@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { SendHorizontal, Sparkles } from 'lucide-react'
 import { Badge, Card, DataTable, Pill, RecommendationCard, SectionTitle, type DataTableColumn } from '../components/ui'
@@ -227,6 +227,19 @@ export default function Copilot() {
       setMensagens((atual) => [...atual, { id: `c-${atual.length}`, autor: 'copiloto', ...buscarResposta(texto) }])
     }, 700)
   }
+
+  // Pergunta vinda do command palette (/copiloto?q=…): envia automaticamente
+  const location = useLocation()
+  const perguntaUrlEnviada = useRef(false)
+  useEffect(() => {
+    if (perguntaUrlEnviada.current) return
+    const q = new URLSearchParams(location.search).get('q')
+    if (q) {
+      perguntaUrlEnviada.current = true
+      enviar(q)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.search])
 
   return (
     <div className="flex h-[calc(100dvh-10.5rem)] min-h-[540px] flex-col space-y-4">

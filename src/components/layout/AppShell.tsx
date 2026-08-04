@@ -3,6 +3,7 @@ import { Outlet } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Sidebar } from './Sidebar'
 import { Topbar } from './Topbar'
+import { CommandLayer } from '../command/CommandLayer'
 import { iniciarLive } from '../../live/liveStore'
 
 const SIDEBAR_WIDTH = 264
@@ -74,6 +75,8 @@ export function AppShell() {
           <Outlet />
         </main>
       </div>
+
+      <CommandLayer />
     </div>
   )
 }

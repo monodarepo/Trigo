@@ -1,9 +1,10 @@
 import { useLocation } from 'react-router-dom'
-import { Bell, ChevronDown, Menu } from 'lucide-react'
+import { Bell, ChevronDown, Menu, Search } from 'lucide-react'
 import { findNavItem } from '../../data/navigation'
 import { APP_CONTEXT } from '../../data/appContext'
 import { snapshot } from '../../data'
 import { MarketPulse } from '../live/MarketPulse'
+import { abrirCommandPalette } from '../command/CommandLayer'
 
 interface TopbarProps {
   onOpenMenu: () => void
@@ -56,6 +57,18 @@ export function Topbar({ onOpenMenu }: TopbarProps) {
         </div>
 
         <div className="ml-auto flex items-center gap-2 lg:gap-3">
+          <button
+            type="button"
+            onClick={abrirCommandPalette}
+            aria-label="Abrir busca e comandos (Ctrl+K)"
+            className="hidden items-center gap-2 rounded-full border border-edge bg-card-2 px-3 py-1.5 text-xs text-ink-subtle transition-colors hover:border-edge-strong hover:text-ink md:flex"
+          >
+            <Search size={13} aria-hidden="true" />
+            Buscar…
+            <kbd className="rounded border border-edge bg-surface-1 px-1.5 py-0.5 font-mono text-11 text-ink-faint">
+              ⌘K
+            </kbd>
+          </button>
           <ContextSelect label="Período" options={APP_CONTEXT.periodOptions} />
           <ContextSelect label="Moinho" options={APP_CONTEXT.millOptions} />
 
