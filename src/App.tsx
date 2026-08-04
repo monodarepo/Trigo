@@ -1,4 +1,4 @@
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+import { BrowserRouter, HashRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { MotionConfig } from 'framer-motion'
 import { AppShell } from './components/layout/AppShell'
 import Alerts from './pages/Alerts'
@@ -11,10 +11,13 @@ import LandedCost from './pages/LandedCost'
 import Showcase from './pages/Showcase'
 import Simulator from './pages/Simulator'
 
+/** Hash router para builds de preview estático (VITE_HASH_ROUTER=1). */
+const Router = import.meta.env.VITE_HASH_ROUTER === '1' ? HashRouter : BrowserRouter
+
 export default function App() {
   return (
     <MotionConfig reducedMotion="user">
-      <BrowserRouter>
+      <Router>
         <Routes>
           <Route element={<AppShell />}>
             <Route path="/" element={<Cockpit />} />
@@ -30,7 +33,7 @@ export default function App() {
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
         </Routes>
-      </BrowserRouter>
+      </Router>
     </MotionConfig>
   )
 }
