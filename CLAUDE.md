@@ -36,3 +36,8 @@ Mockup navegável (protótipo de venda, sem backend) do "Hub de Trigo": um Decis
 
 ## As 8 telas (rotas)
 1. Cockpit Executivo (/) 2. Previsão de Preço e Câmbio (/previsao) 3. Total Landed Cost (/tlc) 4. Recomendação de Compra (/compra) 5. Recomendação de Hedge (/hedge) 6. Simulador de Cenários (/simulador) 7. Alertas Diários (/alertas) 8. Copiloto Gemini (/copiloto).
+
+## Marca
+- Original: `m-dias-branco-logo-png_seeklogo-407830.png` (raiz do repo; PNG 320×320, wordmark monocromático escuro sobre transparente — manter intacto).
+- Cópias de uso em `public/brand/`: `mdias-logo.png` (original, para fundos claros — README/tour) e `mdias-logo-branco.png` (branca gerada do canal alfa, recortada ao conteúdo 296×114, para o navy da UI).
+- Regra de uso: versão branca na sidebar (fundo navy); colorida/original apenas em fundo claro. Dimensionar SEMPRE pela altura (`h-*` com `w-auto`), preservando o aspect ratio (~2,7:1). Sempre `alt="M. Dias Branco"`.

@@ -1,32 +1,45 @@
-# React + TypeScript + Vite
+<img src="public/brand/mdias-logo.png" alt="M. Dias Branco" height="96" />
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+# Torre de Controle do Trigo
 
-Currently, two official plugins are available:
+Mockup navegável (protótipo de venda, sem backend) do **Hub de Trigo** — um Decision Intelligence Hub
+que recomenda, de forma contínua e explicável, quando comprar, quanto, de qual origem, por qual porto,
+para qual moinho, com qual blend e qual parcela proteger por hedge, otimizando pelo **custo total
+landed ajustado ao risco**.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+Cliente: **M. Dias Branco** · Parceria: **Monoda × Google Cloud** · Tese: *"Um Único Trigo"* — todas
+as áreas decidindo sobre a mesma verdade.
 
-## React Compiler
+## Rodando
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```bash
+npm install
+npm run dev      # desenvolvimento (http://localhost:5173)
+npm run build    # build de produção
+npm run preview  # serve o build
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+Build para hospedagem estática (rotas por hash): `VITE_HASH_ROUTER=1 npm run build`.
+
+## As 8 telas
+
+| Rota | Tela |
+| --- | --- |
+| `/` | Cockpit Executivo |
+| `/previsao` | Previsão de Preço e Câmbio |
+| `/tlc` | Total Landed Cost |
+| `/compra` | Recomendação de Compra |
+| `/hedge` | Recomendação de Hedge |
+| `/simulador` | Simulador de Cenários |
+| `/alertas` | Alertas Diários |
+| `/copiloto` | Copiloto Gemini |
+
+## Arquitetura
+
+- **Vite + React 18 + TypeScript** (estrito) · Tailwind · React Router · Recharts · lucide-react · framer-motion.
+- **Verdade única**: todos os números vêm de `src/data` (snapshot do cenário-âncora "terça, 7h").
+  Nenhum componente inventa número.
+- Design system navy + dourado em `src/theme/tokens.ts` (fonte única do tema Tailwind).
+- Contexto completo do projeto (âncoras de dados, cenário e convenções): [`CLAUDE.md`](CLAUDE.md).
+
+> Confidencial — uso interno.

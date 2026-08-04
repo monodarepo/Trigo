@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom'
-import { Wheat, X } from 'lucide-react'
+import { X } from 'lucide-react'
 import { NAV_SECTIONS } from '../../data/navigation'
 
 interface SidebarProps {
@@ -13,25 +13,21 @@ interface SidebarProps {
 export function Sidebar({ showClose = false, onClose, onNavigate }: SidebarProps) {
   return (
     <div className="flex h-full flex-col border-r border-edge/60 bg-card">
-      <div className="flex items-center gap-3 px-5 pb-4 pt-6">
-        <span
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gold/15 text-gold"
-          aria-hidden="true"
-        >
-          <Wheat size={20} />
-        </span>
-        <div className="min-w-0">
-          <p className="font-display text-base font-semibold leading-tight text-ink">
-            Torre de Controle
-          </p>
-          <p className="text-xs text-ink-subtle">Trigo · M. Dias Branco</p>
+      <div className="flex items-start gap-3 px-5 pb-4 pt-6">
+        <div className="min-w-0 flex-1">
+          <img
+            src="/brand/mdias-logo-branco.png"
+            alt="M. Dias Branco"
+            className="h-16 w-auto max-w-full"
+          />
+          <p className="mt-1.5 text-xs font-medium text-ink-subtle">Torre de Controle · Trigo</p>
         </div>
         {showClose && (
           <button
             type="button"
             onClick={onClose}
             aria-label="Fechar menu"
-            className="ml-auto flex h-8 w-8 items-center justify-center rounded-full text-ink-subtle hover:bg-white/5 hover:text-ink"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-ink-subtle hover:bg-white/5 hover:text-ink"
           >
             <X size={18} aria-hidden="true" />
           </button>
