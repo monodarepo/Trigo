@@ -13,6 +13,8 @@ import {
 import { CONVERSA_INICIAL, PERGUNTAS_SUGERIDAS, RESPOSTAS_MOCK } from './copiloto'
 import { FINANCEIRO, FORNECEDORES, MOINHOS, ORIGENS, PORTOS } from './dominio'
 import {
+  BANDA_ORCAMENTO_PCT,
+  CAMBIO_ORCADO,
   COBERTURA_ATUAL_90D_PCT,
   EXPOSICAO_90D_USD,
   POLITICA_CAMBIO_LIMITE,
@@ -99,6 +101,8 @@ export const snapshot = {
     posicoes: POSICOES_HEDGE,
     recomendacao: RECOMENDACAO_HEDGE,
     politicaCambioLimite: POLITICA_CAMBIO_LIMITE,
+    cambioOrcado: CAMBIO_ORCADO,
+    bandaOrcamentoPct: BANDA_ORCAMENTO_PCT,
   },
   simulador: {
     defaults: SIMULADOR_DEFAULTS,

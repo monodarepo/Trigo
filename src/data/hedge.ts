@@ -5,6 +5,10 @@ import { SERIE_CAMBIO } from './previsao'
 /** Limite de câmbio da política de riscos (gatilho de alerta). */
 export const POLITICA_CAMBIO_LIMITE = 5.25
 
+/** Premissa orçamentária: câmbio orçado do ano. Teto da banda (±3%) ≈ limite de política. */
+export const CAMBIO_ORCADO = 5.1
+export const BANDA_ORCAMENTO_PCT = 3
+
 /** Exposição cambial por bucket de prazo (compras a pagar em US$). */
 export const POSICOES_HEDGE: PosicaoHedge[] = [
   { bucketPrazo: '0-30', expostoUsd: 24_000_000, cobertoPct: 45, instrumento: 'NDF' },
