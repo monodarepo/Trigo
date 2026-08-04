@@ -36,7 +36,7 @@ export function Topbar({ onOpenMenu }: TopbarProps) {
   const title = findNavItem(pathname)?.title ?? 'Torre de Controle do Trigo'
 
   return (
-    <header className="sticky top-0 z-30 border-b border-edge/60 bg-navy/85 backdrop-blur">
+    <header className="sticky top-0 z-30 border-b border-edge/60 bg-base/85 backdrop-blur">
       <div className="flex items-center gap-3 px-4 py-3 lg:px-8">
         <button
           type="button"

@@ -5,6 +5,9 @@
 @import '@fontsource/space-grotesk/500.css';
 @import '@fontsource/space-grotesk/600.css';
 @import '@fontsource/space-grotesk/700.css';
+@import '@fontsource/jetbrains-mono/400.css';
+@import '@fontsource/jetbrains-mono/500.css';
+@import '@fontsource/jetbrains-mono/600.css';
 
 @tailwind base;
 @tailwind components;
@@ -33,16 +36,36 @@
   }
 }
 
+@layer components {
+  /* Rótulo-eyebrow: 11px, caixa-alta apagada, tracking largo */
+  .eyebrow {
+    @apply text-11 font-semibold uppercase tracking-[0.14em] text-ink-subtle;
+  }
+}
+
 @layer utilities {
   .tnums {
     font-variant-numeric: tabular-nums;
+  }
+
+  /* Gradiente de decisão (dourado 135°) */
+  .gradient-gold {
+    background-image: linear-gradient(135deg, theme('colors.gold.DEFAULT'), theme('colors.gold.light'));
+  }
+
+  /* Fios reais (rgba) para composições finas */
+  .border-hairline {
+    border-color: rgba(255, 255, 255, 0.06);
+  }
+  .border-hairline-strong {
+    border-color: rgba(255, 255, 255, 0.1);
   }
 }
 
 /* Scrollbar sutil sobre o navy */
 * {
   scrollbar-width: thin;
-  scrollbar-color: theme('colors.edge') transparent;
+  scrollbar-color: theme('colors.edge.DEFAULT') transparent;
 }
 
 ::-webkit-scrollbar {
@@ -55,7 +78,7 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: theme('colors.edge');
+  background: theme('colors.edge.DEFAULT');
   border: 3px solid transparent;
   border-radius: 8px;
   background-clip: padding-box;

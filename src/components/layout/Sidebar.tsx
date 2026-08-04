@@ -12,7 +12,7 @@ interface SidebarProps {
 
 export function Sidebar({ showClose = false, onClose, onNavigate }: SidebarProps) {
   return (
-    <div className="flex h-full flex-col border-r border-edge/60 bg-card">
+    <div className="flex h-full flex-col border-r border-edge/60 bg-surface-1">
       <div className="flex items-start gap-3 px-5 pb-4 pt-6">
         <div className="min-w-0 flex-1">
           <img

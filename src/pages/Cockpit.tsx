@@ -180,7 +180,14 @@ export default function Cockpit() {
   const rec = recomendacaoDoDia
 
   return (
-    <div className="space-y-6">
+    <div className="relative space-y-6">
+      {/* Brilho radial muito sutil atrás do header (azure→violet) */}
+      <div className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-64 overflow-hidden" aria-hidden="true">
+        <div
+          className="absolute -top-32 left-1/4 h-80 w-[36rem] max-w-full rounded-full opacity-[0.08] blur-3xl"
+          style={{ background: 'radial-gradient(closest-side, #5B8DEF, #9B7BF0 55%, transparent 75%)' }}
+        />
+      </div>
       <SectionTitle
         eyebrow="Um único trigo"
         title="A decisão de hoje"
