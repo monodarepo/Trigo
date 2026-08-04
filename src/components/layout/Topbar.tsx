@@ -2,6 +2,7 @@ import { useLocation } from 'react-router-dom'
 import { Bell, ChevronDown, Menu } from 'lucide-react'
 import { findNavItem } from '../../data/navigation'
 import { APP_CONTEXT } from '../../data/appContext'
+import { snapshot } from '../../data'
 
 interface TopbarProps {
   onOpenMenu: () => void
@@ -59,7 +60,7 @@ export function Topbar({ onOpenMenu }: TopbarProps) {
 
           <button
             type="button"
-            aria-label={`Alertas: ${APP_CONTEXT.alertCount} novos`}
+            aria-label={`Alertas: ${snapshot.contagemAlertas} críticos ou altos`}
             className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-edge bg-card-2 text-ink-muted hover:text-ink"
           >
             <Bell size={16} aria-hidden="true" />
@@ -67,7 +68,7 @@ export function Topbar({ onOpenMenu }: TopbarProps) {
               className="tnums absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-danger px-1 text-[10px] font-semibold text-ink"
               aria-hidden="true"
             >
-              {APP_CONTEXT.alertCount}
+              {snapshot.contagemAlertas}
             </span>
           </button>
 

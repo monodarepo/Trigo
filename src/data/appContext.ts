@@ -1,20 +1,18 @@
-/**
- * Contexto fixo do cenário-âncora da demo ("terça, 7h").
- * A contagem de alertas virá do snapshot diário nas próximas etapas.
- */
-export const APP_CONTEXT = {
-  dateLabel: 'Terça, 12 ago · 07:00',
-  alertCount: 4,
+import { MOINHOS } from './dominio'
+import { formatDataHoraPt } from './format'
+
+/** Instante do cenário-âncora da demo ("terça, 7h"). */
+export const DEMO_AGORA = '2025-08-12T07:00:00'
+
+/** Contexto fixo da Topbar. A contagem do sino vem do snapshot (alertas.ts). */
+export const APP_CONTEXT: {
+  dateLabel: string
+  user: { initials: string; name: string }
+  periodOptions: string[]
+  millOptions: string[]
+} = {
+  dateLabel: formatDataHoraPt(DEMO_AGORA),
   user: { initials: 'CPO', name: 'Diretoria de Suprimentos' },
   periodOptions: ['Trimestre atual', 'Próximo trimestre', 'Ano-safra 25/26'],
-  millOptions: [
-    'Todos os moinhos',
-    'Fortaleza/CE',
-    'Eusébio/CE',
-    'Natal/RN',
-    'Salvador/BA',
-    'Cabedelo/PB',
-    'Rolândia/PR',
-    'Bento Gonçalves/RS',
-  ],
-} as const
+  millOptions: ['Todos os moinhos', ...MOINHOS.map((m) => `${m.nome}/${m.uf}`)],
+}

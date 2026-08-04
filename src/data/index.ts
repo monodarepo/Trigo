@@ -1,0 +1,118 @@
+/**
+ * Agregador da "verdade única" da demo: todas as telas leem deste snapshot.
+ * Nenhum componente deve inventar número — tudo nasce em src/data.
+ */
+import type { KpiExposicao, RecomendacaoDoDia } from './types'
+import { ALERTAS, CONTAGEM_ALERTAS_SINO } from './alertas'
+import {
+  COBERTURA_MEDIA_DIAS,
+  ESTOQUE_MOINHOS,
+  RECOMENDACAO_COMPRA,
+  VOLUME_TRIMESTRE_T,
+} from './compra'
+import { CONVERSA_INICIAL, PERGUNTAS_SUGERIDAS, RESPOSTAS_MOCK } from './copiloto'
+import { FINANCEIRO, FORNECEDORES, MOINHOS, ORIGENS, PORTOS } from './dominio'
+import {
+  COBERTURA_ATUAL_90D_PCT,
+  EXPOSICAO_90D_USD,
+  POLITICA_CAMBIO_LIMITE,
+  POSICOES_HEDGE,
+  RECOMENDACAO_HEDGE,
+} from './hedge'
+import { CONTRATOS, EMBARQUES, MV_RIO_PARANA } from './logistica'
+import { PRECOS_ATUAIS, SINAIS_MERCADO } from './mercado'
+import { SERIE_CAMBIO, SERIE_PRECO_TRIGO } from './previsao'
+import {
+  CENARIO_DEFAULT,
+  PERFIS_SIMULADOR,
+  SIMULADOR_DEFAULTS,
+  simularCenario,
+} from './simulador'
+import {
+  ALTERNATIVAS_COMPRA,
+  COMPONENTES_TLC_RECOMENDADO,
+  TLC_BASELINE_RS,
+  TLC_RECOMENDADO_RS,
+} from './tlc'
+import { REGISTROS_VRO, VALOR_CAPTURADO_YTD_RS } from './vro'
+
+/** KPIs do topo do Cockpit Executivo. */
+export const KPIS_COCKPIT: KpiExposicao = {
+  exposicaoCambial90dUsd: EXPOSICAO_90D_USD,
+  cambioAtual: PRECOS_ATUAIS.cambioBrlUsd,
+  protegidoPct: COBERTURA_ATUAL_90D_PCT,
+  protegidoAlvoPct: RECOMENDACAO_HEDGE.coberturaAlvoPct,
+  coberturaMediaDias: COBERTURA_MEDIA_DIAS,
+  ebitdaYtdRs: FINANCEIRO.ebitdaYtdRs,
+  margemEbitdaPct: FINANCEIRO.margemEbitdaPct,
+}
+
+/**
+ * A recomendação do dia — IDÊNTICA no Cockpit, na Compra e no Hedge.
+ * Impacto protegido: R$ 1,28M (compra antecipada) + R$ 3,52M (hedge) = R$ 4,8M.
+ */
+export const RECOMENDACAO_DO_DIA: RecomendacaoDoDia = {
+  resumo:
+    'Antecipar 18% do volume do trimestre (32.000 t · Argentina · Pecém) e proteger 60% da exposição cambial de 90 dias.',
+  probAlta15dPct: PRECOS_ATUAIS.probAltaTrigo15dPct,
+  impactoProtegidoRs: RECOMENDACAO_COMPRA.economiaTotalRs + RECOMENDACAO_HEDGE.protecaoEstimadaRs,
+  memoriaCalculo: {
+    compraAntecipadaRs: RECOMENDACAO_COMPRA.economiaTotalRs,
+    hedgeCambialRs: RECOMENDACAO_HEDGE.protecaoEstimadaRs,
+  },
+  compra: RECOMENDACAO_COMPRA,
+  hedge: RECOMENDACAO_HEDGE,
+}
+
+export const snapshot = {
+  /** Instante do cenário-âncora. */
+  agora: '2025-08-12T07:00:00',
+  kpis: KPIS_COCKPIT,
+  recomendacaoDoDia: RECOMENDACAO_DO_DIA,
+  dominio: {
+    financeiro: FINANCEIRO,
+    origens: ORIGENS,
+    fornecedores: FORNECEDORES,
+    portos: PORTOS,
+    moinhos: MOINHOS,
+  },
+  mercado: { precos: PRECOS_ATUAIS, sinais: SINAIS_MERCADO },
+  previsao: { precoTrigo: SERIE_PRECO_TRIGO, cambio: SERIE_CAMBIO },
+  tlc: {
+    baselineRs: TLC_BASELINE_RS,
+    recomendadoRs: TLC_RECOMENDADO_RS,
+    componentes: COMPONENTES_TLC_RECOMENDADO,
+    alternativas: ALTERNATIVAS_COMPRA,
+  },
+  compra: {
+    recomendacao: RECOMENDACAO_COMPRA,
+    volumeTrimestreToneladas: VOLUME_TRIMESTRE_T,
+    estoqueMoinhos: ESTOQUE_MOINHOS,
+  },
+  hedge: {
+    posicoes: POSICOES_HEDGE,
+    recomendacao: RECOMENDACAO_HEDGE,
+    politicaCambioLimite: POLITICA_CAMBIO_LIMITE,
+  },
+  simulador: {
+    defaults: SIMULADOR_DEFAULTS,
+    perfis: PERFIS_SIMULADOR,
+    cenarioDefault: CENARIO_DEFAULT,
+    simular: simularCenario,
+  },
+  logistica: { contratos: CONTRATOS, embarques: EMBARQUES, navioAtrasado: MV_RIO_PARANA },
+  alertas: ALERTAS,
+  /** Contagem exibida no sino da Topbar (críticos + altos). */
+  contagemAlertas: CONTAGEM_ALERTAS_SINO,
+  copiloto: {
+    perguntasSugeridas: PERGUNTAS_SUGERIDAS,
+    conversaInicial: CONVERSA_INICIAL,
+    respostas: RESPOSTAS_MOCK,
+  },
+  vro: { registros: REGISTROS_VRO, valorCapturadoYtdRs: VALOR_CAPTURADO_YTD_RS },
+}
+
+export type Snapshot = typeof snapshot
+
+export * from './types'
+export * from './format'

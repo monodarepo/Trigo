@@ -1,0 +1,376 @@
+/**
+ * Modelo de domínio do Hub de Trigo — a "verdade única" da demo.
+ * Todos os componentes de tela consomem estes tipos via src/data.
+ */
+
+// ---------------------------------------------------------------------------
+// Identificadores de domínio
+// ---------------------------------------------------------------------------
+
+export type OrigemId = 'argentina' | 'eua-golfo' | 'canada' | 'russia' | 'uruguai' | 'brasil'
+
+export type PortoId = 'pecem' | 'mucuripe' | 'suape' | 'aratu' | 'cabedelo' | 'natal'
+
+export type MoinhoId =
+  | 'fortaleza'
+  | 'eusebio'
+  | 'natal'
+  | 'salvador'
+  | 'cabedelo'
+  | 'rolandia'
+  | 'bento-goncalves'
+
+// ---------------------------------------------------------------------------
+// Entidades de domínio
+// ---------------------------------------------------------------------------
+
+export interface Origem {
+  id: OrigemId
+  nome: string
+  pais: string
+  mercosul: boolean
+  /** Classe predominante do trigo exportado (soft/hard, W típico). */
+  classeTrigo: string
+  faixaW: [number, number]
+  faixaProteina: [number, number]
+  /** Trânsito marítimo médio até o Nordeste, em dias (0 = doméstico). */
+  transitoDias: number
+}
+
+export interface Fornecedor {
+  id: string
+  nome: string
+  origemId: OrigemId
+  rating: 'A' | 'B' | 'C'
+  volumeAnualKt: number
+}
+
+export interface Porto {
+  id: PortoId
+  nome: string
+  uf: string
+  filaNavios: number
+  custoPortuarioRsT: number
+  capacidadeMensalKt: number
+  coordenadas?: { lat: number; lon: number }
+}
+
+export interface Moinho {
+  id: MoinhoId
+  nome: string
+  cidade: string
+  uf: string
+  capacidadeAnualKt: number
+  portoPreferencialId: PortoId
+  perfilProduto: Array<'biscoito' | 'cracker' | 'massa' | 'pao'>
+  coordenadas?: { lat: number; lon: number }
+}
+
+export interface Contrato {
+  id: string
+  fornecedorId: string
+  origemId: OrigemId
+  portoDestinoId: PortoId
+  volumeToneladas: number
+  precoUsdT: number
+  incoterm: 'FOB' | 'CFR' | 'CIF'
+  status: 'planejado' | 'ativo' | 'executado'
+  janelaEmbarque: { inicio: string; fim: string }
+}
+
+export interface Embarque {
+  id: string
+  contratoId: string
+  navio: string
+  origemId: OrigemId
+  portoDestinoId: PortoId
+  /** Moinho prioritário atendido pela descarga, quando aplicável. */
+  moinhoDestinoId?: MoinhoId
+  volumeToneladas: number
+  etaOriginal: string
+  etaAtual: string
+  atrasoDias: number
+  status: 'programado' | 'em-transito' | 'atrasado' | 'atracado' | 'descarregado'
+  riscoDemurrageRs?: number
+}
+
+export interface ParametrosQualidade {
+  /** Proteína em % (base 13,5% umidade). */
+  proteina: number
+  /** Força de glúten (W, alveógrafo). */
+  w: number
+  /** Falling number em segundos. */
+  fallingNumber: number
+  /** Relação tenacidade/extensibilidade. */
+  pl: number
+  /** Peso hectolítrico em kg/hl. */
+  pesoHectolitrico: number
+  /** Umidade em %. */
+  umidade: number
+  /** Cinzas em %. */
+  cinzas: number
+  /** Deoxinivalenol em ppb. */
+  don: number
+}
+
+// ---------------------------------------------------------------------------
+// Mercado e previsão
+// ---------------------------------------------------------------------------
+
+export interface SinalMercado {
+  id: string
+  categoria: 'mercado' | 'clima' | 'logistica' | 'interno'
+  impacto: 'alta' | 'baixa' | 'neutro'
+  titulo: string
+  descricao: string
+  fonte?: string
+  timestamp: string
+}
+
+export interface PontoPrevisao {
+  data: string
+  valor: number
+  bandaMin?: number
+  bandaMax?: number
+}
+
+export interface FatorPrevisao {
+  rotulo: string
+  /** Peso relativo do fator na projeção (0–1). */
+  peso: number
+  direcao: 'alta' | 'baixa' | 'neutra'
+  descricao?: string
+}
+
+export interface SeriePrevisao {
+  id: string
+  nome: string
+  unidade: string
+  valorAtual: number
+  variacao30dPct: number
+  historico: PontoPrevisao[]
+  projecao: PontoPrevisao[]
+  horizontes: {
+    d7: PontoPrevisao
+    d30: PontoPrevisao
+    d60: PontoPrevisao
+    d90: PontoPrevisao
+  }
+  fatores: FatorPrevisao[]
+}
+
+// ---------------------------------------------------------------------------
+// TLC e compra
+// ---------------------------------------------------------------------------
+
+export interface ComponenteTLC {
+  rotulo: string
+  valorRs: number
+  tipo:
+    | 'fob'
+    | 'premio'
+    | 'cambio'
+    | 'frete'
+    | 'seguro'
+    | 'taxa'
+    | 'imposto'
+    | 'porto'
+    | 'risco'
+    | 'armazenagem'
+    | 'transporte'
+    | 'capital'
+  descricao?: string
+}
+
+export interface AlternativaCompra {
+  id: string
+  origemId: OrigemId
+  /** Ausente para compra doméstica (modal rodoviário). */
+  portoId?: PortoId
+  fornecedorId: string
+  /** FOB em US$/t — ausente para compra doméstica em R$. */
+  fobUsd?: number
+  freteUsd?: number
+  /** Alíquota de importação (0% Mercosul / 10% extra-Mercosul). */
+  impostoPct: number
+  tlcRs: number
+  deltaVsBaselineRs: number
+  qualidade: ParametrosQualidade
+  atendeEspec: boolean
+  volumeDisponivelToneladas: number
+  recomendada?: boolean
+  observacao?: string
+}
+
+export interface ParcelaBlend {
+  origemId: OrigemId
+  pct: number
+}
+
+export interface DistribuicaoMoinho {
+  moinhoId: MoinhoId
+  toneladas: number
+  coberturaAtualDias: number
+  coberturaAposDias: number
+}
+
+export interface AlternativaRejeitada {
+  origemId: OrigemId
+  motivo: string
+}
+
+export interface EstoqueMoinho {
+  moinhoId: MoinhoId
+  estoqueToneladas: number
+  coberturaDias: number
+  politicaMinimaDias: number
+}
+
+export interface RecomendacaoCompra {
+  id: string
+  criadaEm: string
+  acao: 'comprar' | 'aguardar'
+  origemId: OrigemId
+  portoId: PortoId
+  fornecedorId: string
+  volumeToneladas: number
+  janelaDias: number
+  blend: ParcelaBlend[]
+  tlcRs: number
+  baselineRs: number
+  economiaRsT: number
+  economiaTotalRs: number
+  probAlta15dPct: number
+  confiancaPct: number
+  anteciparPctTrimestre: number
+  volumeTrimestreToneladas: number
+  racional: string
+  distribuicaoMoinhos: DistribuicaoMoinho[]
+  alternativasRejeitadas: AlternativaRejeitada[]
+}
+
+// ---------------------------------------------------------------------------
+// Hedge
+// ---------------------------------------------------------------------------
+
+export interface PosicaoHedge {
+  bucketPrazo: '0-30' | '31-60' | '61-90' | '91-180'
+  expostoUsd: number
+  cobertoPct: number
+  instrumento?: string
+}
+
+export interface RecomendacaoHedge {
+  id: string
+  criadaEm: string
+  horizonteDias: number
+  exposicaoUsd: number
+  coberturaAtualPct: number
+  coberturaAlvoPct: number
+  notionalNovoUsd: number
+  instrumento: string
+  taxaForwardMedia: number
+  cenarioCambioD90: number
+  protecaoEstimadaRs: number
+  varAntesRs: number
+  varDepoisRs: number
+  racional: string
+}
+
+// ---------------------------------------------------------------------------
+// Simulador
+// ---------------------------------------------------------------------------
+
+export type PerfilSimulacao = 'conservador' | 'recomendado' | 'oportunistico'
+
+export interface SimuladorInputs {
+  variacaoPrecoTrigoPct: number
+  variacaoCambioPct: number
+  atrasoLogisticoDias: number
+}
+
+export interface SimuladorOutputs {
+  custoTrimestreRs: number
+  deltaVsBaselineRs: number
+  impactoCpvRs: number
+  impactoMargemEbitdaPp: number
+  exposicaoResidualUsd: number
+  demurrageEstimadoRs: number
+}
+
+export interface CenarioSimulador {
+  inputs: SimuladorInputs
+  porPerfil: Record<PerfilSimulacao, SimuladorOutputs>
+}
+
+// ---------------------------------------------------------------------------
+// Alertas e copiloto
+// ---------------------------------------------------------------------------
+
+export interface Alerta {
+  id: string
+  severidade: 'critico' | 'alto' | 'medio' | 'info'
+  categoria: 'mercado' | 'cambio' | 'logistica' | 'estoque' | 'hedge' | 'qualidade'
+  timestamp: string
+  titulo: string
+  descricao: string
+  /** Rota da tela onde a ação sugerida acontece. */
+  acaoRota: string
+  acaoRotulo: string
+}
+
+export interface ReferenciaCopiloto {
+  rotulo: string
+  rota: string
+}
+
+export interface MensagemCopiloto {
+  id: string
+  autor: 'usuario' | 'copiloto'
+  timestamp: string
+  texto: string
+  referencias?: ReferenciaCopiloto[]
+}
+
+export interface PerguntaResposta {
+  id: string
+  pergunta: string
+  resposta: string
+  referencias?: ReferenciaCopiloto[]
+}
+
+// ---------------------------------------------------------------------------
+// KPIs e valor capturado
+// ---------------------------------------------------------------------------
+
+export interface KpiExposicao {
+  exposicaoCambial90dUsd: number
+  cambioAtual: number
+  protegidoPct: number
+  protegidoAlvoPct: number
+  coberturaMediaDias: number
+  ebitdaYtdRs: number
+  margemEbitdaPct: number
+}
+
+/** Registro de Valor Realizado/Otimizado — trilha de valor capturado pelas decisões do hub. */
+export interface RegistroVRO {
+  id: string
+  data: string
+  categoria: 'compra' | 'hedge' | 'logistica' | 'blend'
+  decisao: string
+  valorCapturadoRs: number
+  status: 'realizado' | 'projetado'
+}
+
+export interface RecomendacaoDoDia {
+  resumo: string
+  probAlta15dPct: number
+  impactoProtegidoRs: number
+  memoriaCalculo: {
+    compraAntecipadaRs: number
+    hedgeCambialRs: number
+  }
+  compra: RecomendacaoCompra
+  hedge: RecomendacaoHedge
+}
