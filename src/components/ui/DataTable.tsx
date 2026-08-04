@@ -13,6 +13,8 @@ export interface DataTableProps<T> {
   rowKey: (row: T) => string
   /** Descrição acessível da tabela (sr-only). */
   caption?: string
+  /** Largura mínima da tabela em px antes de rolar horizontalmente (default 560). */
+  minWidth?: number
   className?: string
 }
 
@@ -22,12 +24,19 @@ const alignClasses = {
   center: 'text-center',
 }
 
-export function DataTable<T>({ columns, rows, rowKey, caption, className = '' }: DataTableProps<T>) {
+export function DataTable<T>({
+  columns,
+  rows,
+  rowKey,
+  caption,
+  minWidth = 560,
+  className = '',
+}: DataTableProps<T>) {
   return (
     <div
       className={`overflow-x-auto rounded-card-lg border border-edge/80 bg-card shadow-card ${className}`}
     >
-      <table className="w-full min-w-[560px] border-collapse text-sm">
+      <table className="w-full border-collapse text-sm" style={{ minWidth }}>
         {caption && <caption className="sr-only">{caption}</caption>}
         <thead>
           <tr className="border-b border-edge/80">

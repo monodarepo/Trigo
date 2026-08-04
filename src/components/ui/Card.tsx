@@ -24,7 +24,7 @@ export function Card({
 }: CardProps) {
   return (
     <div
-      className={`rounded-card-lg border shadow-card ${variantClasses[variant]} ${paddingClasses[padding]} ${className}`}
+      className={`min-w-0 rounded-card-lg border shadow-card ${variantClasses[variant]} ${paddingClasses[padding]} ${className}`}
       {...rest}
     >
       {children}

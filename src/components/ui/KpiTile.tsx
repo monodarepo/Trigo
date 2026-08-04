@@ -23,7 +23,7 @@ export function KpiTile({ label, value, unit, delta, hint, className = '' }: Kpi
   return (
     <Card padding="sm" className={className}>
       <p className="text-xs font-medium uppercase tracking-wide text-ink-subtle">{label}</p>
-      <p className="tnums mt-2 font-display text-3xl font-semibold leading-none text-ink">
+      <p className="tnums mt-2 font-display text-2xl font-semibold leading-none text-ink">
         {value}
         {unit && <span className="ml-1 text-base font-medium text-ink-subtle">{unit}</span>}
       </p>
