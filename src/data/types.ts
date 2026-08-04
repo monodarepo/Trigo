@@ -142,6 +142,15 @@ export interface FatorPrevisao {
   descricao?: string
 }
 
+/** Curva projetada de FOB por origem: CBOT + prêmio de origem interpolado. */
+export interface PrevisaoOrigem {
+  origemId: OrigemId
+  rotulo: string
+  premioAtualUsdT: number
+  premioD90UsdT: number
+  projecao: PontoPrevisao[]
+}
+
 export interface SeriePrevisao {
   id: string
   nome: string

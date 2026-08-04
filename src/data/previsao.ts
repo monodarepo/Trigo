@@ -1,4 +1,4 @@
-import type { PontoPrevisao, SeriePrevisao } from './types'
+import type { PontoPrevisao, PrevisaoOrigem, SeriePrevisao } from './types'
 import { PRECOS_ATUAIS } from './mercado'
 
 /**
@@ -45,37 +45,64 @@ export const SERIE_PRECO_TRIGO: SeriePrevisao = {
   horizontes: { d7: CBOT_D7, d30: CBOT_D30, d60: CBOT_D60, d90: CBOT_D90 },
   fatores: [
     {
-      rotulo: 'Safra argentina revisada para baixo',
-      peso: 0.35,
+      rotulo: 'Safra argentina',
+      peso: 0.3,
       direcao: 'alta',
-      descricao: 'Corte de 2,1 Mt pela Bolsa de Cereales reduz oferta exportável no 4º tri.',
+      descricao: 'Corte de 2,1 Mt pela Bolsa de Cereales reduz a oferta exportável do 4º tri.',
     },
     {
-      rotulo: 'Seca no Mar Negro',
-      peso: 0.25,
+      rotulo: 'Mar Negro / geopolítica',
+      peso: 0.22,
       direcao: 'alta',
-      descricao: 'Rendimento russo em queda; prêmios FOB Mar Negro reagindo.',
+      descricao: 'Seca na Rússia e prêmio de risco nas rotas do Mar Negro.',
     },
     {
-      rotulo: 'Demanda de importadores (MENA/Sudeste Asiático)',
+      rotulo: 'Posições especulativas',
       peso: 0.15,
       direcao: 'alta',
-      descricao: 'Licitações do Egito e Indonésia acima do ritmo sazonal.',
+      descricao: 'Fundos reduzem a posição vendida líquida em Chicago.',
     },
     {
-      rotulo: 'Colheita HRW nos EUA com boa qualidade',
+      rotulo: 'Estoques globais',
       peso: 0.15,
       direcao: 'baixa',
-      descricao: 'Oferta hard americana confortável limita a ponta compradora.',
+      descricao: 'Colheita HRW nos EUA avança com boa qualidade; estoques confortáveis.',
     },
     {
-      rotulo: 'Dólar global forte',
+      rotulo: 'Frete marítimo',
       peso: 0.1,
+      direcao: 'alta',
+      descricao: 'Handysize disputado pelo milho encarece o CIF no Nordeste.',
+    },
+    {
+      rotulo: 'Dólar global',
+      peso: 0.08,
       direcao: 'baixa',
-      descricao: 'Índice DXY elevado encarece o trigo em moeda local dos importadores.',
+      descricao: 'DXY forte encarece o trigo para importadores e modera a demanda.',
     },
   ],
 }
+
+/**
+ * Curvas projetadas por origem: FOB = CBOT projetado + prêmio interpolado
+ * linearmente do atual ao de 90 dias. Prêmios atuais fecham com PRECOS_ATUAIS
+ * (Argentina 205+48=253 · EUA 205+57=262 · Rússia 205+26=231).
+ */
+function projecaoComPremio(premioInicial: number, premioFinal: number): PontoPrevisao[] {
+  const n = SERIE_PRECO_TRIGO.projecao.length
+  return SERIE_PRECO_TRIGO.projecao.map((p, i) => {
+    const premio = premioInicial + ((premioFinal - premioInicial) * i) / (n - 1)
+    const soma = (v: number | undefined) => (v == null ? undefined : Math.round(v + premio))
+    return { data: p.data, valor: Math.round(p.valor + premio), bandaMin: soma(p.bandaMin), bandaMax: soma(p.bandaMax) }
+  })
+}
+
+export const PREVISOES_ORIGEM: PrevisaoOrigem[] = [
+  { origemId: 'argentina', rotulo: 'Argentina', premioAtualUsdT: 48, premioD90UsdT: 56, projecao: projecaoComPremio(48, 56) },
+  { origemId: 'eua-golfo', rotulo: 'EUA-Golfo (HRW)', premioAtualUsdT: 57, premioD90UsdT: 58, projecao: projecaoComPremio(57, 58) },
+  { origemId: 'canada', rotulo: 'Canadá (CWRS)', premioAtualUsdT: 68, premioD90UsdT: 70, projecao: projecaoComPremio(68, 70) },
+  { origemId: 'russia', rotulo: 'Rússia (Mar Negro)', premioAtualUsdT: 26, premioD90UsdT: 34, projecao: projecaoComPremio(26, 34) },
+]
 
 const FX_D7: PontoPrevisao = { data: '2025-08-19', valor: 5.22, bandaMin: 5.18, bandaMax: 5.26 }
 const FX_D30: PontoPrevisao = { data: '2025-09-11', valor: 5.28, bandaMin: 5.16, bandaMax: 5.4 }

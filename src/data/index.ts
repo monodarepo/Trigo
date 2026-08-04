@@ -21,7 +21,7 @@ import {
 } from './hedge'
 import { CONTRATOS, EMBARQUES, MV_RIO_PARANA } from './logistica'
 import { PRECOS_ATUAIS, SINAIS_MERCADO } from './mercado'
-import { SERIE_CAMBIO, SERIE_PRECO_TRIGO } from './previsao'
+import { PREVISOES_ORIGEM, SERIE_CAMBIO, SERIE_PRECO_TRIGO } from './previsao'
 import {
   CENARIO_DEFAULT,
   PERFIS_SIMULADOR,
@@ -77,7 +77,7 @@ export const snapshot = {
     moinhos: MOINHOS,
   },
   mercado: { precos: PRECOS_ATUAIS, sinais: SINAIS_MERCADO },
-  previsao: { precoTrigo: SERIE_PRECO_TRIGO, cambio: SERIE_CAMBIO },
+  previsao: { precoTrigo: SERIE_PRECO_TRIGO, cambio: SERIE_CAMBIO, porOrigem: PREVISOES_ORIGEM },
   tlc: {
     baselineRs: TLC_BASELINE_RS,
     recomendadoRs: TLC_RECOMENDADO_RS,
