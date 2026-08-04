@@ -31,8 +31,11 @@ import {
 import {
   ALTERNATIVAS_COMPRA,
   COMPONENTES_TLC_RECOMENDADO,
+  RESULTADO_TLC_RECOMENDADO,
+  SELECAO_TLC_DEFAULT,
   TLC_BASELINE_RS,
   TLC_RECOMENDADO_RS,
+  calcularTlcMock,
 } from './tlc'
 import { REGISTROS_VRO, VALOR_CAPTURADO_YTD_RS } from './vro'
 
@@ -83,6 +86,9 @@ export const snapshot = {
     recomendadoRs: TLC_RECOMENDADO_RS,
     componentes: COMPONENTES_TLC_RECOMENDADO,
     alternativas: ALTERNATIVAS_COMPRA,
+    selecaoDefault: SELECAO_TLC_DEFAULT,
+    resultadoRecomendado: RESULTADO_TLC_RECOMENDADO,
+    calcular: calcularTlcMock,
   },
   compra: {
     recomendacao: RECOMENDACAO_COMPRA,

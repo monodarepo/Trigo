@@ -174,6 +174,8 @@ export interface SeriePrevisao {
 
 export interface ComponenteTLC {
   rotulo: string
+  /** Rótulo compacto para o eixo do waterfall. */
+  rotuloCurto?: string
   valorRs: number
   tipo:
     | 'fob'
@@ -189,6 +191,33 @@ export interface ComponenteTLC {
     | 'transporte'
     | 'capital'
   descricao?: string
+}
+
+export type Incoterm = 'FOB' | 'CFR' | 'CIF'
+
+/** Seleção dos filtros da tela de TLC. */
+export interface SelecaoTlc {
+  origemId: OrigemId
+  portoId: PortoId
+  moinhoId: MoinhoId
+  incoterm: Incoterm
+}
+
+/** Parcela de risco precificada DENTRO do TLC (não é custo adicional). */
+export interface RiscoTlc {
+  demurrageRs: number
+  qualidadeRs: number
+  atrasoRs: number
+  totalRs: number
+  pctDoTlc: number
+}
+
+export interface ResultadoTlc {
+  selecao: SelecaoTlc
+  componentes: ComponenteTLC[]
+  totalRs: number
+  deltaVsBaselineRs: number
+  risco: RiscoTlc
 }
 
 export interface AlternativaCompra {

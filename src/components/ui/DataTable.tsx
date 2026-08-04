@@ -15,6 +15,8 @@ export interface DataTableProps<T> {
   caption?: string
   /** Largura mínima da tabela em px antes de rolar horizontalmente (default 560). */
   minWidth?: number
+  /** Classes extras por linha (ex.: destacar a recomendada). */
+  rowClassName?: (row: T, index: number) => string
   className?: string
 }
 
@@ -30,6 +32,7 @@ export function DataTable<T>({
   rowKey,
   caption,
   minWidth = 560,
+  rowClassName,
   className = '',
 }: DataTableProps<T>) {
   return (
@@ -55,7 +58,7 @@ export function DataTable<T>({
           {rows.map((row, index) => (
             <tr
               key={rowKey(row)}
-              className={`border-b border-edge/40 last:border-b-0 ${index % 2 === 1 ? 'bg-white/[0.02]' : ''}`}
+              className={`border-b border-edge/40 last:border-b-0 ${index % 2 === 1 ? 'bg-white/[0.02]' : ''} ${rowClassName?.(row, index) ?? ''}`}
             >
               {columns.map((column) => (
                 <td
