@@ -325,6 +325,14 @@ export interface SimuladorInputs {
   variacaoPrecoTrigoPct: number
   variacaoCambioPct: number
   atrasoLogisticoDias: number
+  /** Frete marítimo na janela (US$/t) — default: frete base do snapshot. */
+  freteUsdT?: number
+  /** Quebra de safra adicional (%) — amplifica o choque de preço. */
+  quebraSafraPct?: number
+  /** Variação do consumo dos moinhos (%) — escala o volume do trimestre. */
+  consumoPct?: number
+  /** Origens indisponíveis (restrição comercial/sanitária). */
+  origensRestritas?: OrigemId[]
 }
 
 export interface SimuladorOutputs {
@@ -334,10 +342,21 @@ export interface SimuladorOutputs {
   impactoMargemEbitdaPp: number
   exposicaoResidualUsd: number
   demurrageEstimadoRs: number
+  volumeAntecipadoT: number
+  volumeRestanteT: number
+  /** Origem usada na antecipação (cadeia de fallback quando há restrição). */
+  origemAntecipadaId: OrigemId | null
+  tlcTravadoRs: number
+  hedgePct: number
+  janelaDias: number
+  /** Intervalo de confiança do delta vs baseline (P10–P90). */
+  intervaloConfiancaRs: [number, number]
+  nivelRisco: 'baixo' | 'medio' | 'alto'
 }
 
 export interface CenarioSimulador {
   inputs: SimuladorInputs
+  volumeTrimestreT: number
   porPerfil: Record<PerfilSimulacao, SimuladorOutputs>
 }
 
