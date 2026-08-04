@@ -14,6 +14,8 @@ export interface RecommendationCardProps {
   stats?: readonly RecommendationStat[]
   /** Slot para badges (ação, confiança, risco). */
   badges?: ReactNode
+  /** Slot extra entre os números e as ações (ex.: ConfidenceMeter). */
+  extra?: ReactNode
   /** Slot de ações (botões). */
   actions?: ReactNode
   className?: string
@@ -24,6 +26,7 @@ export function RecommendationCard({
   rationale,
   stats = [],
   badges,
+  extra,
   actions,
   className = '',
 }: RecommendationCardProps) {
@@ -47,6 +50,7 @@ export function RecommendationCard({
           ))}
         </dl>
       )}
+      {extra && <div className="mt-4">{extra}</div>}
       {actions && <div className="mt-4 flex flex-wrap items-center gap-2">{actions}</div>}
     </Card>
   )
