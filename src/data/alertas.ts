@@ -88,6 +88,18 @@ export const ALERTAS: Alerta[] = [
     acaoRotulo: 'Ver distribuição por moinho',
   },
   {
+    id: 'alerta-restricao-exportacao',
+    severidade: 'medio',
+    categoria: 'mercado',
+    timestamp: '2025-08-11T23:20:00',
+    titulo: 'Rússia estuda nova restrição de exportação de trigo',
+    descricao:
+      'Ministério avalia cota adicional para o 4º trimestre. A alternativa Mar Negro pode ficar indisponível na ' +
+      'janela — teste o impacto com a restrição de origem no Simulador.',
+    acaoRota: '/simulador',
+    acaoRotulo: 'Simular restrição de origem',
+  },
+  {
     id: 'alerta-prob-alta',
     severidade: 'info',
     categoria: 'mercado',
