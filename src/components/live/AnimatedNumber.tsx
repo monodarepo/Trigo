@@ -1,0 +1,40 @@
+import { useEffect, useRef, useState } from 'react'
+
+export interface AnimatedNumberProps {
+  valor: number
+  /** Formata o valor exibido (ex.: casas decimais pt-BR). */
+  formatar: (v: number) => string
+  duracaoMs?: number
+  className?: string
+}
+
+/**
+ * Número que desliza do valor anterior ao novo (rAF + ease-out cúbico).
+ * Com prefers-reduced-motion, salta direto para o alvo.
+ */
+export function AnimatedNumber({ valor, formatar, duracaoMs = 600, className = '' }: AnimatedNumberProps) {
+  const [exibido, setExibido] = useState(valor)
+  const anterior = useRef(valor)
+
+  useEffect(() => {
+    const de = anterior.current
+    anterior.current = valor
+    if (de === valor) return
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      setExibido(valor)
+      return
+    }
+    let raf = 0
+    const inicio = performance.now()
+    const passo = (agora: number) => {
+      const p = Math.min(1, (agora - inicio) / duracaoMs)
+      const easeOut = 1 - Math.pow(1 - p, 3)
+      setExibido(de + (valor - de) * easeOut)
+      if (p < 1) raf = requestAnimationFrame(passo)
+    }
+    raf = requestAnimationFrame(passo)
+    return () => cancelAnimationFrame(raf)
+  }, [valor, duracaoMs])
+
+  return <span className={`tnums ${className}`}>{formatar(exibido)}</span>
+}

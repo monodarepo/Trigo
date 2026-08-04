@@ -3,6 +3,7 @@ import { Bell, ChevronDown, Menu } from 'lucide-react'
 import { findNavItem } from '../../data/navigation'
 import { APP_CONTEXT } from '../../data/appContext'
 import { snapshot } from '../../data'
+import { MarketPulse } from '../live/MarketPulse'
 
 interface TopbarProps {
   onOpenMenu: () => void
@@ -80,6 +81,7 @@ export function Topbar({ onOpenMenu }: TopbarProps) {
           </span>
         </div>
       </div>
+      <MarketPulse />
     </header>
   )
 }

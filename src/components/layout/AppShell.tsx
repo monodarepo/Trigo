@@ -3,11 +3,17 @@ import { Outlet } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Sidebar } from './Sidebar'
 import { Topbar } from './Topbar'
+import { iniciarLive } from '../../live/liveStore'
 
 const SIDEBAR_WIDTH = 264
 
 export function AppShell() {
   const [drawerOpen, setDrawerOpen] = useState(false)
+
+  // Tick global da camada de tempo real simulada (um único timer para o app)
+  useEffect(() => {
+    iniciarLive()
+  }, [])
 
   useEffect(() => {
     if (!drawerOpen) return

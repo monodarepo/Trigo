@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { Freshness } from '../live/Freshness'
 
 export interface SectionTitleProps {
   eyebrow?: string
@@ -20,6 +21,7 @@ export function SectionTitle({ eyebrow, title, subtitle, actions, className = ''
         )}
         <h2 className="mt-1 font-display text-xl font-semibold text-ink lg:text-2xl">{title}</h2>
         {subtitle && <p className="mt-1 text-sm text-ink-subtle">{subtitle}</p>}
+        <Freshness className="mt-1.5" />
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
     </div>
