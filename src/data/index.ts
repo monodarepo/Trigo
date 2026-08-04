@@ -10,7 +10,13 @@ import {
   RECOMENDACAO_COMPRA,
   VOLUME_TRIMESTRE_T,
 } from './compra'
-import { CONVERSA_INICIAL, PERGUNTAS_SUGERIDAS, RESPOSTAS_MOCK } from './copiloto'
+import {
+  CONVERSA_INICIAL,
+  PERGUNTAS_CHIPS,
+  PERGUNTAS_SUGERIDAS,
+  RESPOSTAS_MOCK,
+  RESPOSTAS_RICAS,
+} from './copiloto'
 import { FINANCEIRO, FORNECEDORES, MOINHOS, ORIGENS, PORTOS } from './dominio'
 import {
   BANDA_ORCAMENTO_PCT,
@@ -116,8 +122,10 @@ export const snapshot = {
   contagemAlertas: CONTAGEM_ALERTAS_SINO,
   copiloto: {
     perguntasSugeridas: PERGUNTAS_SUGERIDAS,
+    chips: PERGUNTAS_CHIPS,
     conversaInicial: CONVERSA_INICIAL,
     respostas: RESPOSTAS_MOCK,
+    respostasRicas: RESPOSTAS_RICAS,
   },
   vro: { registros: REGISTROS_VRO, valorCapturadoYtdRs: VALOR_CAPTURADO_YTD_RS },
 }

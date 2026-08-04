@@ -396,6 +396,31 @@ export interface PerguntaResposta {
   referencias?: ReferenciaCopiloto[]
 }
 
+export interface TabelaCopiloto {
+  colunas: string[]
+  linhas: string[][]
+}
+
+export interface MiniRecomendacaoCopiloto {
+  titulo: string
+  texto: string
+  stats: Array<{ label: string; value: string; hint?: string }>
+}
+
+/** Resposta estruturada do copiloto: texto + bullets + mini-tabela + card. */
+export interface RespostaRicaCopiloto {
+  id: string
+  pergunta: string
+  texto: string
+  bullets?: string[]
+  tabela?: TabelaCopiloto
+  recomendacao?: MiniRecomendacaoCopiloto
+  destaque?: string
+  /** Chips de "dados usados / fontes". */
+  fontes: string[]
+  acoes: ReferenciaCopiloto[]
+}
+
 // ---------------------------------------------------------------------------
 // KPIs e valor capturado
 // ---------------------------------------------------------------------------
