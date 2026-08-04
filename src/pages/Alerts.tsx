@@ -14,6 +14,8 @@ import {
 import type { LucideIcon } from 'lucide-react'
 import { Badge, Card, EmptyState, KpiTile, SectionTitle, type Tone } from '../components/ui'
 import { colors } from '../theme/tokens'
+import { abrirObjeto } from '../components/object/objectBus'
+import type { TipoObjeto } from '../data/objects'
 import {
   snapshot,
   formatBRL,
@@ -47,6 +49,15 @@ const TONE_SEV: Record<Severidade, Tone> = { critico: 'danger', alto: 'warning',
 const ROTULO_SEV: Record<Severidade, string> = { critico: 'Crítico', alto: 'Alto', medio: 'Médio', info: 'Info' }
 
 const exigeDecisao = (a: Alerta) => a.severidade !== 'info'
+
+/** Ficha de objeto relacionada a cada alerta (padrão Foundry). */
+const FICHA_DO_ALERTA: Record<string, { tipo: TipoObjeto; id: string; rotulo: string }> = {
+  'alerta-rio-parana': { tipo: 'navio', id: 'mv-rio-parana', rotulo: 'Ficha do navio' },
+  'alerta-cobertura-natal': { tipo: 'moinho', id: 'natal', rotulo: 'Ficha do Moinho Natal' },
+  'alerta-estoque-fortaleza': { tipo: 'moinho', id: 'fortaleza', rotulo: 'Ficha do Moinho Fortaleza' },
+  'alerta-don-russia': { tipo: 'lote', id: 'alt-russia-suape', rotulo: 'Ficha do lote russo' },
+  'alerta-restricao-exportacao': { tipo: 'origem', id: 'russia', rotulo: 'Ficha da origem Rússia' },
+}
 
 const ordenados = [...alertas].sort(
   (a, b) => ORDEM_SEV[a.severidade] - ORDEM_SEV[b.severidade] || b.timestamp.localeCompare(a.timestamp),
@@ -416,13 +427,28 @@ export default function Alerts() {
                 ))}
               </dl>
 
-              <Link
-                to={aberto.acaoRota}
-                className="mt-5 inline-flex items-center gap-1.5 rounded-full bg-gold px-4 py-2 text-xs font-semibold text-navy transition-colors hover:bg-gold-light"
-              >
-                {aberto.acaoRotulo}
-                <ChevronRight size={14} aria-hidden="true" />
-              </Link>
+              <div className="mt-5 flex flex-wrap items-center gap-2">
+                <Link
+                  to={aberto.acaoRota}
+                  className="inline-flex items-center gap-1.5 rounded-full bg-gold px-4 py-2 text-xs font-semibold text-navy transition-colors hover:bg-gold-light"
+                >
+                  {aberto.acaoRotulo}
+                  <ChevronRight size={14} aria-hidden="true" />
+                </Link>
+                {FICHA_DO_ALERTA[aberto.id] && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const ficha = FICHA_DO_ALERTA[aberto.id]
+                      setAberto(null)
+                      abrirObjeto(ficha.tipo, ficha.id)
+                    }}
+                    className="rounded-full border border-edge px-4 py-2 text-xs font-semibold text-ink-muted transition-colors hover:border-gold/40 hover:text-ink"
+                  >
+                    {FICHA_DO_ALERTA[aberto.id].rotulo}
+                  </button>
+                )}
+              </div>
             </motion.aside>
           </>
         )}

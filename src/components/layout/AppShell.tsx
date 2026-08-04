@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { Sidebar } from './Sidebar'
 import { Topbar } from './Topbar'
 import { CommandLayer } from '../command/CommandLayer'
+import { ObjectPanelLayer } from '../object/ObjectPanel'
 import { iniciarLive } from '../../live/liveStore'
 
 const SIDEBAR_WIDTH = 264
@@ -77,6 +78,7 @@ export function AppShell() {
       </div>
 
       <CommandLayer />
+      <ObjectPanelLayer />
     </div>
   )
 }

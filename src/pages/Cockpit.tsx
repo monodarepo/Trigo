@@ -24,6 +24,7 @@ import {
   type Alerta,
   type Embarque,
 } from '../data'
+import { abrirObjeto } from '../components/object/objectBus'
 
 const { recomendacaoDoDia, kpis, tlc, compra, hedge, previsao, logistica, alertas, simulador, vro, mercado } =
   snapshot
@@ -92,7 +93,13 @@ const colunasEmbarques: DataTableColumn<Embarque>[] = [
     header: 'Navio',
     render: (e) => (
       <div>
-        <p className={`font-medium ${e.status === 'atrasado' ? 'text-danger' : 'text-ink'}`}>{e.navio}</p>
+        <button
+          type="button"
+          onClick={() => abrirObjeto('navio', e.id)}
+          className={`text-left font-medium underline-offset-2 hover:underline ${e.status === 'atrasado' ? 'text-danger' : 'text-ink hover:text-gold-light'}`}
+        >
+          {e.navio}
+        </button>
         <p className="text-xs text-ink-subtle">
           {origemNome(e.origemId)} → {portoNome(e.portoDestinoId)}
         </p>
@@ -378,7 +385,13 @@ export default function Cockpit() {
               const largura = Math.min(100, (e.coberturaDias / e.politicaMinimaDias) * 100)
               return (
                 <li key={e.moinhoId} className="flex items-center gap-3">
-                  <span className="w-28 shrink-0 text-xs text-ink-muted">{moinhoNome(e.moinhoId)}</span>
+                  <button
+                    type="button"
+                    onClick={() => abrirObjeto('moinho', e.moinhoId)}
+                    className="w-28 shrink-0 text-left text-xs text-ink-muted underline-offset-2 hover:text-ink hover:underline"
+                  >
+                    {moinhoNome(e.moinhoId)}
+                  </button>
                   <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-edge/50">
                     <div
                       className={`h-full rounded-full ${abaixo ? 'bg-danger' : 'bg-positive'}`}

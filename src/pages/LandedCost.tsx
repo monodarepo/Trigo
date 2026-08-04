@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { ChevronDown, Lightbulb } from 'lucide-react'
 import { Badge, Card, DataTable, SectionTitle, type DataTableColumn } from '../components/ui'
 import { TlcWaterfall } from '../components/charts/TlcWaterfall'
+import { abrirObjeto } from '../components/object/objectBus'
 import {
   snapshot,
   formatBRL,
@@ -68,10 +69,35 @@ const colunas: DataTableColumn<AlternativaCompra>[] = [
     render: (a) => (
       <div className="flex items-center gap-2">
         <div>
-          <p className="font-medium text-ink">{origemNome(a.origemId)}</p>
+          <button
+            type="button"
+            onClick={() => abrirObjeto('origem', a.origemId)}
+            className="text-left font-medium text-ink underline-offset-2 hover:text-gold-light hover:underline"
+          >
+            {origemNome(a.origemId)}
+          </button>
           <p className="text-xs text-ink-subtle">
-            {fornecedorNome(a.fornecedorId)}
-            {a.portoId ? ` · ${portoNome(a.portoId)}` : ' · rodoviário'}
+            <button
+              type="button"
+              onClick={() => abrirObjeto('fornecedor', a.fornecedorId)}
+              className="underline-offset-2 hover:text-ink hover:underline"
+            >
+              {fornecedorNome(a.fornecedorId)}
+            </button>
+            {a.portoId ? (
+              <>
+                {' · '}
+                <button
+                  type="button"
+                  onClick={() => abrirObjeto('porto', a.portoId!)}
+                  className="underline-offset-2 hover:text-ink hover:underline"
+                >
+                  {portoNome(a.portoId)}
+                </button>
+              </>
+            ) : (
+              ' · rodoviário'
+            )}
           </p>
         </div>
         {a.recomendada && <Badge kind="status" label="Recomendada" tone="gold" />}
@@ -126,7 +152,16 @@ const colunas: DataTableColumn<AlternativaCompra>[] = [
     key: 'tlc',
     header: 'TLC (R$/t)',
     align: 'right',
-    render: (a) => <span className="font-semibold text-ink">{formatBRL(a.tlcRs)}</span>,
+    render: (a) => (
+      <button
+        type="button"
+        onClick={() => abrirObjeto('lote', a.id)}
+        className="font-semibold text-ink underline-offset-2 hover:text-gold-light hover:underline"
+        title="Abrir ficha do lote"
+      >
+        {formatBRL(a.tlcRs)}
+      </button>
+    ),
   },
   {
     key: 'delta',

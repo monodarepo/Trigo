@@ -18,6 +18,7 @@ import {
   formatTon,
   type DistribuicaoMoinho,
 } from '../data'
+import { abrirObjeto } from '../components/object/objectBus'
 
 const { compra, tlc, previsao, mercado, logistica } = snapshot
 const rec = compra.recomendacao
@@ -110,9 +111,21 @@ const colunasRejeitadas: DataTableColumn<LinhaRejeitada>[] = [
     header: 'Alternativa',
     render: (r) => (
       <div>
-        <p className="font-medium text-ink">{origemNome(r.origemId)}</p>
+        <button
+          type="button"
+          onClick={() => abrirObjeto('origem', r.origemId)}
+          className="text-left font-medium text-ink underline-offset-2 hover:text-gold-light hover:underline"
+        >
+          {origemNome(r.origemId)}
+        </button>
         <p className="text-xs text-ink-subtle">
-          {fornecedorNome(r.fornecedorId)}
+          <button
+            type="button"
+            onClick={() => abrirObjeto('fornecedor', r.fornecedorId)}
+            className="underline-offset-2 hover:text-ink hover:underline"
+          >
+            {fornecedorNome(r.fornecedorId)}
+          </button>
           {r.portoId ? ` · ${portoNome(r.portoId)}` : ' · rodoviário'}
         </p>
       </div>
@@ -149,7 +162,15 @@ const colunasDistribuicao: DataTableColumn<DistribuicaoMoinho>[] = [
   {
     key: 'moinho',
     header: 'Moinho',
-    render: (d) => <span className="font-medium text-ink">{moinhoNome(d.moinhoId)}</span>,
+    render: (d) => (
+      <button
+        type="button"
+        onClick={() => abrirObjeto('moinho', d.moinhoId)}
+        className="text-left font-medium text-ink underline-offset-2 hover:text-gold-light hover:underline"
+      >
+        {moinhoNome(d.moinhoId)}
+      </button>
+    ),
   },
   { key: 'volume', header: 'Volume', align: 'right', render: (d) => formatTon(d.toneladas) },
   {
