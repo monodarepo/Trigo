@@ -42,4 +42,11 @@ Build para hospedagem estática (rotas por hash): `VITE_HASH_ROUTER=1 npm run bu
 - Design system navy + dourado em `src/theme/tokens.ts` (fonte única do tema Tailwind).
 - Contexto completo do projeto (âncoras de dados, cenário e convenções): [`CLAUDE.md`](CLAUDE.md).
 
+## Atribuições de dados (modo "Ao vivo")
+
+- **Clima**: [Open-Meteo.com](https://open-meteo.com/) — dados meteorológicos sob licença [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
+- **Câmbio**: [Frankfurter](https://frankfurter.dev/) — taxas de referência de bancos centrais (BCE).
+
+> No modo "Cenário (demo)" nenhum dado externo é consultado; a decisão (TLC, R$ 4,8M, blend, hedge) é sempre encenada e nunca depende de rede.
+
 > Confidencial — uso interno.

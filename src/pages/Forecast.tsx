@@ -4,6 +4,7 @@ import { Badge, Card, ConfidenceMeter, SectionTitle, TrendArrow } from '../compo
 import { ForecastChart } from '../components/charts/ForecastChart'
 import { SourceBadge } from '../components/trust/SourceBadge'
 import { SinaisExternos } from '../components/live/ExternalSignals'
+import { WeatherPanel } from '../components/live/WeatherPanel'
 import {
   snapshot,
   formatBRL,
@@ -274,6 +275,9 @@ export default function Forecast() {
 
         {/* 5 · Periferia ao vivo (FX/clima reais com fallback) — núcleo encenado */}
         <SinaisExternos className="lg:col-span-3" />
+
+        {/* 6 · Clima real nas regiões de trigo (anomalia → risco de safra) */}
+        <WeatherPanel className="lg:col-span-3" />
       </div>
 
       {/* 6 · Rodapé com CTAs */}

@@ -28,7 +28,7 @@ import { SourceBadge } from '../components/trust/SourceBadge'
 import { AnimatedNumber } from '../components/live/AnimatedNumber'
 import { abrirAprovacao } from '../components/approval/approvalBus'
 import { useDecisao, type ModoDecisao } from '../components/approval/decisionStore'
-import { useFrescorRelativo, useFxAoVivo } from '../live/useLiveData'
+import { useClimaRegioesAoVivo, useFrescorRelativo, useFxAoVivo } from '../live/useLiveData'
 import { FONTE_FRANKFURTER } from '../data'
 
 const { recomendacaoDoDia, kpis, tlc, compra, hedge, previsao, logistica, alertas, simulador, vro, mercado } =
@@ -62,20 +62,7 @@ const vroProjetadoHoje = vro.registros.find((r) => r.status === 'projetado')!
 // --- Painel risco de mercado ---
 const sinalSafra = mercado.sinais.find((s) => s.id === 'sinal-safra-argentina')!
 const sinalClima = mercado.sinais.find((s) => s.id === 'sinal-mar-negro')!
-const indicadoresMercado: Array<{ rotulo: string; nivel: 'baixo' | 'medio' | 'alto'; texto: string }> = [
-  {
-    rotulo: 'Preço',
-    nivel: 'alto',
-    texto: `Prob. de alta de ${formatPct(mercado.precos.probAltaTrigo15dPct)} em 15 dias · CBOT US$ ${previsao.precoTrigo.valorAtual} → US$ ${previsao.precoTrigo.horizontes.d30.valor} em 30d`,
-  },
-  { rotulo: 'Safra', nivel: 'alto', texto: sinalSafra.titulo },
-  { rotulo: 'Clima', nivel: 'medio', texto: sinalClima.titulo },
-  {
-    rotulo: 'Geopolítica',
-    nivel: 'baixo',
-    texto: 'Rotas contratadas fora do Mar Negro — exposição limitada à alternativa russa',
-  },
-]
+const ORDEM_NIVEL = { alto: 0, medio: 1, baixo: 2 } as const
 
 // --- Painel risco logístico ---
 const embarquesAtivos = logistica.embarques.filter((e) => e.status !== 'descarregado')
@@ -206,6 +193,34 @@ export default function Cockpit() {
   const fx = useFxAoVivo()
   const frescorFx = useFrescorRelativo(fx.updatedAt)
   const cambioExibido = fx.isLive ? fx.value.taxa : kpis.cambioAtual
+
+  // Semáforo de CLIMA: ao vivo reflete o clima real das ORIGENS (Open-Meteo);
+  // em Cenário/falha, o sinal encenado do Mar Negro. Nível = pior origem.
+  const regioesClima = useClimaRegioesAoVivo()
+  const origensAoVivo = regioesClima.filter((r) => r.regiao.papel === 'origem' && r.isLive)
+  const piorOrigem = [...origensAoVivo].sort((a, b) => ORDEM_NIVEL[a.risco.nivel] - ORDEM_NIVEL[b.risco.nivel])[0]
+  const linhaClima = piorOrigem
+    ? {
+        rotulo: 'Clima',
+        nivel: piorOrigem.risco.nivel,
+        texto: `Ao vivo (Open-Meteo): ${piorOrigem.regiao.rotulo} — ${piorOrigem.risco.motivo}`,
+      }
+    : { rotulo: 'Clima', nivel: 'medio' as const, texto: sinalClima.titulo }
+
+  const indicadoresMercado: Array<{ rotulo: string; nivel: 'baixo' | 'medio' | 'alto'; texto: string }> = [
+    {
+      rotulo: 'Preço',
+      nivel: 'alto',
+      texto: `Prob. de alta de ${formatPct(mercado.precos.probAltaTrigo15dPct)} em 15 dias · CBOT US$ ${previsao.precoTrigo.valorAtual} → US$ ${previsao.precoTrigo.horizontes.d30.valor} em 30d`,
+    },
+    { rotulo: 'Safra', nivel: 'alto', texto: sinalSafra.titulo },
+    linhaClima,
+    {
+      rotulo: 'Geopolítica',
+      nivel: 'baixo',
+      texto: 'Rotas contratadas fora do Mar Negro — exposição limitada à alternativa russa',
+    },
+  ]
 
   return (
     <div className="relative space-y-6">

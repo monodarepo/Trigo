@@ -3,13 +3,14 @@
  * se o modo é "Cenário" OU o fetch falhou/expirou, o valor vem do snapshot
  * encenado (isLive=false, source='cenario'). A decisão nunca depende da rede.
  */
-import { useQuery } from '@tanstack/react-query'
+import { useQueries, useQuery } from '@tanstack/react-query'
 import { useDataMode } from './dataMode'
 import { useLive } from './liveStore'
 import { fetchFxLatest, fetchFxSeries, type FxLatest, type PontoFx } from './providers/fx'
 import { fetchWeather, ZONA_NUCLEO_ROSARIO, type Clima } from './providers/weather'
 import { fetchWheatRef, type WheatRef } from './providers/wheatRef'
-import { snapshot } from '../data'
+import { avaliarRiscoClimatico, REGIOES_TRIGO, type RegiaoTrigo, type RiscoClimatico } from './wheatRegions'
+import { snapshot, type ClimaRegiaoCenario } from '../data'
 
 export interface SinalAoVivo<T> {
   value: T
@@ -94,6 +95,52 @@ export function useFrescorRelativo(updatedAt: number | null): string | null {
   if (updatedAt == null) return null
   const s = Math.max(0, Math.round((Date.now() - updatedAt) / 1000))
   return s < 90 ? `há ${s}s` : `há ${Math.round(s / 60)}min`
+}
+
+export interface ClimaRegiaoSinal {
+  regiao: RegiaoTrigo
+  /** Clima real (null quando encenado). */
+  clima: Clima | null
+  /** Fallback encenado da região (sempre presente). */
+  cenario: ClimaRegiaoCenario
+  risco: RiscoClimatico
+  isLive: boolean
+  updatedAt: number | null
+  isLoading: boolean
+}
+
+/**
+ * Clima real das 4 regiões de trigo (useQueries — uma consulta por região).
+ * Ao vivo: anomalia → risco por limiar. Cenário/falha: sinal encenado da região.
+ */
+export function useClimaRegioesAoVivo(): ClimaRegiaoSinal[] {
+  const aoVivo = useDataMode() === 'aovivo'
+  const consultas = useQueries({
+    queries: REGIOES_TRIGO.map((r) => ({
+      queryKey: ['clima', 'regiao', r.id],
+      queryFn: () => fetchWeather(r.lat, r.lon),
+      enabled: aoVivo,
+      refetchInterval: 60_000,
+      staleTime: 60_000,
+      retry: 1,
+    })),
+  })
+  return REGIOES_TRIGO.map((regiao, i) => {
+    const consulta = consultas[i]
+    const cenario = snapshot.mercado.climaRegioes.find((c) => c.regiaoId === regiao.id)!
+    const vivo = aoVivo && consulta.data != null
+    return {
+      regiao,
+      clima: vivo ? consulta.data! : null,
+      cenario,
+      risco: vivo
+        ? avaliarRiscoClimatico(regiao.papel, consulta.data!)
+        : { nivel: cenario.nivel, motivo: cenario.resumo },
+      isLive: vivo,
+      updatedAt: vivo ? consulta.dataUpdatedAt : null,
+      isLoading: aoVivo && consulta.isLoading,
+    }
+  })
 }
 
 /** Referência de trigo — /api/wheat (stub até o API-4; sempre cai no cenário). */

@@ -510,6 +510,15 @@ export interface ClimaSnapshot {
   horario: string
 }
 
+/** Clima encenado por região de trigo — fallback do painel Clima & Safra. */
+export interface ClimaRegiaoCenario {
+  regiaoId: string
+  resumo: string
+  nivel: 'baixo' | 'medio' | 'alto'
+  chuva7dMm: number
+  tMaxC: number
+}
+
 // --- Proveniência e qualidade de dados (governança) ---
 
 /** Famílias de dado com proveniência registrada no Hub. */

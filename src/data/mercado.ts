@@ -1,4 +1,4 @@
-import type { ClimaSnapshot, SinalMercado } from './types'
+import type { ClimaRegiaoCenario, ClimaSnapshot, SinalMercado } from './types'
 
 /** Preços e referências de mercado no instante da demo (terça, 12 ago · 07:00). */
 export const PRECOS_ATUAIS = {
@@ -24,6 +24,18 @@ export const CLIMA_CENARIO: ClimaSnapshot = {
   chuva7dMm: 1.2,
   horario: '2025-08-12T07:00',
 }
+
+/**
+ * Clima encenado POR REGIÃO (fallback do painel Clima & Safra) — coerente
+ * com os sinais do cenário: seca nos Pampas e no Mar Negro, colheita HRW
+ * com tempo firme, janela de descarga aberta no Pecém.
+ */
+export const CLIMA_REGIOES_CENARIO: ClimaRegiaoCenario[] = [
+  { regiaoId: 'pampas', resumo: 'Seca — inverno sem chuva na zona núcleo', nivel: 'alto', chuva7dMm: 1.2, tMaxC: 19 },
+  { regiaoId: 'planicies', resumo: 'Colheita HRW avança com tempo firme', nivel: 'baixo', chuva7dMm: 8, tMaxC: 33 },
+  { regiaoId: 'mar-negro', resumo: '3º decêndio sem chuva (Rostov/Krasnodar)', nivel: 'alto', chuva7dMm: 0.4, tMaxC: 30 },
+  { regiaoId: 'pecem', resumo: 'Janela de descarga aberta — sem chuva relevante', nivel: 'baixo', chuva7dMm: 2.5, tMaxC: 31 },
+]
 
 export const SINAIS_MERCADO: SinalMercado[] = [
   {

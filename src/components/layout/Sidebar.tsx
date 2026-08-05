@@ -82,6 +82,18 @@ export function Sidebar({ showClose = false, onClose, onNavigate }: SidebarProps
       <div className="border-t border-edge/60 px-5 py-4">
         <p className="text-xs font-medium text-ink-muted">Monoda × Google Cloud</p>
         <p className="mt-0.5 text-[11px] text-ink-subtle">Confidencial — uso interno</p>
+        <p className="mt-1 text-[10px] text-ink-faint">
+          Clima:{' '}
+          <a
+            href="https://open-meteo.com/"
+            target="_blank"
+            rel="noreferrer"
+            className="underline-offset-2 hover:text-ink-subtle hover:underline"
+          >
+            Open-Meteo.com
+          </a>{' '}
+          (CC BY 4.0)
+        </p>
       </div>
     </div>
   )

@@ -121,6 +121,26 @@ export const FONTES_LISTA: readonly FonteDado[] = Object.values(FONTES)
 export const fonteDe = (familia: FamiliaDado): FonteDado => FONTES[familia]
 
 /**
+ * Fonte do clima AO VIVO (periferia): painel Clima & Safra e sinal de
+ * clima do Cockpit quando o modo de dados é "Ao vivo".
+ */
+export const FONTE_OPEN_METEO: FonteDado = {
+  familia: 'safra',
+  rotulo: 'Clima & Safra — ao vivo',
+  fonte: 'Open-Meteo — previsão de 16 dias e histórico (dados sob licença CC BY 4.0)',
+  fonteCurta: 'Open-Meteo · CC BY 4.0',
+  metodo: 'tempo-real',
+  confiabilidade: 'alta',
+  atualizadoEm: '2025-08-12T07:00:00',
+  frescorRotulo: 'refetch a cada 60s',
+  responsavel: 'TI Dados (periferia ao vivo)',
+  validacoes: [
+    'Timeout de 6s + try/catch — qualquer falha cai no clima encenado do cenário',
+    'Anomalia → risco por limiares determinísticos (seca < 10 mm/16d; excesso > 90 mm/16d)',
+  ],
+}
+
+/**
  * Fonte do câmbio AO VIVO (periferia): quando o modo de dados é "Ao vivo",
  * o SourceBadge do câmbio troca a fonte encenada (B3) por esta.
  */
