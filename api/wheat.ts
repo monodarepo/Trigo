@@ -35,7 +35,9 @@ interface Res {
 /** Último valor bom (memória do lambda quente) — base do {stale:true}. */
 let ultimoConhecido: RespostaWheat | null = null
 
-const TIMEOUT_MS = 8000
+/* Orçado para caber no limite de 10s de função síncrona (Vercel/Netlify):
+ * pior caso (os DOIS provedores pendurados até o abort) = 2×4s = 8s < 10s. */
+const TIMEOUT_MS = 4000
 
 async function buscarJson(url: string): Promise<unknown | null> {
   const controlador = new AbortController()

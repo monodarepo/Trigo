@@ -34,7 +34,10 @@ interface HandlerResult {
 /** Último valor bom (memória do lambda quente) — base do {stale:true}. */
 let ultimoConhecido: RespostaWheat | null = null
 
-const TIMEOUT_MS = 8000
+/* Orçado para caber no limite de 10s de função síncrona do Netlify: pior caso
+ * (os DOIS provedores pendurados até o abort) = 2×4s = 8s < 10s — o caminho
+ * gracioso {stale}/null responde sempre, nunca 502 por timeout da plataforma. */
+const TIMEOUT_MS = 4000
 
 async function buscarJson(url: string): Promise<unknown | null> {
   const controlador = new AbortController()
@@ -76,9 +79,11 @@ function resposta(corpo: RespostaWheat | null): HandlerResult {
     statusCode: 200,
     headers: {
       'Content-Type': 'application/json',
-      // Cache na CDN do Netlify: 6h fresco + SWR — ~4 fetches/dia no máximo
+      // Cache SÓ na CDN do Netlify (6h fresco + SWR — ~4 fetches/dia no máximo).
+      // O navegador NÃO cacheia: um `null` (site ainda sem chave) cacheado no
+      // cliente sobreviveria ao purge de CDN do redeploy que configura a chave.
       'Netlify-CDN-Cache-Control': 'public, s-maxage=21600, stale-while-revalidate=86400',
-      'Cache-Control': 'public, max-age=3600',
+      'Cache-Control': 'public, max-age=0, must-revalidate',
     },
     body: JSON.stringify(corpo),
   }

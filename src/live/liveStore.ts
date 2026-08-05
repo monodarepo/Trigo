@@ -93,7 +93,9 @@ function estadoInicial(congelado: boolean): LiveState {
 }
 
 const prefereMenosMovimento = () =>
-  typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  typeof window !== 'undefined' &&
+  typeof window.matchMedia === 'function' &&
+  window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
 let state: LiveState = estadoInicial(prefereMenosMovimento())
 const listeners = new Set<() => void>()

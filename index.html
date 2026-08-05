@@ -4,6 +4,21 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Torre de Controle do Trigo — M. Dias Branco</title>
+    <script>
+      // Rede de segurança PRÉ-MONT: um erro fatal na avaliação dos módulos do
+      // bundle (antes de o React montar — fora do alcance do try/catch do
+      // main.tsx e do ErrorBoundary) mostra um aviso legível, nunca tela branca.
+      // Depois do mount, #root tem filhos e este handler vira no-op.
+      window.addEventListener('error', function () {
+        var raiz = document.getElementById('root')
+        if (!raiz || raiz.childElementCount > 0) return
+        raiz.innerHTML =
+          '<div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:48px 24px;text-align:center;background:#0A101F;color:#F4F7FF;font-family:system-ui,sans-serif">' +
+          '<p style="font-size:16px;font-weight:600;margin:0">A Torre de Controle não conseguiu iniciar</p>' +
+          '<p style="font-size:13px;color:#8593AC;margin:0">Recarregue a página; se persistir, avise o time Monoda.</p>' +
+          '</div>'
+      })
+    </script>
   </head>
   <body>
     <div id="root"></div>

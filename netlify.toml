@@ -6,7 +6,9 @@
   publish = "dist"
 
 [build.environment]
-  NODE_VERSION = "20"
+  # Node 22 (LTS ativa): satisfaz o engines do Vite 8 (^20.19 || >=22.12);
+  # a linha 20 saiu de suporte em abr/2026.
+  NODE_VERSION = "22"
 
 [functions]
   directory = "netlify/functions"

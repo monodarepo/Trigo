@@ -3,10 +3,11 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
 
-/* Boot à prova de tela branca: erros de render são cobertos pelo ErrorBoundary
- * raiz do App; este try/catch cobre o que acontece ANTES de o React montar
- * (#root ausente, falha na criação da raiz), com um aviso legível que não
- * depende do CSS do bundle. */
+/* Boot à prova de tela branca, em três camadas: erros de RENDER caem no
+ * ErrorBoundary raiz do App; erros na avaliação dos MÓDULOS importados acima
+ * (que rodam antes deste corpo) caem na rede de segurança inline do
+ * index.html; este try/catch cobre o meio do caminho (#root ausente, falha ao
+ * criar a raiz), com um aviso legível que não depende do CSS do bundle. */
 const raiz = document.getElementById('root')
 try {
   if (!raiz) throw new Error('elemento #root não encontrado no index.html')
