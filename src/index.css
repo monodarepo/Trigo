@@ -42,6 +42,24 @@
     @apply text-11 font-semibold uppercase tracking-[0.14em] text-ink-subtle;
   }
 
+  /* Densidade (compact = operadores · comfortable = executivos).
+     As vars alimentam Card, DataTable e KpiTile; o toggle troca o
+     data-attribute na raiz (layoutStore) — nada de re-render em cascata. */
+  :root {
+    --card-pad: 1.25rem; /* p-5 */
+    --card-pad-sm: 1rem; /* p-4 */
+    --cell-px: 1rem; /* px-4 */
+    --cell-py: 0.75rem; /* py-3 */
+    --kpi-valor: 1.5rem; /* text-2xl */
+  }
+  :root[data-densidade='compact'] {
+    --card-pad: 0.875rem;
+    --card-pad-sm: 0.625rem;
+    --cell-px: 0.75rem;
+    --cell-py: 0.4375rem;
+    --kpi-valor: 1.25rem;
+  }
+
   /* Bloco de skeleton: superfície do card + shimmer sutil (desativado em reduced-motion) */
   .skeleton {
     position: relative;

@@ -7,12 +7,14 @@ import { CommandLayer } from '../command/CommandLayer'
 import { ObjectPanelLayer } from '../object/ObjectPanel'
 import { ToastLayer } from '../feedback/Toast'
 import { PresentationMode } from '../present/PresentationMode'
+import { useMural } from './layoutStore'
 import { iniciarLive } from '../../live/liveStore'
 
 const SIDEBAR_WIDTH = 264
 
 export function AppShell() {
   const [drawerOpen, setDrawerOpen] = useState(false)
+  const mural = useMural()
 
   // Tick global da camada de tempo real simulada (um único timer para o app)
   useEffect(() => {
@@ -30,9 +32,9 @@ export function AppShell() {
 
   return (
     <div className="min-h-screen bg-navy">
-      {/* Sidebar fixa (desktop) */}
+      {/* Sidebar fixa (desktop) — some no modo mural (telão) */}
       <aside
-        className="fixed inset-y-0 left-0 z-40 hidden lg:block"
+        className={`fixed inset-y-0 left-0 z-40 ${mural ? 'hidden' : 'hidden lg:block'}`}
         style={{ width: SIDEBAR_WIDTH }}
       >
         <Sidebar />
@@ -72,7 +74,7 @@ export function AppShell() {
         )}
       </AnimatePresence>
 
-      <div className="lg:pl-[264px]">
+      <div className={mural ? '' : 'lg:pl-[264px]'}>
         <Topbar onOpenMenu={() => setDrawerOpen(true)} />
         <main className="px-4 py-6 lg:px-8 lg:py-8">
           <Outlet />

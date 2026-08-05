@@ -5,6 +5,10 @@ export default {
   content: ['./index.html', './src/**/*.{ts,tsx}'],
   theme: {
     extend: {
+      screens: {
+        /* Ultrawide / command center: o Cockpit vira grid de parede */
+        wide: '1800px',
+      },
       colors: {
         // Superfícies em camadas (v2)
         base: colors.surface.base,

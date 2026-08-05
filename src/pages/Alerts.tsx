@@ -268,7 +268,7 @@ export default function Alerts() {
       />
 
       {/* 1 · Contadores (clicáveis = filtro de severidade) */}
-      <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
         <button type="button" className="min-w-0 text-left" onClick={limparFiltros} aria-pressed={severidade === 'todas'}>
           <KpiTile label="Total de alertas" value={String(contagem.total)} hint={`${snapshot.contagemAlertas} no sino (críticos + altos)`} />
         </button>

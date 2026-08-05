@@ -299,7 +299,7 @@ export default function BuyRecommendation() {
         </div>
       </Card>
 
-      <div className="grid items-start gap-4 lg:grid-cols-2">
+      <div className="grid items-start gap-4 md:grid-cols-2">
         {/* 3 · Alternativas rejeitadas */}
         <div className="min-w-0">
           <h3 className="mb-3 font-display text-base font-semibold text-ink">Alternativas rejeitadas</h3>

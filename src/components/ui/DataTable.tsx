@@ -71,7 +71,7 @@ export function DataTable<T>({
                 aria-sort={
                   ordem?.key === column.key ? (ordem.dir === 1 ? 'ascending' : 'descending') : undefined
                 }
-                className={`px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-ink-subtle ${alignClasses[column.align ?? 'left']}`}
+                className={`px-[var(--cell-px)] py-[var(--cell-py)] text-[11px] font-semibold uppercase tracking-wide text-ink-subtle ${alignClasses[column.align ?? 'left']}`}
               >
                 {column.sortValue ? (
                   <button
@@ -108,7 +108,7 @@ export function DataTable<T>({
               {columns.map((column) => (
                 <td
                   key={column.key}
-                  className={`px-4 py-3 text-ink-muted ${alignClasses[column.align ?? 'left']}`}
+                  className={`px-[var(--cell-px)] py-[var(--cell-py)] text-ink-muted ${alignClasses[column.align ?? 'left']}`}
                 >
                   {column.render(row)}
                 </td>

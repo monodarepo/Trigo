@@ -1,11 +1,12 @@
 import { useLocation } from 'react-router-dom'
-import { ChevronDown, Menu, Play, Search } from 'lucide-react'
+import { ChevronDown, Menu, Monitor, Play, Rows3, Search } from 'lucide-react'
 import { findNavItem } from '../../data/navigation'
 import { APP_CONTEXT } from '../../data/appContext'
 import { MarketPulse } from '../live/MarketPulse'
 import { abrirCommandPalette } from '../command/CommandLayer'
 import { NotificationCenter } from '../feedback/NotificationCenter'
 import { abrirApresentacao } from '../present/presentStore'
+import { alternarDensidade, alternarMural, useDensidade, useMural } from './layoutStore'
 
 interface TopbarProps {
   onOpenMenu: () => void
@@ -37,6 +38,14 @@ function ContextSelect({ label, options }: { label: string; options: readonly st
 export function Topbar({ onOpenMenu }: TopbarProps) {
   const { pathname } = useLocation()
   const title = findNavItem(pathname)?.title ?? 'Torre de Controle do Trigo'
+  const densidade = useDensidade()
+  const mural = useMural()
+  const btnIcone = (ativo: boolean) =>
+    `h-9 w-9 shrink-0 items-center justify-center rounded-full border transition-colors ${
+      ativo
+        ? 'border-gold/50 bg-gold/15 text-gold-light'
+        : 'border-edge bg-card-2 text-ink-muted hover:text-ink'
+    }`
 
   return (
     <header className="sticky top-0 z-30 border-b border-edge/60 bg-base/85 backdrop-blur">
@@ -72,6 +81,27 @@ export function Topbar({ onOpenMenu }: TopbarProps) {
           </button>
           <ContextSelect label="Período" options={APP_CONTEXT.periodOptions} />
           <ContextSelect label="Moinho" options={APP_CONTEXT.millOptions} />
+
+          <button
+            type="button"
+            onClick={alternarDensidade}
+            aria-label="Densidade compacta"
+            aria-pressed={densidade === 'compact'}
+            title={densidade === 'compact' ? 'Densidade: compacta (operadores)' : 'Densidade: confortável (executivos)'}
+            className={`hidden xl:flex ${btnIcone(densidade === 'compact')}`}
+          >
+            <Rows3 size={15} aria-hidden="true" />
+          </button>
+          <button
+            type="button"
+            onClick={alternarMural}
+            aria-label="Modo mural (telão)"
+            aria-pressed={mural}
+            title="Modo mural: esconde a navegação e maximiza os dados (telão)"
+            className={`hidden xl:flex ${btnIcone(mural)}`}
+          >
+            <Monitor size={15} aria-hidden="true" />
+          </button>
 
           <button
             type="button"

@@ -36,13 +36,13 @@ export function EsqueletoCockpit() {
   return (
     <div className="space-y-6">
       <Cabecalho />
-      <Caixa className="h-64" />
-      <GradeKpis n={6} cols="grid-cols-2 sm:grid-cols-3 xl:grid-cols-6" />
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Caixa className="h-96" />
-        <Caixa className="h-96" />
+      <div className="space-y-6 wide:grid wide:grid-cols-3 wide:items-start wide:gap-4 wide:space-y-0">
+        <Caixa className="h-64 wide:col-span-2" />
+        <GradeKpis n={6} cols="grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 wide:grid-cols-2" />
       </div>
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-2 wide:grid-cols-4">
+        <Caixa className="h-96" />
+        <Caixa className="h-96" />
         <Caixa className="h-72" />
         <Caixa className="h-72" />
       </div>

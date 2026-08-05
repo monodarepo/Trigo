@@ -378,7 +378,7 @@ export default function Vro() {
                 </p>
               </div>
               <div className="space-y-2">
-                <div className="flex items-center justify-between gap-2 text-xs">
+                <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
                   <span className="text-ink-subtle">Drift de dados</span>
                   <Badge kind="status" label={`${formatPct(m.driftPct, 1)} — dentro do limite (5%)`} tone="positive" />
                 </div>

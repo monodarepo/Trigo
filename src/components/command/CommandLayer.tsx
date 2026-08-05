@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { BellRing, CheckCircle2, Download, Play, ShieldCheck, SlidersHorizontal } from 'lucide-react'
+import { BellRing, CheckCircle2, Download, Monitor, Play, Rows3, ShieldCheck, SlidersHorizontal } from 'lucide-react'
 import { CommandPalette, type Comando } from './CommandPalette'
 import { ShortcutsHelp } from './ShortcutsHelp'
 import { useHotkeys } from '../../hooks/useHotkeys'
@@ -9,6 +9,7 @@ import { ApprovalModal } from '../approval/ApprovalModal'
 import { aoAbrirAprovacao } from '../approval/approvalBus'
 import type { ModoDecisao } from '../approval/decisionStore'
 import { abrirApresentacao, useApresentacaoAtiva } from '../present/presentStore'
+import { alternarDensidade, alternarMural } from '../layout/layoutStore'
 import { ALL_NAV_ITEMS } from '../../data/navigation'
 import { snapshot } from '../../data'
 
@@ -77,6 +78,20 @@ export function CommandLayer() {
       icone: Play,
       atalho: 'P',
       executar: () => abrirApresentacao(),
+    },
+    {
+      id: 'acao-densidade',
+      grupo: 'Ações',
+      rotulo: 'Alternar densidade (compacta/confortável)',
+      icone: Rows3,
+      executar: () => alternarDensidade(),
+    },
+    {
+      id: 'acao-mural',
+      grupo: 'Ações',
+      rotulo: 'Modo mural (telão)',
+      icone: Monitor,
+      executar: () => alternarMural(),
     },
     {
       id: 'acao-simulador',

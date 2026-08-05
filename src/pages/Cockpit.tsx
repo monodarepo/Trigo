@@ -215,8 +215,10 @@ export default function Cockpit() {
         subtitle={`A mesma verdade para todas as áreas — ${formatDataHoraPt(snapshot.agora)}.`}
       />
 
-      {/* 1 · HERO — recomendação do dia */}
+      {/* 1+2 · HERO + KPIs — no ultrawide (≥1800px) viram uma linha do grid de parede */}
+      <div className="space-y-6 wide:grid wide:grid-cols-3 wide:items-start wide:gap-4 wide:space-y-0">
       <RecommendationCard
+        className="wide:col-span-2"
         title={rec.resumo}
         rationale={rec.compra.racional}
         fontes={
@@ -284,8 +286,8 @@ export default function Cockpit() {
         }
       />
 
-      {/* 2 · KPIs */}
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-6">
+      {/* 2 · KPIs (ultrawide: coluna 2×3 ao lado do hero) */}
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-6 wide:grid-cols-2 wide:content-start">
         <KpiTile
           label="Contratado / trimestre"
           value={formatTon(contratadoT)}
@@ -330,9 +332,10 @@ export default function Cockpit() {
           fonte={<SourceBadge familia="alertas" />}
         />
       </div>
+      </div>
 
-      {/* 3 · Painéis de risco */}
-      <div className="grid items-start gap-4 lg:grid-cols-2">
+      {/* 3+4 · Risco + listas — tablet: 2 colunas · ultrawide: 4 painéis lado a lado */}
+      <div className="grid items-start gap-4 md:grid-cols-2 wide:grid-cols-4">
         <Card>
           <div className="flex items-center justify-between gap-3">
             <h3 className="font-display text-base font-semibold text-ink">Risco de mercado</h3>
@@ -444,10 +447,8 @@ export default function Cockpit() {
             })}
           </ul>
         </Card>
-      </div>
 
-      {/* 4 · Oportunidades e exceções */}
-      <div className="grid items-start gap-4 lg:grid-cols-2">
+        {/* 4 · Oportunidades e exceções (mesmo grid de parede) */}
         <Card>
           <div className="flex items-center justify-between gap-3">
             <h3 className="font-display text-base font-semibold text-ink">Top 5 oportunidades financeiras</h3>

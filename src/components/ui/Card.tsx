@@ -13,7 +13,8 @@ const variantClasses: Record<CardVariant, string> = {
   alert: 'border-danger/30 bg-gradient-to-b from-danger/10 to-card shadow-card-rose hover:border-danger/50',
 }
 
-const paddingClasses = { md: 'p-5', sm: 'p-4', none: '' }
+/* Paddings via CSS var — respondem ao toggle de densidade (layoutStore). */
+const paddingClasses = { md: 'p-[var(--card-pad)]', sm: 'p-[var(--card-pad-sm)]', none: '' }
 
 export function Card({
   variant = 'default',

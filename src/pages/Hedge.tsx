@@ -97,7 +97,7 @@ export default function Hedge() {
         />
       </div>
 
-      <div className="grid items-start gap-4 lg:grid-cols-2">
+      <div className="grid items-start gap-4 md:grid-cols-2">
         {/* 1 · Gráfico de exposição por bucket */}
         <Card>
           <div className="flex flex-wrap items-center justify-between gap-3">
