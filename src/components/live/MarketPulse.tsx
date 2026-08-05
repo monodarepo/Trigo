@@ -3,7 +3,7 @@ import { Sparkline } from '../ui'
 import { AnimatedNumber } from './AnimatedNumber'
 import { LIVE_BASE, useLive } from '../../live/liveStore'
 import { definirDataMode, useDataMode, type DataMode } from '../../live/dataMode'
-import { useFxAoVivo, useFxSerieAoVivo } from '../../live/useLiveData'
+import { useFxAoVivo, useFxSerieAoVivo, useWheatAoVivo } from '../../live/useLiveData'
 
 /** Toggle "Ao vivo | Cenário": em Cenário, todos os useLiveData ignoram a rede. */
 function ToggleModoDados() {
@@ -108,6 +108,47 @@ function CotacaoCambio() {
   )
 }
 
+/**
+ * Trigo do pulse com ÂNCORA-E-DERIVA sobre a referência mensal (/api/wheat):
+ * a âncora é o preço mensal (FRED via Alpha Vantage) e a micro-flutuação do
+ * PRO-1 (±0,1–0,3%) oscila EM TORNO dela — é uma leitura sobre a referência,
+ * não cotação intraday (chip âmbar "ref. mensal", nunca "ao vivo").
+ * Sem referência (Cenário/falha), oscila sobre o CBOT encenado (US$ 205).
+ */
+function CotacaoTrigo() {
+  const precos = useLive((s) => s.precos)
+  const historico = useLive((s) => s.historico)
+  const wheat = useWheatAoVivo()
+
+  if (!wheat.isLive) {
+    return (
+      <Cotacao rotulo="Trigo CBOT" valor={precos.trigoUsdT} base={LIVE_BASE.trigoUsdT} casas={1} prefixo="US$" sufixo="/t" serie={historico.trigo} />
+    )
+  }
+
+  const ancora = wheat.value.precoUsdT
+  const escala = (v: number) => (v / LIVE_BASE.trigoUsdT) * ancora
+  return (
+    <span className="flex shrink-0 items-center gap-1.5">
+      <Cotacao
+        rotulo="Trigo"
+        valor={escala(precos.trigoUsdT)}
+        base={ancora}
+        casas={1}
+        prefixo="US$"
+        sufixo="/t"
+        serie={historico.trigo.map(escala)}
+      />
+      <span
+        className="rounded-full border border-warning/40 bg-warning/10 px-1.5 py-px text-[9px] font-semibold uppercase tracking-wide text-warning"
+        title="Âncora: preço global mensal (FRED via Alpha Vantage) — o pulso oscila ±0,3% sobre a referência; não é cotação intraday CBOT"
+      >
+        ref. mensal
+      </span>
+    </span>
+  )
+}
+
 /** Faixa fina de mercado ao vivo (Topbar): trigo, câmbio e frete oscilando. */
 export function MarketPulse() {
   const precos = useLive((s) => s.precos)
@@ -125,15 +166,7 @@ export function MarketPulse() {
         <span className="font-mono text-11 font-semibold tracking-[0.2em] text-positive">LIVE</span>
       </span>
 
-      <Cotacao
-        rotulo="Trigo CBOT"
-        valor={precos.trigoUsdT}
-        base={LIVE_BASE.trigoUsdT}
-        casas={1}
-        prefixo="US$"
-        sufixo="/t"
-        serie={historico.trigo}
-      />
+      <CotacaoTrigo />
       <CotacaoCambio />
       <Cotacao
         rotulo="Frete"

@@ -163,13 +163,13 @@ export function useNoticiasAoVivo(): SinalAoVivo<Noticia[]> {
   })
 }
 
-/** Referência de trigo — /api/wheat (stub até o API-4; sempre cai no cenário). */
+/** Trigo de REFERÊNCIA MENSAL — proxy /api/wheat (FRED via Alpha Vantage, cache 6h). */
 export function useWheatAoVivo(): SinalAoVivo<WheatRef> {
   return useLiveData<WheatRef>({
     chave: ['wheat', 'ref'],
     buscar: fetchWheatRef,
-    fallback: { precoUsdT: snapshot.mercado.precos.cbotUsdT, data: snapshot.agora.slice(0, 10) },
-    fonteAoVivo: 'hub',
+    fallback: { precoUsdT: snapshot.mercado.precos.cbotUsdT, data: snapshot.agora.slice(0, 10), fonte: 'cenário' },
+    fonteAoVivo: 'fred-av',
     refetchMs: SEIS_HORAS_MS,
   })
 }

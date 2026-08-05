@@ -534,7 +534,7 @@ export type FamiliaDado = 'preco' | 'cambio' | 'frete' | 'safra' | 'estoque' | '
 export type ConfiabilidadeFonte = 'alta' | 'media' | 'baixa'
 
 /** Como a família é atualizada: feed contínuo, carga diária ou por contrato/evento. */
-export type MetodoFonte = 'tempo-real' | 'diario' | 'contrato'
+export type MetodoFonte = 'tempo-real' | 'diario' | 'contrato' | 'mensal'
 
 export interface FonteDado {
   familia: FamiliaDado

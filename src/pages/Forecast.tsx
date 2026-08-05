@@ -5,6 +5,8 @@ import { ForecastChart } from '../components/charts/ForecastChart'
 import { SourceBadge } from '../components/trust/SourceBadge'
 import { SinaisExternos } from '../components/live/ExternalSignals'
 import { WeatherPanel } from '../components/live/WeatherPanel'
+import { useFrescorRelativo, useWheatAoVivo } from '../live/useLiveData'
+import { FONTE_WHEAT_REF } from '../data'
 import {
   snapshot,
   formatBRL,
@@ -81,6 +83,10 @@ export default function Forecast() {
   const [unidade, setUnidade] = useState<Unidade>('usd')
   const [horizonte, setHorizonte] = useState<Horizonte>('d90')
   const [origem, setOrigem] = useState<OrigemCurva>('cbot')
+  // Referência mensal de trigo (proxy /api/wheat) — rótulo honesto ao lado
+  // do CBOT encenado; o gráfico/projeção seguem 100% do cenário.
+  const wheatRef = useWheatAoVivo()
+  const frescorWheat = useFrescorRelativo(wheatRef.updatedAt)
 
   const serie = previsao.precoTrigo
   const origemSelecionada = origem === 'cbot' ? null : previsao.porOrigem.find((o) => o.origemId === origem)!
@@ -128,9 +134,18 @@ export default function Forecast() {
                   ? `FOB ${origemSelecionada.rotulo} = CBOT + prêmio de origem (US$ ${origemSelecionada.premioAtualUsdT} hoje → US$ ${origemSelecionada.premioD90UsdT} em 90d)`
                   : `CBOT hoje: US$ ${serie.valorAtual}/t · projeção ${formatPct(serie.variacao30dPct, 1)} em 30d`}
               </p>
-              <div className="-ml-1.5 mt-1">
+              <div className="-ml-1.5 mt-1 flex flex-wrap items-center gap-1">
                 <SourceBadge familia="preco" />
+                {wheatRef.isLive && (
+                  <SourceBadge familia="preco" fonteOverride={FONTE_WHEAT_REF} frescorOverride={frescorWheat ?? undefined} />
+                )}
               </div>
+              {wheatRef.isLive && (
+                <p className="tnums mt-1 text-11 text-ink-faint">
+                  Referência mensal: US$ {Math.round(wheatRef.value.precoUsdT)}/t ({wheatRef.value.data.slice(0, 7)})
+                  {wheatRef.value.stale ? ' · cache' : ''} — o gráfico segue o cenário encenado.
+                </p>
+              )}
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <Toggle

@@ -53,7 +53,12 @@ export function SinaisExternos({ className = '' }: { className?: string }) {
           sinal={clima}
           fonteRotulo="Open-Meteo"
         />
-        <Sinal rotulo="Trigo referência" valor={`US$ ${fmtNum(wheat.value.precoUsdT, 0)}/t`} sinal={wheat} fonteRotulo="Hub" />
+        <Sinal
+          rotulo="Trigo ref. mensal"
+          valor={`US$ ${fmtNum(wheat.value.precoUsdT, 0)}/t${wheat.isLive ? ` (${wheat.value.data.slice(0, 7)})` : ''}${wheat.value.stale ? ' · cache' : ''}`}
+          sinal={wheat}
+          fonteRotulo="FRED via Alpha Vantage"
+        />
         <span className="ml-auto text-11 italic text-ink-faint">
           Referência externa — não altera a decisão (núcleo encenado).
         </span>

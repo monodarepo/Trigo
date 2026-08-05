@@ -42,6 +42,28 @@ Build para hospedagem estática (rotas por hash): `VITE_HASH_ROUTER=1 npm run bu
 - Design system navy + dourado em `src/theme/tokens.ts` (fonte única do tema Tailwind).
 - Contexto completo do projeto (âncoras de dados, cenário e convenções): [`CLAUDE.md`](CLAUDE.md).
 
+## Preço de trigo de referência (proxy serverless)
+
+O preço de trigo "ao vivo" é a **referência mensal** (série FRED `PWHEAMTUSDM`, servida
+pela Alpha Vantage) — **não** é cotação intraday CBOT, e a UI rotula isso honestamente
+("Referência mensal · FRED via Alpha Vantage"). O pulso do topo oscila ±0,1–0,3% **sobre**
+essa âncora.
+
+- Função: [`api/wheat.ts`](api/wheat.ts) (Vercel Functions) — busca no servidor, responde
+  `{ valorUsdT, data, fonte }` com `Cache-Control: s-maxage=21600, stale-while-revalidate`
+  (respeita o limite gratuito de 25 req/dia); em erro responde 200 com `{ stale: true }` +
+  último valor conhecido; sem chave, responde `null`.
+- **Variáveis de ambiente** (Settings → Environment Variables na Vercel — nunca no cliente):
+  - `ALPHAVANTAGE_KEY` — chave da Alpha Vantage (preferida), **ou**
+  - `FRED_KEY` — chave do FRED (provedor alternativo).
+- O browser **nunca** chama Alpha Vantage/FRED diretamente — só `/api/wheat`.
+
+### Fallback puro-estático (sem serverless)
+
+Sem a função (dev local, preview single-file), o `/api/wheat` responde 404 → o cliente cai
+no **valor-semente versionado** em `src/data` (`PRECOS_ATUAIS.cbotUsdT = US$ 205/t`) e só o
+pulso oscila — o restante do app funciona exatamente igual.
+
 ## Atribuições de dados (modo "Ao vivo")
 
 - **Clima**: [Open-Meteo.com](https://open-meteo.com/) — dados meteorológicos sob licença [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).

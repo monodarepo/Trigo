@@ -12,6 +12,7 @@ const METODO_ROTULO: Record<MetodoFonte, string> = {
   'tempo-real': 'Tempo real (feed contínuo)',
   diario: 'Carga diária',
   contrato: 'Por contrato / evento',
+  mensal: 'Referência mensal (cache de 6h no proxy)',
 }
 
 /**

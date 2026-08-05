@@ -140,6 +140,27 @@ export const FONTE_OPEN_METEO: FonteDado = {
   ],
 }
 
+/**
+ * Fonte do preço de trigo de REFERÊNCIA MENSAL (proxy /api/wheat).
+ * Rótulo honesto: NÃO é cotação intraday CBOT — é a série mensal do FRED
+ * (PWHEAMTUSDM) servida pela Alpha Vantage, com chave só no servidor.
+ */
+export const FONTE_WHEAT_REF: FonteDado = {
+  familia: 'preco',
+  rotulo: 'Trigo — referência mensal (não é intraday)',
+  fonte: 'Preço global do trigo (mensal) — FRED PWHEAMTUSDM via Alpha Vantage · proxy /api/wheat (chave no servidor, cache 6h)',
+  fonteCurta: 'Referência mensal · FRED via Alpha Vantage',
+  metodo: 'mensal',
+  confiabilidade: 'alta',
+  atualizadoEm: '2025-08-12T07:00:00',
+  frescorRotulo: 'cache de 6h no proxy',
+  responsavel: 'TI Dados (periferia ao vivo)',
+  validacoes: [
+    'Chave da API só em variável de ambiente do servidor — nunca no cliente',
+    'O pulso oscila ±0,3% SOBRE a referência — rotulado como leitura, não cotação',
+  ],
+}
+
 /** Fonte do ticker de notícias AO VIVO (periferia). */
 export const FONTE_GDELT: FonteDado = {
   familia: 'alertas',

@@ -162,4 +162,4 @@ export type Snapshot = typeof snapshot
 
 export * from './types'
 export * from './format'
-export { FONTES, FONTES_LISTA, FONTE_FRANKFURTER, FONTE_OPEN_METEO, FONTE_GDELT, fonteDe } from './sources'
+export { FONTES, FONTES_LISTA, FONTE_FRANKFURTER, FONTE_OPEN_METEO, FONTE_GDELT, FONTE_WHEAT_REF, fonteDe } from './sources'
