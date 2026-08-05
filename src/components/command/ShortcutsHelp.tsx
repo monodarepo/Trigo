@@ -27,6 +27,7 @@ const GRUPOS: Array<{ titulo: string; atalhos: Array<{ teclas: string[]; descric
       { teclas: ['G', 'S'], descricao: 'Simulador de Cenários' },
       { teclas: ['G', 'A'], descricao: 'Alertas Diários' },
       { teclas: ['G', 'I'], descricao: 'Copiloto Gemini' },
+      { teclas: ['G', 'V'], descricao: 'VRO — Realização de Valor' },
     ],
   },
 ]

@@ -45,7 +45,14 @@ import {
   TLC_RECOMENDADO_RS,
   calcularTlcMock,
 } from './tlc'
-import { REGISTROS_VRO, VALOR_CAPTURADO_YTD_RS } from './vro'
+import {
+  ALAVANCAS_VRO,
+  CURVA_VRO,
+  METRICAS_VRO,
+  RECOMENDACOES_VRO,
+  REGISTROS_VRO,
+  VALOR_CAPTURADO_YTD_RS,
+} from './vro'
 
 /** KPIs do topo do Cockpit Executivo. */
 export const KPIS_COCKPIT: KpiExposicao = {
@@ -127,7 +134,14 @@ export const snapshot = {
     respostas: RESPOSTAS_MOCK,
     respostasRicas: RESPOSTAS_RICAS,
   },
-  vro: { registros: REGISTROS_VRO, valorCapturadoYtdRs: VALOR_CAPTURADO_YTD_RS },
+  vro: {
+    registros: REGISTROS_VRO,
+    valorCapturadoYtdRs: VALOR_CAPTURADO_YTD_RS,
+    recomendacoes: RECOMENDACOES_VRO,
+    metricas: METRICAS_VRO,
+    alavancas: ALAVANCAS_VRO,
+    curva: CURVA_VRO,
+  },
 }
 
 export type Snapshot = typeof snapshot

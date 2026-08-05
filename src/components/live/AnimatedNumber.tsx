@@ -5,6 +5,8 @@ export interface AnimatedNumberProps {
   /** Formata o valor exibido (ex.: casas decimais pt-BR). */
   formatar: (v: number) => string
   duracaoMs?: number
+  /** Conta a partir de 0 na montagem (KPIs de entrada). */
+  deZero?: boolean
   className?: string
 }
 
@@ -12,9 +14,9 @@ export interface AnimatedNumberProps {
  * Número que desliza do valor anterior ao novo (rAF + ease-out cúbico).
  * Com prefers-reduced-motion, salta direto para o alvo.
  */
-export function AnimatedNumber({ valor, formatar, duracaoMs = 600, className = '' }: AnimatedNumberProps) {
-  const [exibido, setExibido] = useState(valor)
-  const anterior = useRef(valor)
+export function AnimatedNumber({ valor, formatar, duracaoMs = 600, deZero = false, className = '' }: AnimatedNumberProps) {
+  const [exibido, setExibido] = useState(deZero ? 0 : valor)
+  const anterior = useRef(deZero ? 0 : valor)
 
   useEffect(() => {
     const de = anterior.current

@@ -6,6 +6,7 @@
  */
 import { FORNECEDORES, MOINHOS, getFornecedor, getMoinho, getOrigem, getPorto } from './dominio'
 import { CONTRATOS, EMBARQUES } from './logistica'
+import { RECOMENDACOES_VRO } from './vro'
 import { ESTOQUE_MOINHOS, RECOMENDACAO_COMPRA } from './compra'
 import { ALTERNATIVAS_COMPRA, TLC_BASELINE_RS, TLC_RECOMENDADO_RS } from './tlc'
 import { PRECOS_ATUAIS } from './mercado'
@@ -13,7 +14,15 @@ import { PREVISOES_ORIGEM } from './previsao'
 import { formatBRL, formatDataPt, formatPct, formatTon, formatUSD } from './format'
 import type { Embarque, OrigemId } from './types'
 
-export type TipoObjeto = 'navio' | 'contrato' | 'moinho' | 'origem' | 'porto' | 'fornecedor' | 'lote'
+export type TipoObjeto =
+  | 'navio'
+  | 'contrato'
+  | 'moinho'
+  | 'origem'
+  | 'porto'
+  | 'fornecedor'
+  | 'lote'
+  | 'recomendacao'
 
 export type TomObjeto = 'neutro' | 'positivo' | 'atencao' | 'risco' | 'info'
 
@@ -567,6 +576,97 @@ function objetoLote(id: string): ObjetoDetalhe | null {
   }
 }
 
+const TOM_DECISAO: Record<string, { rotulo: string; tom: TomObjeto }> = {
+  aprovada: { rotulo: 'Aprovada', tom: 'positivo' },
+  ajustada: { rotulo: 'Ajustada', tom: 'atencao' },
+  rejeitada: { rotulo: 'Rejeitada', tom: 'risco' },
+  pendente: { rotulo: 'Em aprovação', tom: 'info' },
+}
+
+function objetoRecomendacao(id: string): ObjetoDetalhe | null {
+  const r = RECOMENDACOES_VRO.find((x) => x.id === id)
+  if (!r) return null
+  const decisao = TOM_DECISAO[r.decisaoHumana]
+  const total = r.valorCpvRs + r.valorHedgeRs
+  return {
+    ref: { tipo: 'recomendacao', id: r.id, rotulo: r.titulo },
+    subtitulo: r.recomendacaoIA,
+    status: decisao,
+    atributos: [
+      { rotulo: 'Data', valor: formatDataPt(r.data, { comAno: true }) },
+      { rotulo: 'Alavanca', valor: r.alavanca.replace('-', ' / ') },
+      {
+        rotulo: 'Decisão humana',
+        valor: decisao.rotulo,
+        tom: decisao.tom,
+        porque: r.decisaoNota,
+      },
+      { rotulo: 'Confiança da IA', valor: formatPct(r.confiancaPct) },
+      {
+        rotulo: 'Valor no CPV',
+        valor: `${r.valorCpvRs < 0 ? '−' : ''}${formatBRL(Math.abs(r.valorCpvRs), { compacto: true })}`,
+        tom: r.valorCpvRs < 0 ? 'risco' : r.valorCpvRs > 0 ? 'positivo' : 'neutro',
+        porque: 'Δ vs baseline medido no fechamento — haircut de 15–20% aplicado',
+      },
+      ...(r.valorHedgeRs > 0
+        ? [
+            {
+              rotulo: 'Protegido por hedge',
+              valor: formatBRL(r.valorHedgeRs, { compacto: true }),
+              tom: 'positivo' as TomObjeto,
+              porque: 'Notional × (câmbio realizado − taxa travada)',
+            },
+          ]
+        : []),
+      { rotulo: 'Status', valor: r.status === 'realizado' ? 'Resultado medido' : 'Projetado' },
+    ],
+    relacionados: [],
+    timeline: [
+      { data: r.data, titulo: 'Recomendada pela IA', descricao: r.recomendacaoIA },
+      { data: r.data, titulo: `Decisão humana: ${decisao.rotulo}`, descricao: r.decisaoNota, tom: decisao.tom },
+      {
+        data: r.data,
+        titulo: r.status === 'realizado' ? 'Resultado medido' : 'Resultado projetado',
+        descricao: r.resultado,
+        tom: total > 0 ? 'positivo' : r.valorCpvRs < 0 ? 'risco' : 'neutro',
+      },
+    ],
+    grafico:
+      total !== 0
+        ? {
+            tipo: 'barras',
+            rotulo: 'Valor atribuído (R$)',
+            itens: [
+              ...(r.valorCpvRs !== 0
+                ? [
+                    {
+                      rotulo: 'CPV',
+                      valor: Math.abs(r.valorCpvRs),
+                      texto: formatBRL(r.valorCpvRs, { compacto: true }),
+                      tom: r.valorCpvRs < 0 ? ('risco' as TomObjeto) : ('positivo' as TomObjeto),
+                    },
+                  ]
+                : []),
+              ...(r.valorHedgeRs > 0
+                ? [
+                    {
+                      rotulo: 'Hedge',
+                      valor: r.valorHedgeRs,
+                      texto: formatBRL(r.valorHedgeRs, { compacto: true }),
+                      tom: 'info' as TomObjeto,
+                    },
+                  ]
+                : []),
+            ],
+          }
+        : undefined,
+    acoes: [
+      { rotulo: 'Ver metodologia no VRO', rota: '/vro' },
+      ...(r.status === 'projetado' ? [{ rotulo: 'Abrir recomendação do dia', rota: '/compra' }] : []),
+    ],
+  }
+}
+
 export function resolverObjeto(ref: Pick<RefObjeto, 'tipo' | 'id'>): ObjetoDetalhe | null {
   switch (ref.tipo) {
     case 'navio':
@@ -583,6 +683,8 @@ export function resolverObjeto(ref: Pick<RefObjeto, 'tipo' | 'id'>): ObjetoDetal
       return objetoFornecedor(ref.id)
     case 'lote':
       return objetoLote(ref.id)
+    case 'recomendacao':
+      return objetoRecomendacao(ref.id)
   }
 }
 
@@ -594,4 +696,5 @@ export const ROTULO_TIPO: Record<TipoObjeto, string> = {
   porto: 'Porto',
   fornecedor: 'Fornecedor',
   lote: 'Lote',
+  recomendacao: 'Recomendação',
 }

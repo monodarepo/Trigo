@@ -15,8 +15,8 @@ export function abrirCommandPalette() {
   window.dispatchEvent(new Event(EVENTO_PALETTE))
 }
 
-/** Letra da sequência "g + letra" por rota, na ordem das 8 telas. */
-const LETRAS_SEQUENCIA = ['c', 'p', 't', 'b', 'h', 's', 'a', 'i'] as const
+/** Letra da sequência "g + letra" por rota, na ordem das telas do menu. */
+const LETRAS_SEQUENCIA = ['c', 'p', 't', 'b', 'h', 's', 'a', 'i', 'v'] as const
 
 export function CommandLayer() {
   const navigate = useNavigate()

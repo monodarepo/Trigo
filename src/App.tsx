@@ -10,6 +10,7 @@ import Hedge from './pages/Hedge'
 import LandedCost from './pages/LandedCost'
 import Showcase from './pages/Showcase'
 import Simulator from './pages/Simulator'
+import Vro from './pages/Vro'
 
 /** Hash router para builds de preview estático (VITE_HASH_ROUTER=1). */
 const Router = import.meta.env.VITE_HASH_ROUTER === '1' ? HashRouter : BrowserRouter
@@ -28,6 +29,7 @@ export default function App() {
             <Route path="/simulador" element={<Simulator />} />
             <Route path="/alertas" element={<Alerts />} />
             <Route path="/copiloto" element={<Copilot />} />
+            <Route path="/vro" element={<Vro />} />
             {/* QA temporário dos primitivos — não listado na sidebar */}
             <Route path="/showcase" element={<Showcase />} />
             <Route path="*" element={<Navigate to="/" replace />} />

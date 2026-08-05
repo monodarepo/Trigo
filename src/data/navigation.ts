@@ -7,6 +7,7 @@ import {
   SlidersHorizontal,
   Sparkles,
   TrendingUp,
+  Trophy,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
@@ -46,6 +47,12 @@ export const NAV_SECTIONS: NavSection[] = [
     items: [
       { path: '/alertas', label: 'Alertas', title: 'Alertas Diários', icon: BellRing },
       { path: '/copiloto', label: 'Copiloto Gemini', title: 'Copiloto Gemini', icon: Sparkles },
+    ],
+  },
+  {
+    label: 'Governança',
+    items: [
+      { path: '/vro', label: 'Realização de Valor', title: 'VRO — Realização de Valor', icon: Trophy },
     ],
   },
 ]

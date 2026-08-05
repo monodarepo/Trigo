@@ -8,9 +8,11 @@ export interface KpiDelta {
   tone?: Tone
 }
 
+import type { ReactNode } from 'react'
+
 export interface KpiTileProps {
   label: string
-  value: string
+  value: ReactNode
   /** Sufixo pequeno ao lado do valor (ex.: "/t", "dias"). */
   unit?: string
   delta?: KpiDelta

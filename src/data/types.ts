@@ -435,6 +435,49 @@ export interface KpiExposicao {
   margemEbitdaPct: number
 }
 
+export type AlavancaVRO = 'mercado-compra' | 'logistica-estoques' | 'qualidade-blend' | 'integracao' | 'hedge'
+
+/** Uma recomendação do hub: o que a IA sugeriu, o que o humano decidiu, o que o resultado mediu. */
+export interface RecomendacaoVRO {
+  id: string
+  data: string
+  titulo: string
+  alavanca: AlavancaVRO
+  recomendacaoIA: string
+  decisaoHumana: 'aprovada' | 'ajustada' | 'rejeitada' | 'pendente'
+  decisaoNota?: string
+  resultado: string
+  /** Valor capturado no CPV (R$; já com haircut de 15–20%). Negativo = miss. */
+  valorCpvRs: number
+  /** Valor protegido por hedge (R$). */
+  valorHedgeRs: number
+  status: 'realizado' | 'projetado'
+  confiancaPct: number
+}
+
+export interface PontoCurvaVRO {
+  mes: string
+  acumuladoRs: number
+  metaRs: number
+  /** Presente apenas no mês corrente: acumulado + recomendação do dia. */
+  projetadoRs?: number
+}
+
+export interface MetricasVRO {
+  cpvCapturadoYtdRs: number
+  hedgeProtegidoYtdRs: number
+  ebitdaIncrementalYtdRs: number
+  ebitdaIncrementalPp: number
+  runRateAnualRs: number
+  acuraciaModeloPct: number
+  hitRatePct: number
+  driftPct: number
+  /** Erro médio mensal do modelo (%), mar→ago. */
+  erroSerie: number[]
+  /** Postura das decisões executadas por perfil (%). */
+  posturaDecisoesPct: { conservador: number; recomendado: number; oportunistico: number }
+}
+
 /** Registro de Valor Realizado/Otimizado — trilha de valor capturado pelas decisões do hub. */
 export interface RegistroVRO {
   id: string
