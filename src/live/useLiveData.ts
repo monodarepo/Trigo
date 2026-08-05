@@ -8,6 +8,7 @@ import { useDataMode } from './dataMode'
 import { useLive } from './liveStore'
 import { fetchFxLatest, fetchFxSeries, type FxLatest, type PontoFx } from './providers/fx'
 import { fetchWeather, ZONA_NUCLEO_ROSARIO, type Clima } from './providers/weather'
+import { fetchNews, filtrarRelevantes, type Noticia } from './providers/news'
 import { fetchWheatRef, type WheatRef } from './providers/wheatRef'
 import { avaliarRiscoClimatico, REGIOES_TRIGO, type RegiaoTrigo, type RiscoClimatico } from './wheatRegions'
 import { snapshot, type ClimaRegiaoCenario } from '../data'
@@ -140,6 +141,25 @@ export function useClimaRegioesAoVivo(): ClimaRegiaoSinal[] {
       updatedAt: vivo ? consulta.dataUpdatedAt : null,
       isLoading: aoVivo && consulta.isLoading,
     }
+  })
+}
+
+/**
+ * Manchetes de trigo/geopolítica (GDELT, filtradas por relevância).
+ * Fallback: manchetes encenadas do snapshot (mesma narrativa do cenário).
+ */
+export function useNoticiasAoVivo(): SinalAoVivo<Noticia[]> {
+  return useLiveData<Noticia[]>({
+    chave: ['noticias', 'gdelt'],
+    buscar: async () => {
+      const brutas = await fetchNews()
+      if (!brutas) return null
+      const relevantes = filtrarRelevantes(brutas)
+      return relevantes.length > 0 ? relevantes : null
+    },
+    fallback: snapshot.mercado.noticias.map((n) => ({ titulo: n.titulo, fonte: n.fonte, horario: n.horario })),
+    fonteAoVivo: 'gdelt',
+    refetchMs: 5 * 60_000,
   })
 }
 

@@ -28,7 +28,7 @@ import {
   RECOMENDACAO_HEDGE,
 } from './hedge'
 import { CONTRATOS, EMBARQUES, MV_RIO_PARANA } from './logistica'
-import { CLIMA_CENARIO, CLIMA_REGIOES_CENARIO, PRECOS_ATUAIS, SINAIS_MERCADO } from './mercado'
+import { CLIMA_CENARIO, CLIMA_REGIOES_CENARIO, NOTICIAS_CENARIO, PRECOS_ATUAIS, SINAIS_MERCADO } from './mercado'
 import { PREVISOES_ORIGEM, SERIE_CAMBIO, SERIE_PRECO_TRIGO } from './previsao'
 import {
   CENARIO_DEFAULT,
@@ -95,7 +95,13 @@ export const snapshot = {
     portos: PORTOS,
     moinhos: MOINHOS,
   },
-  mercado: { precos: PRECOS_ATUAIS, sinais: SINAIS_MERCADO, clima: CLIMA_CENARIO, climaRegioes: CLIMA_REGIOES_CENARIO },
+  mercado: {
+    precos: PRECOS_ATUAIS,
+    sinais: SINAIS_MERCADO,
+    clima: CLIMA_CENARIO,
+    climaRegioes: CLIMA_REGIOES_CENARIO,
+    noticias: NOTICIAS_CENARIO,
+  },
   previsao: { precoTrigo: SERIE_PRECO_TRIGO, cambio: SERIE_CAMBIO, porOrigem: PREVISOES_ORIGEM },
   tlc: {
     baselineRs: TLC_BASELINE_RS,
@@ -156,4 +162,4 @@ export type Snapshot = typeof snapshot
 
 export * from './types'
 export * from './format'
-export { FONTES, FONTES_LISTA, FONTE_FRANKFURTER, FONTE_OPEN_METEO, fonteDe } from './sources'
+export { FONTES, FONTES_LISTA, FONTE_FRANKFURTER, FONTE_OPEN_METEO, FONTE_GDELT, fonteDe } from './sources'

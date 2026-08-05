@@ -46,6 +46,7 @@ Build para hospedagem estática (rotas por hash): `VITE_HASH_ROUTER=1 npm run bu
 
 - **Clima**: [Open-Meteo.com](https://open-meteo.com/) — dados meteorológicos sob licença [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
 - **Câmbio**: [Frankfurter](https://frankfurter.dev/) — taxas de referência de bancos centrais (BCE).
+- **Notícias**: [GDELT Project](https://www.gdeltproject.org/) — DOC 2.0 API (monitoramento global de notícias, gratuito).
 
 > No modo "Cenário (demo)" nenhum dado externo é consultado; a decisão (TLC, R$ 4,8M, blend, hedge) é sempre encenada e nunca depende de rede.
 

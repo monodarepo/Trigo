@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { SendHorizontal, Sparkles } from 'lucide-react'
+import { Newspaper, SendHorizontal, Sparkles } from 'lucide-react'
 import { Badge, Card, DataTable, Pill, RecommendationCard, SectionTitle, type DataTableColumn } from '../components/ui'
+import { useNoticiasAoVivo } from '../live/useLiveData'
 import {
   snapshot,
   type PerguntaResposta,
@@ -255,6 +256,8 @@ export default function Copilot() {
         }
       />
 
+      <ContextoNoticiasAoVivo />
+
       <Card padding="none" className="flex min-h-0 flex-1 flex-col">
         {/* Histórico */}
         <div role="log" aria-live="polite" className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4 lg:p-5">
@@ -323,5 +326,28 @@ export default function Copilot() {
         </div>
       </Card>
     </div>
+  )
+}
+
+/**
+ * Contexto de notícias do agente (só quando a periferia está ao vivo):
+ * "li N manchetes nas últimas 24h" — enriquece a narrativa sem tocar
+ * nas respostas encenadas (núcleo).
+ */
+function ContextoNoticiasAoVivo() {
+  const noticias = useNoticiasAoVivo()
+  if (!noticias.isLive) return null
+  const corte = Date.now() - 24 * 60 * 60 * 1000
+  const em24h = noticias.value.filter((n) => Date.parse(n.horario) >= corte).length
+  const recente = noticias.value[0]
+  return (
+    <p className="flex items-center gap-2 rounded-card border border-info/30 bg-info/10 px-3 py-2 text-xs text-ink-muted">
+      <Newspaper size={13} className="shrink-0 text-info" aria-hidden="true" />
+      <span className="min-w-0 truncate">
+        <span className="font-semibold text-ink">Contexto ao vivo (GDELT):</span> li {em24h} manchete
+        {em24h === 1 ? '' : 's'} de trigo/geopolítica nas últimas 24h
+        {recente ? <> — mais recente: “{recente.titulo}”</> : null}
+      </span>
+    </p>
   )
 }

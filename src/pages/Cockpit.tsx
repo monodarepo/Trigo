@@ -28,7 +28,9 @@ import { SourceBadge } from '../components/trust/SourceBadge'
 import { AnimatedNumber } from '../components/live/AnimatedNumber'
 import { abrirAprovacao } from '../components/approval/approvalBus'
 import { useDecisao, type ModoDecisao } from '../components/approval/decisionStore'
-import { useClimaRegioesAoVivo, useFrescorRelativo, useFxAoVivo } from '../live/useLiveData'
+import { NewsTicker } from '../components/live/NewsTicker'
+import { useClimaRegioesAoVivo, useFrescorRelativo, useFxAoVivo, useNoticiasAoVivo } from '../live/useLiveData'
+import { avaliarRiscoGeopolitico } from '../live/providers/news'
 import { FONTE_FRANKFURTER } from '../data'
 
 const { recomendacaoDoDia, kpis, tlc, compra, hedge, previsao, logistica, alertas, simulador, vro, mercado } =
@@ -207,6 +209,22 @@ export default function Cockpit() {
       }
     : { rotulo: 'Clima', nivel: 'medio' as const, texto: sinalClima.titulo }
 
+  // Sinal de GEOPOLÍTICA: ao vivo, densidade de manchetes de risco (GDELT/24h);
+  // em Cenário/falha, a leitura encenada de rotas fora do Mar Negro.
+  const noticias = useNoticiasAoVivo()
+  const riscoGeo = noticias.isLive ? avaliarRiscoGeopolitico(noticias.value, Date.now()) : null
+  const linhaGeopolitica = riscoGeo
+    ? {
+        rotulo: 'Geopolítica',
+        nivel: riscoGeo.nivel,
+        texto: `Ao vivo (GDELT): ${riscoGeo.manchetes24h} manchete${riscoGeo.manchetes24h === 1 ? '' : 's'} de risco (Mar Negro/cotas) nas últimas 24h — ${noticias.value.length} relevantes no ticker`,
+      }
+    : {
+        rotulo: 'Geopolítica',
+        nivel: 'baixo' as const,
+        texto: 'Rotas contratadas fora do Mar Negro — exposição limitada à alternativa russa',
+      }
+
   const indicadoresMercado: Array<{ rotulo: string; nivel: 'baixo' | 'medio' | 'alto'; texto: string }> = [
     {
       rotulo: 'Preço',
@@ -215,11 +233,7 @@ export default function Cockpit() {
     },
     { rotulo: 'Safra', nivel: 'alto', texto: sinalSafra.titulo },
     linhaClima,
-    {
-      rotulo: 'Geopolítica',
-      nivel: 'baixo',
-      texto: 'Rotas contratadas fora do Mar Negro — exposição limitada à alternativa russa',
-    },
+    linhaGeopolitica,
   ]
 
   return (
@@ -542,6 +556,9 @@ export default function Cockpit() {
           </ul>
         </Card>
       </div>
+
+      {/* 4b · Ticker de notícias (GDELT ao vivo · encenado no cenário) */}
+      <NewsTicker />
 
       {/* 5 · Impacto projetado (régua de perfis) */}
       <Card>

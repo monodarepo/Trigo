@@ -510,6 +510,13 @@ export interface ClimaSnapshot {
   horario: string
 }
 
+/** Manchete encenada — fallback do ticker de notícias (GDELT). */
+export interface NoticiaCenario {
+  titulo: string
+  fonte: string
+  horario: string
+}
+
 /** Clima encenado por região de trigo — fallback do painel Clima & Safra. */
 export interface ClimaRegiaoCenario {
   regiaoId: string

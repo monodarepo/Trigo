@@ -140,6 +140,23 @@ export const FONTE_OPEN_METEO: FonteDado = {
   ],
 }
 
+/** Fonte do ticker de notícias AO VIVO (periferia). */
+export const FONTE_GDELT: FonteDado = {
+  familia: 'alertas',
+  rotulo: 'Notícias trigo & geopolítica — ao vivo',
+  fonte: 'GDELT DOC 2.0 — monitoramento global de notícias (gratuito, sem chave)',
+  fonteCurta: 'GDELT',
+  metodo: 'tempo-real',
+  confiabilidade: 'media',
+  atualizadoEm: '2025-08-12T07:00:00',
+  frescorRotulo: 'refetch a cada 5min',
+  responsavel: 'TI Dados (periferia ao vivo)',
+  validacoes: [
+    'Filtro de relevância por palavra-chave (score ≥ 2) + dedupe de títulos',
+    'Timeout de 6s; falha ou CORS → proxy /api/news → manchetes encenadas',
+  ],
+}
+
 /**
  * Fonte do câmbio AO VIVO (periferia): quando o modo de dados é "Ao vivo",
  * o SourceBadge do câmbio troca a fonte encenada (B3) por esta.

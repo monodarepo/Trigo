@@ -1,4 +1,4 @@
-import type { ClimaRegiaoCenario, ClimaSnapshot, SinalMercado } from './types'
+import type { ClimaRegiaoCenario, ClimaSnapshot, NoticiaCenario, SinalMercado } from './types'
 
 /** Preços e referências de mercado no instante da demo (terça, 12 ago · 07:00). */
 export const PRECOS_ATUAIS = {
@@ -35,6 +35,19 @@ export const CLIMA_REGIOES_CENARIO: ClimaRegiaoCenario[] = [
   { regiaoId: 'planicies', resumo: 'Colheita HRW avança com tempo firme', nivel: 'baixo', chuva7dMm: 8, tMaxC: 33 },
   { regiaoId: 'mar-negro', resumo: '3º decêndio sem chuva (Rostov/Krasnodar)', nivel: 'alto', chuva7dMm: 0.4, tMaxC: 30 },
   { regiaoId: 'pecem', resumo: 'Janela de descarga aberta — sem chuva relevante', nivel: 'baixo', chuva7dMm: 2.5, tMaxC: 31 },
+]
+
+/**
+ * Manchetes encenadas (fallback do ticker GDELT) — mesma narrativa dos
+ * sinais e alertas do cenário-âncora; nenhuma contradiz outra tela.
+ */
+export const NOTICIAS_CENARIO: NoticiaCenario[] = [
+  { titulo: 'Rússia avalia cota adicional de exportação de trigo para o 4º trimestre', fonte: 'reuters.com', horario: '2025-08-12T05:50:00' },
+  { titulo: 'Seca no Mar Negro corta projeções da safra russa em até 2 Mt', fonte: 'sovecon.ru', horario: '2025-08-11T22:40:00' },
+  { titulo: 'Bolsa de Cereales revisa safra argentina de trigo para 49,9 Mt', fonte: 'bolsadecereales.com', horario: '2025-08-12T05:15:00' },
+  { titulo: 'Frete Handysize sobe no Up River com disputa entre milho e trigo', fonte: 'agricensus.com', horario: '2025-08-11T16:30:00' },
+  { titulo: 'Colheita de HRW nos EUA avança a 84% com proteína acima da média', fonte: 'usda.gov', horario: '2025-08-11T18:00:00' },
+  { titulo: 'Importadores do Norte da África voltam ao mercado de trigo', fonte: 'worldgrain.com', horario: '2025-08-11T14:10:00' },
 ]
 
 export const SINAIS_MERCADO: SinalMercado[] = [
