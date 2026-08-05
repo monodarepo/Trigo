@@ -11,12 +11,23 @@ import type {
   CanalFarinha,
   ClienteExterno,
   FarinhaId,
+  GuardrailRuptura,
   MoinhoId,
   OportunidadeComercial,
   RegiaoComercial,
+  SemaforoRuptura,
   StatusOportunidade,
 } from './types'
-import { capacidadeOciosaFarinhaT, margemVendaExterna } from './economics'
+import { regiaoDoMoinho } from './dominio'
+import { precoExternoComparavel } from './farinha'
+import {
+  capacidadeOciosaFarinhaT,
+  custoInternoFarinha,
+  ganhoVerticalizacao,
+  margemVendaExterna,
+} from './economics'
+
+const arred1 = (v: number) => Math.round(v * 10) / 10
 
 export const CLIENTES_EXTERNOS: ClienteExterno[] = [
   {
@@ -78,6 +89,36 @@ export const CLIENTES_EXTERNOS: ClienteExterno[] = [
     volumeMensalT: 1100,
     prazoDias: 45,
     relacionamentoAnos: 5,
+  },
+  {
+    id: 'biscoitos-paulista',
+    nome: 'Biscoitos Paulista S.A.',
+    regiao: 'sudeste',
+    canal: 'industrial',
+    rating: 'A',
+    volumeMensalT: 1900,
+    prazoDias: 28,
+    relacionamentoAnos: 7,
+  },
+  {
+    id: 'panificio-cerrado',
+    nome: 'Panifício Cerrado',
+    regiao: 'centro-oeste',
+    canal: 'panificacao',
+    rating: 'B',
+    volumeMensalT: 700,
+    prazoDias: 30,
+    relacionamentoAnos: 3,
+  },
+  {
+    id: 'andina-alimentos',
+    nome: 'Andina Alimentos (Bolívia)',
+    regiao: 'exportacao',
+    canal: 'industrial',
+    rating: 'B',
+    volumeMensalT: 1500,
+    prazoDias: 60,
+    relacionamentoAnos: 1,
   },
 ]
 
@@ -158,6 +199,39 @@ const ENTRADAS: EntradaOportunidade[] = [
       'Rating C e prazo de 42 dias: o risco de crédito já está nos R$ 235/t de custo de servir, mas a política exige garantia antes de contratar.',
   },
   {
+    id: 'op-biscoitos-paulista',
+    clienteId: 'biscoitos-paulista',
+    farinhaId: 'biscoito',
+    moinhoId: 'cabedelo',
+    apresentacao: 'granel',
+    volumeT: 1300,
+    precoLiquidoRsT: 2610,
+    custoServirRsT: 245,
+    ressalva: 'Frete Nordeste → Sudeste responde por quase todo o custo de servir.',
+  },
+  {
+    id: 'op-panificio-cerrado',
+    clienteId: 'panificio-cerrado',
+    farinhaId: 'pao',
+    moinhoId: 'salvador',
+    apresentacao: 'saco-25kg',
+    volumeT: 700,
+    precoLiquidoRsT: 2690,
+    custoServirRsT: 300,
+  },
+  {
+    id: 'op-andina-exportacao',
+    clienteId: 'andina-alimentos',
+    farinhaId: 'massa',
+    moinhoId: 'rolandia',
+    apresentacao: 'big-bag',
+    volumeT: 1500,
+    precoLiquidoRsT: 2620,
+    custoServirRsT: 265,
+    ressalva:
+      'Exportação: preço em dólar já convertido, prazo de 60 dias e despacho aduaneiro dentro do custo de servir.',
+  },
+  {
     id: 'op-alimentos-sul',
     clienteId: 'alimentos-sul',
     farinhaId: 'massa',
@@ -174,7 +248,64 @@ const ENTRADAS: EntradaOportunidade[] = [
 /** Margem fina (R$/t) abaixo da qual a conta entra em "avaliar" e não em "recomendar". */
 const MARGEM_MINIMA_RS_T = 200
 
-function montarOportunidade(e: EntradaOportunidade): OportunidadeComercial {
+/**
+ * Guardrail de ruptura: separa o pedido na parcela que cabe na folga do moinho
+ * e na que só é atendida tirando farinha das fábricas.
+ *
+ * A parcela segura rende contra o CUSTO MARGINAL (fixos já absorvidos). A
+ * parcela em ruptura rende contra o CUSTO DE REPOSIÇÃO — o preço de comprar
+ * de terceiros a farinha que deixou de ir para o consumo próprio. Medir as
+ * duas com a mesma régua é o erro que faz uma venda destruidora parecer boa.
+ */
+function calcularGuardrail(
+  e: EntradaOportunidade,
+  folgaDisponivelT: number,
+): GuardrailRuptura {
+  const custo = custoInternoFarinha(e.moinhoId, e.farinhaId)
+  const externo = precoExternoComparavel(e.farinhaId, regiaoDoMoinho(e.moinhoId))
+  // Sem cotação comparável, repor sai pelo próprio custo pleno — é o melhor
+  // proxy disponível e a tela avisa que a comparação exige ajuste.
+  const custoReposicaoRsT = externo?.precoRsT ?? custo.totalRsT
+
+  const volumeSeguroT = Math.max(0, Math.min(e.volumeT, folgaDisponivelT))
+  const volumeEmRupturaT = Math.max(0, e.volumeT - volumeSeguroT)
+
+  const margemSeguraRsT = arred1(e.precoLiquidoRsT - e.custoServirRsT - custo.custoMarginalRsT)
+  const margemComReposicaoRsT = arred1(e.precoLiquidoRsT - e.custoServirRsT - custoReposicaoRsT)
+  const margemPonderadaRsT =
+    e.volumeT > 0
+      ? arred1((margemSeguraRsT * volumeSeguroT + margemComReposicaoRsT * volumeEmRupturaT) / e.volumeT)
+      : 0
+
+  const semaforo: SemaforoRuptura =
+    volumeEmRupturaT === 0
+      ? 'seguro'
+      : margemComReposicaoRsT > 0
+        ? 'atencao'
+        : 'ruptura'
+
+  const ton = (v: number) => `${Math.round(v).toLocaleString('pt-BR')} t`
+  const brl = (v: number) => `R$ ${v.toFixed(1).replace('.', ',')}`
+  const diagnostico =
+    volumeEmRupturaT === 0
+      ? `As ${ton(e.volumeT)} cabem na folga de ${ton(folgaDisponivelT)}: nenhuma tonelada sai do consumo próprio.`
+      : margemComReposicaoRsT > 0
+        ? `${ton(volumeSeguroT)} cabem na folga; ${ton(volumeEmRupturaT)} só saem do consumo interno e obrigam a repor a ${brl(custoReposicaoRsT)}/t. Essa parcela ainda rende ${brl(margemComReposicaoRsT)}/t, mas troca farinha própria por farinha de terceiros nas fábricas.`
+        : `${ton(volumeEmRupturaT)} do pedido forçariam compra emergencial a ${brl(custoReposicaoRsT)}/t, com margem de ${brl(margemComReposicaoRsT)}/t — vender essa parcela destrói valor. Reduzir o volume para ${ton(volumeSeguroT)} ou renegociar preço.`
+
+  return {
+    volumeSeguroT,
+    volumeEmRupturaT,
+    custoReposicaoRsT,
+    margemSeguraRsT,
+    margemComReposicaoRsT,
+    margemPonderadaRsT,
+    semaforo,
+    diagnostico,
+  }
+}
+
+function montarOportunidade(e: EntradaOportunidade, folgaDisponivelT: number): OportunidadeComercial {
   const cliente = getClienteExterno(e.clienteId)!
   const m = margemVendaExterna(e.farinhaId, {
     id: e.clienteId,
@@ -184,8 +315,18 @@ function montarOportunidade(e: EntradaOportunidade): OportunidadeComercial {
     custoServirRsT: e.custoServirRsT,
   })
   const capacidadeDisponivelT = capacidadeOciosaFarinhaT(e.moinhoId, e.farinhaId)
+  const guardrail = calcularGuardrail(e, folgaDisponivelT)
 
-  const cabeNaCapacidade = e.volumeT <= capacidadeDisponivelT
+  // Barra que a venda precisa superar: o ganho de usar a MESMA tonelada
+  // internamente (verticalização). Vender por menos que isso é trocar margem
+  // garantida por margem de terceiro.
+  const ganhoVert = ganhoVerticalizacao(e.moinhoId, e.farinhaId, {
+    regiao: regiaoDoMoinho(e.moinhoId),
+    volumeT: e.volumeT,
+  })
+  const ganhoUsoInternoRsT = ganhoVert.comparavel ? ganhoVert.ganhoRsT : null
+
+  const cabeNaCapacidade = guardrail.volumeEmRupturaT === 0
   const status: StatusOportunidade =
     m.margemRsT <= 0 || !cabeNaCapacidade
       ? 'recusar'
@@ -220,6 +361,9 @@ function montarOportunidade(e: EntradaOportunidade): OportunidadeComercial {
     margemTotalRs: m.margemTotalRs,
     precoMinimoRsT: m.precoMinimoRsT,
     capacidadeDisponivelT,
+    ganhoUsoInternoRsT,
+    superaUsoInterno: ganhoUsoInternoRsT != null ? m.margemRsT > ganhoUsoInternoRsT : null,
+    guardrail,
     status,
     racional: e.ressalva ? `${motivo} ${e.ressalva}` : motivo,
   }
@@ -234,8 +378,9 @@ function montarOportunidade(e: EntradaOportunidade): OportunidadeComercial {
 function montarPortfolio(entradas: EntradaOportunidade[]): OportunidadeComercial[] {
   const usadoPorMoinho = new Map<MoinhoId, number>()
   return entradas.map((e) => {
-    const op = montarOportunidade(e)
     const jaUsado = usadoPorMoinho.get(e.moinhoId) ?? 0
+    const folgaTotalT = capacidadeOciosaFarinhaT(e.moinhoId, e.farinhaId)
+    const op = montarOportunidade(e, Math.max(0, folgaTotalT - jaUsado))
     const residuoT = op.capacidadeDisponivelT - jaUsado
     if (op.status !== 'recusar' && op.volumeT > residuoT) {
       return {
@@ -277,4 +422,24 @@ export const REGIOES_COMERCIAIS: Array<{ id: RegiaoComercial; rotulo: string }> 
   { id: 'sudeste', rotulo: 'Sudeste' },
   { id: 'sul', rotulo: 'Sul' },
   { id: 'centro-oeste', rotulo: 'Centro-Oeste' },
+  { id: 'exportacao', rotulo: 'Exportação' },
 ]
+
+/** Agregado por região para o mapa: contagem, volume e margem. */
+export function resumoPorRegiao() {
+  return REGIOES_COMERCIAIS.map((r) => {
+    const daRegiao = OPORTUNIDADES_COMERCIAIS.filter((o) => o.regiao === r.id)
+    const vendaveis = daRegiao.filter((o) => o.status !== 'recusar')
+    return {
+      regiao: r.id,
+      rotulo: r.rotulo,
+      oportunidades: daRegiao.length,
+      volumeT: vendaveis.reduce((soma, o) => soma + o.volumeT, 0),
+      margemRs: vendaveis.reduce((soma, o) => soma + o.margemTotalRs, 0),
+      melhorMargemRsT: daRegiao.length
+        ? Math.max(...daRegiao.map((o) => o.margemRsT))
+        : 0,
+      temRuptura: daRegiao.some((o) => o.guardrail.volumeEmRupturaT > 0),
+    }
+  })
+}

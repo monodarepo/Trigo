@@ -695,7 +695,14 @@ export interface CustoInternoFarinha {
 // Mercado de farinha — preço externo comparável
 // ---------------------------------------------------------------------------
 
-export type RegiaoComercial = 'nordeste' | 'norte' | 'sudeste' | 'sul' | 'centro-oeste'
+export type RegiaoComercial =
+  | 'nordeste'
+  | 'norte'
+  | 'sudeste'
+  | 'sul'
+  | 'centro-oeste'
+  /** Venda ao exterior: preço em dólar, prazo longo e logística portuária. */
+  | 'exportacao'
 
 export type CanalFarinha = 'industrial' | 'panificacao' | 'distribuidor' | 'varejo'
 
@@ -786,6 +793,36 @@ export interface ClienteExterno {
 
 export type StatusOportunidade = 'recomendada' | 'avaliar' | 'recusar'
 
+/** Semáforo do guardrail: a venda cabe na folga, aperta, ou rompe o interno. */
+export type SemaforoRuptura = 'seguro' | 'atencao' | 'ruptura'
+
+/**
+ * GUARDRAIL DE RUPTURA — quanto do pedido pode ser assumido sem tirar farinha
+ * das fábricas próprias.
+ *
+ * Até a capacidade ociosa, vender é margem incremental pura. Acima dela, cada
+ * tonelada vendida sai do consumo interno e obriga a COMPRAR farinha de
+ * terceiros para repor: a margem dessa parcela deixa de ser medida contra o
+ * custo marginal e passa a ser medida contra o preço de reposição.
+ */
+export interface GuardrailRuptura {
+  /** Volume que cabe na folga do moinho, já descontado o que oportunidades de
+   * maior prioridade comprometeram (t/mês). */
+  volumeSeguroT: number
+  /** Parcela do pedido que só é atendida tirando do consumo próprio (t/mês). */
+  volumeEmRupturaT: number
+  /** Preço de repor a farinha comprando de terceiros (R$/t). */
+  custoReposicaoRsT: number
+  /** Margem da parcela segura (R$/t): contra o custo marginal. */
+  margemSeguraRsT: number
+  /** Margem da parcela em ruptura (R$/t): contra o custo de reposição. */
+  margemComReposicaoRsT: number
+  /** Margem média do pedido inteiro, ponderada pelas duas parcelas (R$/t). */
+  margemPonderadaRsT: number
+  semaforo: SemaforoRuptura
+  diagnostico: string
+}
+
 export interface OportunidadeComercial {
   id: string
   clienteId: string
@@ -809,6 +846,14 @@ export interface OportunidadeComercial {
   precoMinimoRsT: number
   /** Capacidade ociosa do moinho na janela (t/mês). */
   capacidadeDisponivelT: number
+  /** Ganho de usar a mesma tonelada internamente (R$/t) — a barra que a venda
+   * precisa superar para valer mais que a verticalização. null quando não há
+   * cotação apples-to-apples da spec na região: aí não existe barra a comparar,
+   * e fingir que ela é zero faria qualquer venda parecer vantajosa. */
+  ganhoUsoInternoRsT: number | null
+  /** A margem da venda supera o ganho de consumir internamente. null = sem base. */
+  superaUsoInterno: boolean | null
+  guardrail: GuardrailRuptura
   status: StatusOportunidade
   racional: string
 }

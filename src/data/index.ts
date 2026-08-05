@@ -250,6 +250,13 @@ export {
   regiaoDoMoinho,
 } from './dominio'
 export { DEMANDA_FARINHA, CALENDARIO_DEMANDA } from './demanda'
-export { CLIENTES_EXTERNOS, OPORTUNIDADES_COMERCIAIS, getClienteExterno } from './comercial'
+export {
+  CANAIS_FARINHA,
+  CLIENTES_EXTERNOS,
+  OPORTUNIDADES_COMERCIAIS,
+  REGIOES_COMERCIAIS,
+  getClienteExterno,
+  resumoPorRegiao,
+} from './comercial'
 export { CENARIOS_MAKE_BUY_SELL, CENARIO_MBS_ANCORA, KPIS_FARINHA } from './makeBuySell'
 export { FONTES, FONTES_LISTA, FONTE_FRANKFURTER, FONTE_OPEN_METEO, FONTE_GDELT, FONTE_WHEAT_REF, fonteDe } from './sources'

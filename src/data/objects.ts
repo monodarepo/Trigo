@@ -12,6 +12,9 @@ import { ALTERNATIVAS_COMPRA, TLC_BASELINE_RS, TLC_RECOMENDADO_RS } from './tlc'
 import { PRECOS_ATUAIS } from './mercado'
 import { PREVISOES_ORIGEM } from './previsao'
 import { formatBRL, formatDataPt, formatPct, formatTon, formatUSD } from './format'
+import { OPORTUNIDADES_COMERCIAIS, getClienteExterno } from './comercial'
+import { getFarinha } from './farinha'
+import { custoInternoFarinha } from './economics'
 import type { Embarque, OrigemId } from './types'
 
 export type TipoObjeto =
@@ -23,6 +26,7 @@ export type TipoObjeto =
   | 'fornecedor'
   | 'lote'
   | 'recomendacao'
+  | 'oportunidade'
 
 export type TomObjeto = 'neutro' | 'positivo' | 'atencao' | 'risco' | 'info'
 
@@ -667,6 +671,155 @@ function objetoRecomendacao(id: string): ObjetoDetalhe | null {
   }
 }
 
+
+const ROTULO_CANAL: Record<string, string> = {
+  industrial: 'Industrial',
+  panificacao: 'Panificação',
+  distribuidor: 'Distribuidor',
+  varejo: 'Varejo',
+}
+
+const ROTULO_APRESENTACAO: Record<string, string> = {
+  granel: 'Granel',
+  'big-bag': 'Big-bag',
+  'saco-25kg': 'Saco 25 kg',
+  'saco-1kg': 'Saco 1 kg',
+}
+
+/**
+ * Detalhe de uma oportunidade comercial: spec ofertada, condição comercial,
+ * logística e a margem líquida DECOMPOSTA — preço menos custo interno menos
+ * custo de servir, com o guardrail de ruptura ao lado.
+ */
+function objetoOportunidade(id: string): ObjetoDetalhe | null {
+  const op = OPORTUNIDADES_COMERCIAIS.find((o) => o.id === id)
+  if (!op) return null
+  const cliente = getClienteExterno(op.clienteId)!
+  const farinha = getFarinha(op.farinhaId)!
+  const moinho = getMoinho(op.moinhoId)!
+  const custo = custoInternoFarinha(op.moinhoId, op.farinhaId)
+  const g = op.guardrail
+
+  const tomStatus: TomObjeto =
+    op.status === 'recomendada' ? 'positivo' : op.status === 'avaliar' ? 'atencao' : 'risco'
+  const tomSemaforo: TomObjeto =
+    g.semaforo === 'seguro' ? 'positivo' : g.semaforo === 'atencao' ? 'atencao' : 'risco'
+  const rsT = (v: number) => `${formatBRL(v, { casas: 1 })}/t`
+
+  return {
+    ref: { tipo: 'oportunidade', id: op.id, rotulo: cliente.nome },
+    subtitulo: `${farinha.nome} · ${ROTULO_CANAL[op.canal] ?? op.canal} · ${formatTon(op.volumeT)}/mês`,
+    status: {
+      rotulo:
+        op.status === 'recomendada' ? 'Recomendada' : op.status === 'avaliar' ? 'Avaliar' : 'Recusar',
+      tom: tomStatus,
+    },
+    atributos: [
+      { rotulo: 'Cliente', valor: `${cliente.nome} · rating ${cliente.rating}` },
+      { rotulo: 'Região', valor: op.regiao === 'exportacao' ? 'Exportação' : op.regiao },
+      {
+        rotulo: 'Spec ofertada',
+        valor: `proteína ${formatPct(farinha.proteina, 1)} · W ${farinha.gluten} · cinzas ${formatPct(farinha.cinzas, 2)}`,
+        porque: `Blend de referência: ${farinha.blendReferencia}.`,
+      },
+      {
+        rotulo: 'Apresentação',
+        valor: ROTULO_APRESENTACAO[op.apresentacao] ?? op.apresentacao,
+      },
+      {
+        rotulo: 'Logística',
+        valor:
+          op.apresentacao === 'granel'
+            ? `FOB moinho ${moinho.nome}`
+            : `Entregue ao cliente (CIF) · saída de ${moinho.nome}`,
+        porque: 'A base logística define o que está dentro do preço e o que vira custo de servir.',
+      },
+      {
+        rotulo: 'Condição comercial',
+        valor: `${cliente.prazoDias} dias · relacionamento de ${cliente.relacionamentoAnos} ano(s)`,
+      },
+      { rotulo: 'Preço líquido', valor: rsT(op.precoLiquidoRsT) },
+      {
+        rotulo: '(−) Custo interno',
+        valor: rsT(op.custoInternoRsT),
+        porque: `Trigo a ${rsT(custo.tlcTrigoRsT)} posto em ${moinho.nome}, rendimento de ${formatPct(custo.rendimentoPct, 1)}.`,
+      },
+      {
+        rotulo: '(−) Custo de servir',
+        valor: rsT(op.custoServirRsT),
+        porque: 'Frete até o cliente, comissão, embalagem e risco de crédito.',
+      },
+      {
+        rotulo: '= Margem líquida',
+        valor: rsT(op.margemRsT),
+        tom: op.margemRsT > 0 ? 'positivo' : 'risco',
+      },
+      {
+        rotulo: 'Preço mínimo',
+        valor: rsT(op.precoMinimoRsT),
+        porque: 'Abaixo disso a venda não cobre custo interno mais custo de servir.',
+      },
+      {
+        rotulo: 'Ganho de uso interno',
+        valor: op.ganhoUsoInternoRsT != null ? rsT(op.ganhoUsoInternoRsT) : 'sem base comparável',
+        tom: op.superaUsoInterno === true ? 'positivo' : op.superaUsoInterno === false ? 'atencao' : 'neutro',
+        porque:
+          op.ganhoUsoInternoRsT != null
+            ? 'A barra que a venda precisa superar: o que a mesma tonelada renderia consumida nas fábricas.'
+            : 'Não há cotação apples-to-apples desta spec na região do moinho, então não existe barra a comparar.',
+      },
+      {
+        rotulo: 'Guardrail de ruptura',
+        valor:
+          g.volumeEmRupturaT === 0
+            ? `${formatTon(g.volumeSeguroT)} sem ruptura`
+            : `${formatTon(g.volumeEmRupturaT)} em ruptura`,
+        tom: tomSemaforo,
+        porque: g.diagnostico,
+      },
+    ],
+    relacionados: [
+      { grupo: 'Produção', refs: [refMoinho(op.moinhoId)] },
+    ],
+    timeline: [
+      {
+        data: HOJE,
+        titulo: 'Oportunidade avaliada pelo hub',
+        descricao: op.racional,
+        tom: tomStatus,
+      },
+    ],
+    grafico: {
+      tipo: 'barras',
+      rotulo: 'Composição do preço líquido (R$/t)',
+      itens: [
+        {
+          rotulo: 'Custo interno',
+          valor: op.custoInternoRsT,
+          texto: rsT(op.custoInternoRsT),
+          tom: 'neutro',
+        },
+        {
+          rotulo: 'Custo de servir',
+          valor: op.custoServirRsT,
+          texto: rsT(op.custoServirRsT),
+          tom: 'info',
+        },
+        {
+          rotulo: 'Margem',
+          valor: Math.max(0, op.margemRsT),
+          texto: rsT(op.margemRsT),
+          tom: op.margemRsT > 0 ? 'positivo' : 'risco',
+        },
+      ],
+    },
+    acoes: [
+      { rotulo: 'Simular no Make/Buy/Sell', rota: '/make-buy-sell' },
+      { rotulo: 'Ver performance do moinho', rota: '/moinhos' },
+    ],
+  }
+}
+
 export function resolverObjeto(ref: Pick<RefObjeto, 'tipo' | 'id'>): ObjetoDetalhe | null {
   switch (ref.tipo) {
     case 'navio':
@@ -685,6 +838,8 @@ export function resolverObjeto(ref: Pick<RefObjeto, 'tipo' | 'id'>): ObjetoDetal
       return objetoLote(ref.id)
     case 'recomendacao':
       return objetoRecomendacao(ref.id)
+    case 'oportunidade':
+      return objetoOportunidade(ref.id)
   }
 }
 
@@ -697,4 +852,5 @@ export const ROTULO_TIPO: Record<TipoObjeto, string> = {
   fornecedor: 'Fornecedor',
   lote: 'Lote',
   recomendacao: 'Recomendação',
+  oportunidade: 'Oportunidade',
 }

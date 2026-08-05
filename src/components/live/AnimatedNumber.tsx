@@ -29,7 +29,10 @@ export function AnimatedNumber({ valor, formatar, duracaoMs = 600, deZero = fals
     let raf = 0
     const inicio = performance.now()
     const passo = (agora: number) => {
-      const p = Math.min(1, (agora - inicio) / duracaoMs)
+      // Piso além do teto: sem o Math.max, um relógio que ande para trás
+      // (tempo virtual, aba suspensa) faz p<0, o ease-out fica negativo e o
+      // número atravessa o zero — um câmbio de R$ −1,57 no ticker.
+      const p = Math.max(0, Math.min(1, (agora - inicio) / duracaoMs))
       const easeOut = 1 - Math.pow(1 - p, 3)
       setExibido(de + (valor - de) * easeOut)
       if (p < 1) raf = requestAnimationFrame(passo)
