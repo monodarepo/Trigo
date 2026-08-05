@@ -3,6 +3,7 @@ import { BrowserRouter, HashRouter, Navigate, Route, Routes } from 'react-router
 import { MotionConfig } from 'framer-motion'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AppShell } from './components/layout/AppShell'
+import { ErrorBoundary } from './components/feedback/ErrorBoundary'
 import { TelaComEstado } from './components/feedback/TelaComEstado'
 import {
   EsqueletoAlertas,
@@ -55,6 +56,7 @@ const TELAS: Array<{ path: string; titulo: string; Tela: ComponentType; esquelet
 
 export default function App() {
   return (
+    <ErrorBoundary rotulo="A Torre de Controle">
     <QueryClientProvider client={queryClient}>
     <MotionConfig reducedMotion="user">
       <Router>
@@ -81,5 +83,6 @@ export default function App() {
       </Router>
     </MotionConfig>
     </QueryClientProvider>
+    </ErrorBoundary>
   )
 }

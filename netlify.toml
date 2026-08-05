@@ -1,0 +1,26 @@
+# Deploy do Netlify — a config viaja com o código (não depende do painel).
+# Produção: branch feat/mockup-torre-trigo → torredecontroletrigo.netlify.app
+
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+[functions]
+  directory = "netlify/functions"
+
+# Proxy /api/* → Netlify Functions (chave Alpha Vantage/FRED só no servidor).
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/:splat"
+  status = 200
+
+# Regra SPA por ÚLTIMO: deep links do React Router (/tlc, /compra…) recarregados
+# caem no index.html. Não captura /api (redirect acima vence) nem /assets
+# (arquivo existente no publish vence redirects sem force).
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
