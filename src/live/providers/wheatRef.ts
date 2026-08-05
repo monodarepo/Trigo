@@ -25,7 +25,7 @@ interface RespostaProxy {
 }
 
 export async function fetchWheatRef(): Promise<WheatRef | null> {
-  const json = (await fetchJson('/api/wheat')) as RespostaProxy | null
+  const json = (await fetchJson('/api/wheat', 'trigo')) as RespostaProxy | null
   if (typeof json?.valorUsdT !== 'number' || !json.data) return null
   return {
     precoUsdT: json.valorUsdT,

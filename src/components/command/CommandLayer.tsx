@@ -22,7 +22,7 @@ export function abrirCommandPalette() {
 }
 
 /** Letra da sequência "g + letra" por rota, na ordem das telas do menu. */
-const LETRAS_SEQUENCIA = ['c', 'p', 't', 'b', 'h', 's', 'a', 'i', 'v'] as const
+const LETRAS_SEQUENCIA = ['c', 'p', 't', 'b', 'h', 's', 'a', 'i', 'l', 'v'] as const
 
 export function CommandLayer() {
   const navigate = useNavigate()

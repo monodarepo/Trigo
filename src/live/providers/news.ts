@@ -52,9 +52,9 @@ function parseArtigos(json: unknown): Noticia[] | null {
 
 export async function fetchNews(): Promise<Noticia[] | null> {
   // 1º: direto no GDELT (CORS aberto); 2º: proxy serverless /api/news
-  const direto = parseArtigos(await fetchJson(URL_GDELT))
+  const direto = parseArtigos(await fetchJson(URL_GDELT, 'noticias'))
   if (direto) return direto
-  return parseArtigos(await fetchJson('/api/news'))
+  return parseArtigos(await fetchJson('/api/news', 'noticias'))
 }
 
 const normaliza = (s: string) =>

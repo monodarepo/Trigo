@@ -55,7 +55,7 @@ export async function fetchWeather(lat: number, lon: number): Promise<Clima | nu
     '&current=temperature_2m,precipitation,weather_code' +
     '&daily=precipitation_sum,temperature_2m_max,temperature_2m_min' +
     '&past_days=7&forecast_days=16&timezone=auto'
-  const json = (await fetchJson(url)) as RespostaForecast | null
+  const json = (await fetchJson(url, 'clima')) as RespostaForecast | null
   const atual = json?.current
   if (typeof atual?.temperature_2m !== 'number') return null
 
@@ -95,7 +95,7 @@ export async function fetchWeatherHistorico(lat: number, lon: number, dias: numb
     `?latitude=${lat}&longitude=${lon}` +
     `&start_date=${fmt(inicio)}&end_date=${fmt(fim)}` +
     '&daily=precipitation_sum&timezone=auto'
-  const json = (await fetchJson(url)) as RespostaArchive | null
+  const json = (await fetchJson(url, 'clima')) as RespostaArchive | null
   const datas = json?.daily?.time
   const somas = json?.daily?.precipitation_sum
   if (!datas || !somas || datas.length === 0) return null

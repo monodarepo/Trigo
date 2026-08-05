@@ -31,7 +31,7 @@ interface RespostaSerie {
 }
 
 export async function fetchFxLatest(): Promise<FxLatest | null> {
-  const json = (await fetchJson(`${BASE_URL}/latest?base=USD&symbols=BRL`)) as RespostaLatest | null
+  const json = (await fetchJson(`${BASE_URL}/latest?base=USD&symbols=BRL`, 'cambio')) as RespostaLatest | null
   const taxa = json?.rates?.BRL
   if (typeof taxa !== 'number' || !json?.date) return null
   return { taxa, data: json.date }
@@ -43,6 +43,7 @@ export async function fetchFxSeries(dias: number): Promise<PontoFx[] | null> {
   const fmt = (d: Date) => d.toISOString().slice(0, 10)
   const json = (await fetchJson(
     `${BASE_URL}/${fmt(inicio)}..${fmt(fim)}?base=USD&symbols=BRL`,
+    'cambio',
   )) as RespostaSerie | null
   if (!json?.rates) return null
   const pontos = Object.entries(json.rates)

@@ -12,6 +12,7 @@ import {
   EsqueletoHedge,
   EsqueletoPrevisao,
   EsqueletoSimulador,
+  EsqueletoSinais,
   EsqueletoTlc,
   EsqueletoVro,
 } from './components/feedback/skeletons'
@@ -23,6 +24,7 @@ import ExportOnePager from './pages/ExportOnePager'
 import Forecast from './pages/Forecast'
 import Hedge from './pages/Hedge'
 import LandedCost from './pages/LandedCost'
+import LiveSignals from './pages/LiveSignals'
 import Showcase from './pages/Showcase'
 import Simulator from './pages/Simulator'
 import Vro from './pages/Vro'
@@ -47,6 +49,7 @@ const TELAS: Array<{ path: string; titulo: string; Tela: ComponentType; esquelet
   { path: '/simulador', titulo: 'o Simulador de Cenários', Tela: Simulator, esqueleto: <EsqueletoSimulador /> },
   { path: '/alertas', titulo: 'os Alertas Diários', Tela: Alerts, esqueleto: <EsqueletoAlertas /> },
   { path: '/copiloto', titulo: 'o Copiloto Gemini', Tela: Copilot, esqueleto: <EsqueletoCopiloto /> },
+  { path: '/sinais', titulo: 'os Sinais ao Vivo', Tela: LiveSignals, esqueleto: <EsqueletoSinais /> },
   { path: '/vro', titulo: 'a Realização de Valor', Tela: Vro, esqueleto: <EsqueletoVro /> },
 ]
 

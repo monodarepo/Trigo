@@ -2,6 +2,7 @@ import {
   BellRing,
   Layers,
   LayoutDashboard,
+  RadioTower,
   ShieldCheck,
   ShoppingCart,
   SlidersHorizontal,
@@ -47,6 +48,7 @@ export const NAV_SECTIONS: NavSection[] = [
     items: [
       { path: '/alertas', label: 'Alertas', title: 'Alertas Diários', icon: BellRing },
       { path: '/copiloto', label: 'Copiloto Gemini', title: 'Copiloto Gemini', icon: Sparkles },
+      { path: '/sinais', label: 'Sinais ao Vivo', title: 'Sinais ao Vivo — Observabilidade', icon: RadioTower },
     ],
   },
   {

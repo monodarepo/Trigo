@@ -166,3 +166,17 @@ export function EsqueletoVro() {
     </div>
   )
 }
+
+export function EsqueletoSinais() {
+  return (
+    <div className="space-y-6">
+      <Cabecalho />
+      <Caixa className="h-24" />
+      <GradeKpis n={4} altura="h-72" cols="grid-cols-1 md:grid-cols-2" />
+      <div className="grid gap-4 lg:grid-cols-3">
+        <Caixa className="h-72 lg:col-span-2" />
+        <Caixa className="h-72" />
+      </div>
+    </div>
+  )
+}
