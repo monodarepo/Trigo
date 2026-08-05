@@ -17,7 +17,6 @@ import {
   ganhoVerticalizacao,
 } from './economics'
 import { precoExternoComparavel } from './farinha'
-import { MARGEM_OPORTUNIDADES_RECOMENDADAS_RS } from './comercial'
 import { TLC_RECOMENDADO_RS } from './tlc'
 
 interface EntradaCenario {
@@ -97,13 +96,16 @@ const ENTRADAS: EntradaCenario[] = [
   },
 ]
 
-function montarCenario(e: EntradaCenario): CenarioMakeBuySell {
+/**
+ * Monta o cenário, ou devolve null quando falta cotação apples-to-apples —
+ * um Make/Buy/Sell não pode ser decidido sobre preço não comparável. Devolver
+ * null (e não lançar) é deliberado: um throw aqui roda na AVALIAÇÃO DO MÓDULO,
+ * antes de o React montar, e derrubaria o app inteiro por causa de uma fixture
+ * de preço faltando.
+ */
+function montarCenario(e: EntradaCenario): CenarioMakeBuySell | null {
   const externo = precoExternoComparavel(e.farinhaId, e.regiao)
-  if (!externo) {
-    throw new Error(
-      `Sem cotação apples-to-apples de ${e.farinhaId} em ${e.regiao}: um cenário Make/Buy/Sell não pode ser montado sobre preço não comparável.`,
-    )
-  }
+  if (!externo) return null
   return decisaoMakeBuySell({
     moinhoId: e.moinhoId,
     farinhaId: e.farinhaId,
@@ -117,15 +119,27 @@ function montarCenario(e: EntradaCenario): CenarioMakeBuySell {
   })
 }
 
-export const CENARIOS_MAKE_BUY_SELL: CenarioMakeBuySell[] = ENTRADAS.map(montarCenario)
+export const CENARIOS_MAKE_BUY_SELL: CenarioMakeBuySell[] = ENTRADAS.map(montarCenario).filter(
+  (c): c is CenarioMakeBuySell => c !== null,
+)
 
 /** O cenário-âncora da demo: Fortaleza × farinha de massas. */
 export const CENARIO_MBS_ANCORA = CENARIOS_MAKE_BUY_SELL[0]
 
-/** Benefício mensal das decisões recomendadas (R$) — verticalização + venda. */
-export const BENEFICIO_MAKE_BUY_SELL_RS =
-  CENARIOS_MAKE_BUY_SELL.reduce((soma, c) => soma + c.resultadoRs, 0) +
-  MARGEM_OPORTUNIDADES_RECOMENDADAS_RS
+/**
+ * Benefício mensal das decisões Make/Buy/Sell (R$): soma o VALOR DA DECISÃO de
+ * cada cenário — quanto a recomendada rende a mais que a segunda melhor.
+ * Usar `resultadoRs` zeraria os cenários em que 'comprar' vence (a referência
+ * vale 0 por definição), justamente onde o hub evita a maior perda.
+ *
+ * As oportunidades comerciais NÃO entram aqui: a venda externa dos cenários já
+ * é contabilizada em `recomendadaCapacidadeOciosa`, e somar as duas contaria a
+ * mesma tonelada duas vezes. A margem comercial vive em comercial.ts.
+ */
+export const BENEFICIO_MAKE_BUY_SELL_RS = CENARIOS_MAKE_BUY_SELL.reduce(
+  (soma, c) => soma + c.beneficioVsAlternativaRs,
+  0,
+)
 
 // ---------------------------------------------------------------------------
 // Os 10 KPIs executivos do elo farinha
@@ -155,9 +169,12 @@ export const KPIS_FARINHA: KpiFarinha = {
   precoExternoEquivalenteRsT: ganhoAncora.precoExternoRsT,
   ganhoVerticalizacaoRsT: ganhoAncora.ganhoRsT,
   margemVendaExternaRsT:
-    CENARIO_MBS_ANCORA.precoVendaLiquidoRsT -
-    CENARIO_MBS_ANCORA.custoInternoRsT -
-    CENARIO_MBS_ANCORA.custoServirRsT,
+    Math.round(
+      (CENARIO_MBS_ANCORA.precoVendaLiquidoRsT -
+        CENARIO_MBS_ANCORA.custoInternoRsT -
+        CENARIO_MBS_ANCORA.custoServirRsT) *
+        10,
+    ) / 10,
   rendimentoPct: custoAncora.rendimentoPct,
   creditoFareloRsT: Math.abs(
     custoAncora.componentes.find((c) => c.tipo === 'credito')!.valorRs,

@@ -13,18 +13,25 @@ Mockup navegável (protótipo de venda, sem backend) da **Wheat & Flour Value To
 ## Modelo econômico
 **EM DESTAQUE — números canônicos do produto:** custo interno da farinha = **R$ 2.100/t** · rendimento de moagem ≈ **76%** · farelo/subprodutos ≈ **24%**. Toda tela, card, gráfico e narrativa parte destes valores; não recalcule por conta própria nem invente variantes.
 
-Parâmetros: rendimento de moagem 76% (farinha) · farelo/subprodutos 24% · preço do farelo R$ 682/t · custo de servir (venda externa) R$ 120/t · trigo posto no moinho (TLC do cenário-âncora, moinho Fortaleza) R$ 1.480/t.
+Parâmetros: rendimento de moagem 76% (farinha) · farelo/subprodutos 24% · preço do farelo R$ 682/t · custo de servir (venda externa) R$ 120/t.
+
+**DOIS TLCs, não confundir.** `R$ 1.480/t` é o TLC do **lote recomendado** (Argentina · Pecém), que desembarca em **Eusébio** — é o número do cenário-âncora e da tela de Compra. `R$ 1.473,4/t` é o TLC de **regime do moinho Fortaleza** (Argentina · Mucuripe, seu porto preferencial) — é o que entra no custo da farinha de Fortaleza. Ambos saem do mesmo motor (`calcularTlcMock`); cada moinho tem porto e frete interno próprios, então atribuir o TLC de um moinho a outro é erro.
 
 ### Composição do custo interno da farinha (R$ por tonelada de FARINHA)
+Par-âncora: **moinho Fortaleza × farinha de massas**.
+
 | Componente | R$/t farinha |
 | --- | ---: |
-| Trigo posto no moinho (R$ 1.480/t ÷ 0,76) | 1.947,4 |
-| Custo de conversão (moagem, mão de obra, embalagem) | 180,0 |
-| Energia e manutenção | 98,0 |
-| Perdas e custo financeiro do estoque em processo | 42,0 |
+| Trigo posto no moinho (R$ 1.473,4/t ÷ 0,76) | 1.938,7 |
+| Custo de conversão (moagem, mão de obra, embalagem) | 184,0 |
+| Energia e manutenção | 100,7 |
+| Perdas e custo financeiro do estoque em processo | 44,0 |
 | Depreciação | 48,0 |
 | (−) Crédito do farelo (0,3158 t × R$ 682/t) | −215,4 |
-| **= CUSTO INTERNO DA FARINHA** | **2.100,0** |
+| **= CUSTO INTERNO DA FARINHA (pleno absorvido)** | **2.100,0** |
+| Custo **evitável** (= pleno − depreciação) | 2.052,0 |
+
+**Custo pleno vs. custo evitável.** O pleno (R$ 2.100/t) é a visão de P&L e a base dos KPIs. Mas a decisão **Make/Buy** se faz no **evitável** (R$ 2.052/t): a depreciação é afundada e não desaparece ao comprar farinha de terceiros, então deixá-la pesar contra "produzir" fecha moinho por um custo que continua saindo. Quando as duas bases divergem em sinal, o motor emite alerta explícito no racional.
 
 ### Fórmula 1 — custo interno da farinha (R$/t farinha)
 ```
@@ -44,6 +51,17 @@ margem = preçoLíquidoVenda − custoInterno − custoDeServir = 2.500 − 2.10
 ```
 
 **ÂNCORAS:** custo interno canônico R$ 2.100/t · preço equivalente externo R$ 2.350/t → ganho R$ 250/t · venda líquida R$ 2.500/t → margem ~R$ 280/t · rendimento ~76% · farelo/subprodutos ~24%.
+
+### As 5 alternativas, em DUAS decisões
+O motor (`src/data/economics.ts` → `decisaoMakeBuySell`) não escolhe entre cinco opções num ranking só. São **duas decisões sobre tonelagens diferentes**, e misturá-las é o erro que faz "vender" (margem maior por tonelada) parecer melhor que "produzir" sem notar que a demanda das fábricas ficaria descoberta:
+
+1. **Demanda das fábricas** → `produzir e consumir` · `comprar de terceiros` · `produzir e estocar` · `parar a moagem`.
+2. **Capacidade ociosa** → `produzir e vender` · deixar parada.
+
+Todos os resultados são medidos em R$/t contra a MESMA referência — comprar farinha no mercado, que vale 0 por definição —, então são comparáveis entre si. `comprar` e `parar a moagem` são estados distintos: em `comprar` a capacidade é redirecionada para outra spec; em `parar`, não é, e os fixos viram perda. O **valor da decisão** é sempre a recomendada menos a segunda melhor — é assim que "comprar" mostra o quanto de perda evitou, em vez de aparecer como zero.
+
+### Capacidade e demanda (precisam fechar)
+Capacidade instalada: **100.300 t de trigo/mês** (1.203 kt/ano). Demanda consolidada das 4 famílias: **84.051 t/mês** (~1,008 Mt/ano) ⇒ ocupação de **83,8%**, deixando folga real para venda externa. Consumo do trimestre (252.153 t) = já contratado (74.153 t, 29,4%) + **a comprar (178.000 t)** — é sobre este último que a recomendação do dia antecipa 18% (32.000 t). Consumo e compra são números diferentes; confundi-los quebra a âncora dos 18%.
 
 ## Comparação apples-to-apples
 **REGRA:** NUNCA comparar o custo interno da farinha com um "preço médio de farinha" de mercado. A comparação só é válida entre produtos equivalentes nestes 8 eixos:

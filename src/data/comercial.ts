@@ -225,7 +225,34 @@ function montarOportunidade(e: EntradaOportunidade): OportunidadeComercial {
   }
 }
 
-export const OPORTUNIDADES_COMERCIAIS: OportunidadeComercial[] = ENTRADAS.map(montarOportunidade)
+/**
+ * Monta o portfólio conferindo a capacidade de forma CUMULATIVA por moinho:
+ * duas contas do mesmo moinho podem caber sozinhas e estourar somadas. A
+ * ordem é a de prioridade comercial (a lista acima), então a conta que não
+ * couber no resíduo é rebaixada — e o motivo diz contra quem ela perdeu.
+ */
+function montarPortfolio(entradas: EntradaOportunidade[]): OportunidadeComercial[] {
+  const usadoPorMoinho = new Map<MoinhoId, number>()
+  return entradas.map((e) => {
+    const op = montarOportunidade(e)
+    const jaUsado = usadoPorMoinho.get(e.moinhoId) ?? 0
+    const residuoT = op.capacidadeDisponivelT - jaUsado
+    if (op.status !== 'recusar' && op.volumeT > residuoT) {
+      return {
+        ...op,
+        status: 'recusar' as StatusOportunidade,
+        racional:
+          `Capacidade esgotada em ${op.moinhoId}: restam ${Math.max(0, residuoT).toLocaleString('pt-BR')} t das ` +
+          `${op.capacidadeDisponivelT.toLocaleString('pt-BR')} t ociosas depois das contas de maior prioridade, e esta pede ${op.volumeT.toLocaleString('pt-BR')} t. ` +
+          `A margem de R$ ${op.margemRsT.toFixed(1).replace('.', ',')}/t só se realiza liberando capacidade ou reduzindo o volume.`,
+      }
+    }
+    if (op.status !== 'recusar') usadoPorMoinho.set(e.moinhoId, jaUsado + op.volumeT)
+    return op
+  })
+}
+
+export const OPORTUNIDADES_COMERCIAIS: OportunidadeComercial[] = montarPortfolio(ENTRADAS)
 
 /** Margem mensal das oportunidades recomendadas (R$). */
 export const MARGEM_OPORTUNIDADES_RECOMENDADAS_RS = OPORTUNIDADES_COMERCIAIS.filter(

@@ -8,13 +8,13 @@
  * carrega `comparavel` e, quando falso, a `ressalva` que explica o ajuste.
  */
 import type { FarinhaId, FarinhaSpec, PrecoFarinhaExterno } from './types'
-import { TLC_RECOMENDADO_RS } from './tlc'
 
 /**
- * As 6 farinhas do portfólio. `tlcTrigoRsT` é o custo do trigo/blend que cada
- * spec exige, ANCORADO no TLC recomendado do cenário (R$ 1.480/t para a farinha
- * de massas, a spec do blend 65% Argentina + 35% EUA-HRW): farinhas soft usam
- * blends mais baratos, farinhas hard usam mais HRW e custam mais.
+ * As 6 farinhas do portfólio. `premioBlendRsT` é um DELTA sobre o blend da
+ * farinha de massas (65% Argentina + 35% EUA-HRW): farinhas soft usam blends
+ * mais baratos (delta negativo), farinhas hard usam mais HRW e custam mais.
+ * O custo ABSOLUTO do trigo nunca mora aqui — sai do motor de TLC, por moinho
+ * (economics.tlcTrigoNoMoinho), porque cada moinho tem porto e frete próprios.
  *
  * `ajusteRendimentoPp` segue as cinzas: farinha mais refinada (cinzas baixas)
  * extrai MENOS do grão e derruba o rendimento; farinha mais rústica extrai mais.
@@ -31,7 +31,7 @@ export const FARINHAS: FarinhaSpec[] = [
     cor: 1.8,
     granulometria: 98,
     aplicacao: 'massa',
-    tlcTrigoRsT: TLC_RECOMENDADO_RS, // R$ 1.480/t — a spec-âncora do cenário
+    premioBlendRsT: 0, // blend de referência: todo prêmio é medido contra ele
     ajusteRendimentoPp: 0,
     blendReferencia: '65% Argentina + 35% EUA (HRW)',
   },
@@ -46,7 +46,7 @@ export const FARINHAS: FarinhaSpec[] = [
     cor: 2.1,
     granulometria: 97,
     aplicacao: 'pao',
-    tlcTrigoRsT: 1512,
+    premioBlendRsT: 32,
     ajusteRendimentoPp: 0.4,
     blendReferencia: '50% Argentina + 50% EUA (HRW) — W alto',
   },
@@ -61,7 +61,7 @@ export const FARINHAS: FarinhaSpec[] = [
     cor: 1.5,
     granulometria: 98,
     aplicacao: 'biscoito',
-    tlcTrigoRsT: 1446,
+    premioBlendRsT: -34,
     ajusteRendimentoPp: -0.4,
     blendReferencia: '80% Argentina + 20% Brasil (RS)',
   },
@@ -76,7 +76,7 @@ export const FARINHAS: FarinhaSpec[] = [
     cor: 1.2,
     granulometria: 99,
     aplicacao: 'domestica',
-    tlcTrigoRsT: 1462,
+    premioBlendRsT: -18,
     ajusteRendimentoPp: -0.7,
     blendReferencia: '75% Argentina + 25% EUA (HRW)',
   },
@@ -91,7 +91,7 @@ export const FARINHAS: FarinhaSpec[] = [
     cor: 1.1,
     granulometria: 99,
     aplicacao: 'biscoito',
-    tlcTrigoRsT: 1428,
+    premioBlendRsT: -52,
     ajusteRendimentoPp: -1.0,
     blendReferencia: '70% Argentina (soft) + 30% Brasil (RS)',
   },
@@ -106,7 +106,7 @@ export const FARINHAS: FarinhaSpec[] = [
     cor: 0.8,
     granulometria: 99.5,
     aplicacao: 'bolo',
-    tlcTrigoRsT: 1402,
+    premioBlendRsT: -78,
     ajusteRendimentoPp: -1.6,
     blendReferencia: '60% Argentina (soft) + 40% Brasil (RS)',
   },
@@ -206,11 +206,11 @@ export const PRECOS_FARINHA_EXTERNOS: PrecoFarinhaExterno[] = [
     comparavel: true,
   },
   {
-    id: 'ext-bolo-ne-ind-bigbag',
+    id: 'ext-bolo-ne-ind-granel',
     regiao: 'nordeste',
     farinhaId: 'bolo',
     canal: 'industrial',
-    apresentacao: 'big-bag',
+    apresentacao: 'granel',
     precoRsT: 2440,
     base: 'posto-fabrica',
     prazoDias: 21,
@@ -330,10 +330,23 @@ export const PRECOS_FARINHA_EXTERNOS: PrecoFarinhaExterno[] = [
 ]
 
 /**
- * Preço externo COMPARÁVEL (apples-to-apples) de uma farinha numa região:
- * mesma spec, canal industrial, granel e posto fábrica — a única base que pode
- * ser confrontada direto com o custo interno. Retorna null quando não existe
- * cotação comparável (aí a decisão de Make/Buy exige ajuste explícito).
+ * Base ÚNICA de comparação com o custo interno: canal industrial, granel e
+ * posto fábrica. É exatamente a base em que o custo interno é apurado — sem
+ * embalagem, sem frete ao cliente, sem margem de canal.
+ */
+export const BASE_COMPARAVEL = {
+  canal: 'industrial',
+  apresentacao: 'granel',
+  base: 'posto-fabrica',
+} as const
+
+/**
+ * Preço externo COMPARÁVEL (apples-to-apples) de uma farinha numa região.
+ * Exige coincidência nos QUATRO eixos que mudam o número (spec, canal,
+ * apresentação e base logística) além da flag `comparavel` — conferir só a
+ * flag deixaria passar, por exemplo, uma cotação em big-bag contra um custo
+ * interno de granel. Retorna null quando não existe cotação comparável: aí a
+ * decisão de Make/Buy exige ajuste explícito, nunca um palpite.
  */
 export function precoExternoComparavel(
   farinhaId: FarinhaId,
@@ -341,7 +354,13 @@ export function precoExternoComparavel(
 ): PrecoFarinhaExterno | null {
   return (
     PRECOS_FARINHA_EXTERNOS.find(
-      (p) => p.farinhaId === farinhaId && p.regiao === regiao && p.comparavel,
+      (p) =>
+        p.farinhaId === farinhaId &&
+        p.regiao === regiao &&
+        p.comparavel &&
+        p.canal === BASE_COMPARAVEL.canal &&
+        p.apresentacao === BASE_COMPARAVEL.apresentacao &&
+        p.base === BASE_COMPARAVEL.base,
     ) ?? null
   )
 }

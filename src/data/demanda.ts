@@ -7,7 +7,9 @@
  * CLAUDE.md, e alimenta o volume do trimestre da tela de Compra.
  */
 import type { DemandaFarinha, FamiliaProduto, FarinhaId, MoinhoId, PontoCalendarioDemanda } from './types'
+import { MOINHOS } from './dominio'
 import { rendimentoEfetivoPct } from './economics'
+import { VOLUME_TRIMESTRE_T } from './compra'
 
 /** Meses do horizonte de planejamento (a partir do cenário-âncora de ago/25). */
 const MESES = ['2025-09', '2025-10', '2025-11', '2025-12', '2026-01', '2026-02']
@@ -119,3 +121,44 @@ export const CALENDARIO_DEMANDA: PontoCalendarioDemanda[] = MESES.map((mes, i) =
   farinhaT: DEMANDA_FARINHA.reduce((soma, d) => soma + d.calendario[i].farinhaT, 0),
   trigoT: DEMANDA_FARINHA.reduce((soma, d) => soma + d.calendario[i].trigoT, 0),
 }))
+
+// ---------------------------------------------------------------------------
+// Reconciliação com o elo do trigo (compra.ts)
+// ---------------------------------------------------------------------------
+
+/**
+ * Ponte explícita entre CONSUMO e COMPRA — os dois números são diferentes de
+ * propósito e confundi-los é erro clássico de planejamento:
+ *
+ *   consumo do trimestre  = o que os moinhos vão moer          (~252 kt)
+ *   já contratado         = embarques fechados em contrato      (~74 kt)
+ *   a comprar             = VOLUME_TRIMESTRE_T em compra.ts     (178 kt)
+ *
+ * É sobre "a comprar" que a recomendação do dia antecipa 18% (32.000 t) —
+ * não sobre o consumo total. `coberturaContratadaPct` fecha a conta.
+ */
+export const CONSUMO_TRIMESTRE_T = NECESSIDADE_TRIGO_MES_T * 3
+
+/** Volume do trimestre já coberto por contrato (t) — o consumo menos o que falta comprar. */
+export const JA_CONTRATADO_TRIMESTRE_T = CONSUMO_TRIMESTRE_T - VOLUME_TRIMESTRE_T
+
+/** Parcela do consumo do trimestre já contratada (%). */
+export const COBERTURA_CONTRATADA_PCT =
+  Math.round((JA_CONTRATADO_TRIMESTRE_T / CONSUMO_TRIMESTRE_T) * 1000) / 10
+
+/**
+ * Consumo mensal implícito no parque moageiro (Σ capacidade × utilização).
+ * Reconcilia com NECESSIDADE_TRIGO_MES_T a menos do arredondamento das
+ * capacidades declaradas — o resíduo é o colchão de estoque de segurança.
+ */
+export const CONSUMO_MOAGEM_MES_T = MOINHOS.reduce(
+  (soma, m) => soma + Math.round((m.capacidadeMensalT * m.utilizacaoPct) / 100),
+  0,
+)
+
+/** Capacidade instalada total do parque (t de trigo/mês). */
+export const CAPACIDADE_INSTALADA_MES_T = MOINHOS.reduce((soma, m) => soma + m.capacidadeMensalT, 0)
+
+/** Ocupação real do parque (%) = consumo da demanda ÷ capacidade instalada. */
+export const OCUPACAO_PARQUE_PCT =
+  Math.round((NECESSIDADE_TRIGO_MES_T / CAPACIDADE_INSTALADA_MES_T) * 1000) / 10

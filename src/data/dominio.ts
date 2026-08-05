@@ -116,6 +116,12 @@ const arred1 = (v: number) => Math.round(v * 10) / 10
  * Crédito do farelo por tonelada de FARINHA, dado o rendimento (%).
  * Moer 1 t de farinha consome 1/rendimento t de trigo e gera
  * (1/rendimento − 1) t de farelo, vendido a `precoFareloRsT`.
+ *
+ * O campo `Moinho.creditoFareloRsT` guarda o valor no rendimento BASE do
+ * moinho — é a referência de ficha técnica. O crédito que entra no custo é
+ * sempre recalculado por esta função com o rendimento EFETIVO da spec
+ * (base + ajuste da farinha), porque farinha mais refinada rende menos farinha
+ * e, portanto, gera mais farelo. Os dois divergem de propósito.
  */
 export function creditoFareloRsT(rendimentoPct: number): number {
   return arred1((100 / rendimentoPct - 1) * ECONOMIA_MOAGEM.precoFareloRsT)
@@ -128,71 +134,83 @@ function custoMarginal(conversao: number, energia: number, perdas: number): numb
 
 /**
  * Os 7 moinhos com os parâmetros de moagem. Fortaleza é o moinho-âncora do
- * cenário: com o TLC de R$ 1.480/t e a farinha de massas, sua composição fecha
- * exatamente no custo interno canônico de R$ 2.100/t (ver economics.ts).
+ * cenário: com o SEU TLC (Argentina · Mucuripe · FOB = R$ 1.473,4/t, calculado
+ * pelo motor de TLC) e a farinha de massas, a composição fecha exatamente no
+ * custo interno canônico de R$ 2.100/t (ver economics.ts). Atenção: os
+ * R$ 1.480/t do cenário-âncora são outra coisa — o TLC do LOTE recomendado
+ * (Argentina · Pecém), que desembarca em Eusébio; não confundir os dois.
+ *
  * `rendimentoPct` = farinha total sobre trigo moído; `extracaoPct` = parcela
  * refinada (patente), sempre menor — o restante sai como farinha segunda.
+ *
+ * Capacidade instalada total: 100.300 t de trigo/mês (1.203 kt/ano). Com a
+ * demanda consolidada de ~84 kt/mês (demanda.ts), sobra folga real para venda
+ * externa — as capacidades antigas (85,8 kt/mês) davam 97,9% de ocupação e
+ * tornavam fictícia qualquer capacidade ociosa.
  */
 export const MOINHOS: Moinho[] = [
   {
-    id: 'fortaleza', nome: 'Fortaleza', cidade: 'Fortaleza', uf: 'CE', capacidadeAnualKt: 220,
+    id: 'fortaleza', nome: 'Fortaleza', cidade: 'Fortaleza', uf: 'CE', capacidadeAnualKt: 257,
     portoPreferencialId: 'mucuripe', perfilProduto: ['biscoito', 'massa'],
     coordenadas: { lat: -3.73, lon: -38.52 },
-    rendimentoPct: 76.0, extracaoPct: 72.5, capacidadeMensalT: 18_333, utilizacaoPct: 88,
-    custoConversaoRsT: 180, energiaManutRsT: 98, perdasFinanceiroRsT: 42,
-    creditoFareloRsT: creditoFareloRsT(76.0), custoMarginalRsT: custoMarginal(180, 98, 42),
+    rendimentoPct: 76.0, extracaoPct: 72.5, capacidadeMensalT: 21_400, utilizacaoPct: 88,
+    // Calibrado para o TLC REAL de Fortaleza (Argentina · Mucuripe · FOB =
+    // R$ 1.473,4/t pelo motor de TLC): 1.473,4 ÷ 0,76 + 184 + 100,7 + 44 + 48
+    // − 215,4 = R$ 2.100,0/t, o custo interno canônico do CLAUDE.md.
+    custoConversaoRsT: 184, energiaManutRsT: 100.7, perdasFinanceiroRsT: 44,
+    creditoFareloRsT: creditoFareloRsT(76.0), custoMarginalRsT: custoMarginal(184, 100.7, 44),
     depreciacaoRsT: 48,
   },
   {
-    id: 'eusebio', nome: 'Eusébio', cidade: 'Eusébio', uf: 'CE', capacidadeAnualKt: 180,
+    id: 'eusebio', nome: 'Eusébio', cidade: 'Eusébio', uf: 'CE', capacidadeAnualKt: 210,
     portoPreferencialId: 'pecem', perfilProduto: ['biscoito', 'cracker'],
     coordenadas: { lat: -3.89, lon: -38.45 },
-    rendimentoPct: 76.8, extracaoPct: 73.4, capacidadeMensalT: 15_000, utilizacaoPct: 91,
+    rendimentoPct: 76.8, extracaoPct: 73.4, capacidadeMensalT: 17_500, utilizacaoPct: 91,
     custoConversaoRsT: 174, energiaManutRsT: 92, perdasFinanceiroRsT: 39,
     creditoFareloRsT: creditoFareloRsT(76.8), custoMarginalRsT: custoMarginal(174, 92, 39),
     depreciacaoRsT: 44,
   },
   {
-    id: 'natal', nome: 'Natal', cidade: 'Natal', uf: 'RN', capacidadeAnualKt: 120,
+    id: 'natal', nome: 'Natal', cidade: 'Natal', uf: 'RN', capacidadeAnualKt: 140,
     portoPreferencialId: 'natal', perfilProduto: ['massa', 'pao'],
     coordenadas: { lat: -5.79, lon: -35.21 },
-    rendimentoPct: 74.5, extracaoPct: 70.8, capacidadeMensalT: 10_000, utilizacaoPct: 79,
+    rendimentoPct: 74.5, extracaoPct: 70.8, capacidadeMensalT: 11_700, utilizacaoPct: 79,
     custoConversaoRsT: 196, energiaManutRsT: 108, perdasFinanceiroRsT: 48,
     creditoFareloRsT: creditoFareloRsT(74.5), custoMarginalRsT: custoMarginal(196, 108, 48),
     depreciacaoRsT: 54,
   },
   {
-    id: 'salvador', nome: 'Salvador', cidade: 'Salvador', uf: 'BA', capacidadeAnualKt: 150,
+    id: 'salvador', nome: 'Salvador', cidade: 'Salvador', uf: 'BA', capacidadeAnualKt: 175,
     portoPreferencialId: 'aratu', perfilProduto: ['massa', 'pao'],
     coordenadas: { lat: -12.97, lon: -38.5 },
-    rendimentoPct: 75.6, extracaoPct: 72.0, capacidadeMensalT: 12_500, utilizacaoPct: 84,
+    rendimentoPct: 75.6, extracaoPct: 72.0, capacidadeMensalT: 14_600, utilizacaoPct: 84,
     custoConversaoRsT: 186, energiaManutRsT: 101, perdasFinanceiroRsT: 44,
     creditoFareloRsT: creditoFareloRsT(75.6), custoMarginalRsT: custoMarginal(186, 101, 44),
     depreciacaoRsT: 50,
   },
   {
-    id: 'cabedelo', nome: 'Cabedelo', cidade: 'Cabedelo', uf: 'PB', capacidadeAnualKt: 110,
+    id: 'cabedelo', nome: 'Cabedelo', cidade: 'Cabedelo', uf: 'PB', capacidadeAnualKt: 128,
     portoPreferencialId: 'cabedelo', perfilProduto: ['biscoito', 'massa'],
     coordenadas: { lat: -6.97, lon: -34.84 },
-    rendimentoPct: 75.0, extracaoPct: 71.4, capacidadeMensalT: 9_167, utilizacaoPct: 76,
+    rendimentoPct: 75.0, extracaoPct: 71.4, capacidadeMensalT: 10_700, utilizacaoPct: 76,
     custoConversaoRsT: 192, energiaManutRsT: 104, perdasFinanceiroRsT: 46,
     creditoFareloRsT: creditoFareloRsT(75.0), custoMarginalRsT: custoMarginal(192, 104, 46),
     depreciacaoRsT: 52,
   },
   {
-    id: 'rolandia', nome: 'Rolândia', cidade: 'Rolândia', uf: 'PR', capacidadeAnualKt: 160,
+    id: 'rolandia', nome: 'Rolândia', cidade: 'Rolândia', uf: 'PR', capacidadeAnualKt: 187,
     portoPreferencialId: 'pecem', perfilProduto: ['massa', 'pao'],
     coordenadas: { lat: -23.31, lon: -51.37 },
-    rendimentoPct: 77.2, extracaoPct: 73.9, capacidadeMensalT: 13_333, utilizacaoPct: 86,
+    rendimentoPct: 77.2, extracaoPct: 73.9, capacidadeMensalT: 15_600, utilizacaoPct: 86,
     custoConversaoRsT: 168, energiaManutRsT: 88, perdasFinanceiroRsT: 37,
     creditoFareloRsT: creditoFareloRsT(77.2), custoMarginalRsT: custoMarginal(168, 88, 37),
     depreciacaoRsT: 42,
   },
   {
-    id: 'bento-goncalves', nome: 'Bento Gonçalves', cidade: 'Bento Gonçalves', uf: 'RS', capacidadeAnualKt: 90,
+    id: 'bento-goncalves', nome: 'Bento Gonçalves', cidade: 'Bento Gonçalves', uf: 'RS', capacidadeAnualKt: 106,
     portoPreferencialId: 'pecem', perfilProduto: ['massa', 'pao'],
     coordenadas: { lat: -29.17, lon: -51.52 },
-    rendimentoPct: 74.0, extracaoPct: 70.2, capacidadeMensalT: 7_500, utilizacaoPct: 71,
+    rendimentoPct: 74.0, extracaoPct: 70.2, capacidadeMensalT: 8_800, utilizacaoPct: 71,
     custoConversaoRsT: 204, energiaManutRsT: 114, perdasFinanceiroRsT: 52,
     creditoFareloRsT: creditoFareloRsT(74.0), custoMarginalRsT: custoMarginal(204, 114, 52),
     depreciacaoRsT: 58,

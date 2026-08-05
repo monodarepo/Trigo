@@ -42,8 +42,16 @@ export const TAXA_CAPITAL_MES = 0.0095
 // Trigo posto no moinho (a ponte com o elo 1)
 // ---------------------------------------------------------------------------
 
-/** TLC de referência de um moinho: Argentina · porto preferencial · FOB. */
-function tlcReferenciaMoinho(moinhoId: MoinhoId): number {
+/**
+ * TLC do trigo posto num moinho (R$/t de TRIGO), pelo motor de TLC existente:
+ * Argentina · porto preferencial do moinho · FOB. É o custo de regime do
+ * moinho — cada um é abastecido pelo seu próprio porto.
+ *
+ * NÃO confundir com os R$ 1.480/t do cenário-âncora: aquele é o TLC do LOTE
+ * recomendado (Argentina · Pecém), que desembarca em Eusébio. Atribuí-lo a
+ * qualquer outro moinho seria ignorar o frete interno que o motor já precifica.
+ */
+export function tlcReferenciaMoinho(moinhoId: MoinhoId): number {
   const moinho = getMoinho(moinhoId)!
   return calcularTlcMock({
     origemId: 'argentina',
@@ -54,17 +62,12 @@ function tlcReferenciaMoinho(moinhoId: MoinhoId): number {
 }
 
 /**
- * Diferencial logístico do moinho contra o moinho-âncora (R$/t de TRIGO) —
- * calculado pelo motor de TLC, não digitado. É o que encarece o trigo de
- * Bento Gonçalves e Rolândia frente aos moinhos do Nordeste servidos por porto.
+ * Custo do trigo posto no moinho para a spec de uma farinha (R$/t de TRIGO):
+ * o TLC do moinho mais o prêmio de blend que a spec exige. Sem diferencial
+ * contra moinho-âncora nenhum — o motor de TLC já cobra o frete de cada um.
  */
-export function diferencialLogisticoMoinho(moinhoId: MoinhoId): number {
-  return arred1(tlcReferenciaMoinho(moinhoId) - tlcReferenciaMoinho(MOINHO_ANCORA))
-}
-
-/** Custo do trigo posto no moinho para a spec de uma farinha (R$/t de TRIGO). */
 export function tlcTrigoNoMoinho(moinhoId: MoinhoId, farinhaId: FarinhaId): number {
-  return arred1(getFarinha(farinhaId)!.tlcTrigoRsT + diferencialLogisticoMoinho(moinhoId))
+  return arred1(tlcReferenciaMoinho(moinhoId) + getFarinha(farinhaId)!.premioBlendRsT)
 }
 
 /** Rendimento efetivo (%) = rendimento do moinho + ajuste da spec da farinha. */
@@ -149,6 +152,9 @@ export function custoInternoFarinha(moinhoId: MoinhoId, farinhaId: FarinhaId): C
     fatorFareloPorFarinha,
     componentes,
     totalRsT,
+    // Base correta do Make/Buy: a depreciação é AFUNDADA — comprar farinha de
+    // fora não a faz desaparecer, então ela não pode pesar contra o "produzir".
+    custoEvitavelRsT: arred1(totalRsT - moinho.depreciacaoRsT),
     // Piso de curto prazo: trigo + variáveis − crédito (sem fixos nem depreciação)
     custoMarginalRsT: arred1(trigoRs + moinho.custoMarginalRsT - creditoRs),
   }
@@ -384,73 +390,113 @@ export function decisaoMakeBuySell(entrada: EntradaMbs): CenarioMakeBuySell {
   const capacidadeSuficiente = capacidadeFarinhaT(moinhoId, farinhaId) >= demandaT
   const volumeVendavelT = Math.min(contratadoExternoT, capacidadeDisponivelT)
 
+  // A mesma comparação na base do custo EVITÁVEL (sem a depreciação afundada).
+  const evitavel = custo.custoEvitavelRsT
+  const brl = (v: number) => v.toFixed(1).replace('.', ',')
+  const tons = (v: number) => v.toLocaleString('pt-BR')
+
   const alternativas: ResultadoAlternativaMbs[] = [
     {
       alternativa: 'produzir-consumir',
       rotulo: ROTULO_ALTERNATIVA['produzir-consumir'],
       resultadoRsT: ganhoProduzirRsT,
+      resultadoEvitavelRsT: arred1(precoExternoRsT - evitavel),
+      volumeAplicavelT: demandaT,
       resultadoRs: Math.round(ganhoProduzirRsT * demandaT),
+      escopo: 'demanda',
       viavel: capacidadeSuficiente,
-      nota: `Evita comprar ${demandaT.toLocaleString('pt-BR')} t da mesma spec a R$ ${precoExternoRsT}/t. Mantém o controle de qualidade do blend e a segurança de suprimento das fábricas.`,
+      nota: `Evita comprar ${tons(demandaT)} t da mesma spec a R$ ${precoExternoRsT}/t. Mantém o controle de qualidade do blend e a segurança de suprimento das fábricas.`,
     },
     {
       alternativa: 'comprar',
       rotulo: ROTULO_ALTERNATIVA.comprar,
       resultadoRsT: 0,
+      resultadoEvitavelRsT: 0,
+      volumeAplicavelT: demandaT,
       resultadoRs: 0,
+      escopo: 'demanda',
       viavel: true,
-      nota: `Referência da comparação: pagar R$ ${precoExternoRsT}/t no mercado. Libera capacidade, mas transfere a qualidade da farinha para terceiros.`,
+      nota: `Referência da comparação: pagar R$ ${precoExternoRsT}/t no mercado e redirecionar a capacidade para specs de maior margem. Transfere a qualidade da farinha para terceiros.`,
     },
     {
       alternativa: 'produzir-vender',
       rotulo: ROTULO_ALTERNATIVA['produzir-vender'],
       resultadoRsT: margemVenderRsT,
+      resultadoEvitavelRsT: arred1(precoVendaLiquidoRsT - evitavel - custoServirRsT),
+      volumeAplicavelT: volumeVendavelT,
       resultadoRs: Math.round(margemVenderRsT * volumeVendavelT),
-      viavel: volumeVendavelT > 0,
+      escopo: 'capacidade-ociosa',
+      viavel: volumeVendavelT > 0 && margemVenderRsT > 0,
       nota:
         volumeVendavelT > 0
-          ? `Limitado a ${volumeVendavelT.toLocaleString('pt-BR')} t: o contratado com terceiros dentro da capacidade ociosa. Não substitui o consumo próprio.`
-          : 'Sem volume contratado com terceiros nesta janela dentro da capacidade ociosa — a margem unitária existe, mas não há a quem vender.',
+          ? `Disputa a CAPACIDADE OCIOSA (${tons(capacidadeDisponivelT)} t), não a demanda das fábricas: limitado às ${tons(volumeVendavelT)} t contratadas com terceiros.`
+          : 'Sem volume contratado com terceiros dentro da capacidade ociosa — a margem unitária existe, mas não há a quem vender.',
     },
     {
       alternativa: 'estoque',
       rotulo: ROTULO_ALTERNATIVA.estoque,
       resultadoRsT: ganhoEstoqueRsT,
+      resultadoEvitavelRsT: arred1(precoExternoRsT - evitavel - carregoRsT),
+      volumeAplicavelT: demandaT,
       resultadoRs: Math.round(ganhoEstoqueRsT * demandaT),
+      escopo: 'demanda',
       viavel: capacidadeSuficiente,
-      nota: `Mesmo ganho de moer, menos R$ ${carregoRsT.toFixed(1).replace('.', ',')}/t de carrego (armazenagem + custo de capital de um mês). Só compensa se houver expectativa de alta.`,
+      nota: `Mesmo ganho de moer, menos R$ ${brl(carregoRsT)}/t de carrego (armazenagem + custo de capital de um mês). Com o preço de mercado parado, é sempre dominado por produzir e consumir: só vira resposta com expectativa de alta acima do carrego.`,
     },
     {
       alternativa: 'parar-moagem',
       rotulo: ROTULO_ALTERNATIVA['parar-moagem'],
       resultadoRsT: -fixoNaoAbsorvidoRsT,
+      resultadoEvitavelRsT: -arred1(fixoNaoAbsorvidoRsT - moinho.depreciacaoRsT),
+      volumeAplicavelT: demandaT,
       resultadoRs: Math.round(-fixoNaoAbsorvidoRsT * demandaT),
+      escopo: 'demanda',
       viavel: true,
-      nota: `Fixos e depreciação de R$ ${fixoNaoAbsorvidoRsT.toFixed(1).replace('.', ',')}/t deixam de ser absorvidos e viram perda, sem nenhuma receita em troca.`,
+      nota: `Diferente de "comprar": aqui a capacidade NÃO é redirecionada. Fixos e depreciação de R$ ${brl(fixoNaoAbsorvidoRsT)}/t deixam de ser absorvidos e viram perda, sem receita em troca.`,
     },
   ]
 
-  // Consumo próprio tem prioridade sobre venda: a venda concorre apenas pela
-  // capacidade ociosa, e nunca pelo volume que abastece as fábricas.
-  const candidatas = alternativas.filter(
-    (a) => a.viavel && a.alternativa !== 'produzir-vender' && a.alternativa !== 'parar-moagem',
-  )
-  const melhor = candidatas.reduce((a, b) => (b.resultadoRsT > a.resultadoRsT ? b : a))
+  // DUAS decisões sobre tonelagens diferentes. A demanda das fábricas escolhe
+  // entre produzir, comprar, estocar ou parar; a capacidade ociosa escolhe
+  // entre vender e ficar parada. Disputá-las no mesmo ranking faria "vender"
+  // (margem maior por tonelada) parecer melhor que "produzir" sem notar que a
+  // demanda das fábricas continuaria descoberta.
+  const daDemanda = alternativas.filter((a) => a.escopo === 'demanda' && a.viavel)
+  const ordenadas = [...daDemanda].sort((a, b) => b.resultadoRsT - a.resultadoRsT)
+  const melhor = ordenadas[0]
+  const segunda = ordenadas[1]
   const recomendada = melhor.alternativa
-  const resultadoRs = melhor.resultadoRs
 
   const vender = alternativas.find((a) => a.alternativa === 'produzir-vender')!
-  const complementoVenda =
-    vender.viavel && vender.resultadoRsT > 0
-      ? ` Em paralelo, a capacidade ociosa de ${capacidadeDisponivelT.toLocaleString('pt-BR')} t sustenta ${volumeVendavelT.toLocaleString('pt-BR')} t de venda externa a R$ ${vender.resultadoRsT.toFixed(1).replace('.', ',')}/t de margem.`
-      : ''
+  const recomendadaCapacidadeOciosa: AlternativaMbs | null = vender.viavel ? 'produzir-vender' : null
+
+  // Valor da DECISÃO: o quanto a recomendada rende a mais que a segunda melhor.
+  // Quando 'comprar' vence, evitar a perda de moer É o benefício — reportar 0
+  // apagaria justamente o caso em que o hub mais protege margem.
+  const beneficioVsAlternativaRs = segunda
+    ? Math.round((melhor.resultadoRsT - segunda.resultadoRsT) * melhor.volumeAplicavelT)
+    : melhor.resultadoRs
+  const resultadoRs = melhor.resultadoRs + (recomendadaCapacidadeOciosa ? vender.resultadoRs : 0)
+
+  const complementoVenda = recomendadaCapacidadeOciosa
+    ? ` Em paralelo, a capacidade ociosa de ${tons(capacidadeDisponivelT)} t sustenta ${tons(vender.volumeAplicavelT)} t de venda externa a R$ ${brl(vender.resultadoRsT)}/t de margem (R$ ${vender.resultadoRs.toLocaleString('pt-BR')}/mês).`
+    : ''
+
+  // Alerta quando a base de custo inverte a resposta: com a depreciação
+  // afundada fora da conta, moer pode passar a compensar mesmo perdendo no
+  // custo pleno. É o caso clássico de fechar moinho por um custo que não sai.
+  const produzir = alternativas.find((a) => a.alternativa === 'produzir-consumir')!
+  const divergeNaBase = produzir.resultadoRsT < 0 && produzir.resultadoEvitavelRsT > 0
+  const alertaBase = divergeNaBase
+    ? ` ATENÇÃO: no custo EVITÁVEL (sem a depreciação de R$ ${brl(moinho.depreciacaoRsT)}/t, que não desaparece ao comprar de fora) moer ainda rende R$ ${brl(produzir.resultadoEvitavelRsT)}/t — a decisão de comprar só se sustenta se a capacidade for de fato redirecionada.`
+    : ''
 
   const racional =
     recomendada === 'produzir-consumir'
-      ? `Moer ${farinha.nome.toLowerCase()} em ${moinho.nome} custa R$ ${custoInternoRsT.toFixed(1).replace('.', ',')}/t contra R$ ${precoExternoRsT}/t da mesma spec no mercado: cada tonelada verticalizada vale R$ ${ganhoProduzirRsT.toFixed(1).replace('.', ',')}.${complementoVenda}`
+      ? `Moer ${farinha.nome.toLowerCase()} em ${moinho.nome} custa R$ ${brl(custoInternoRsT)}/t contra R$ ${precoExternoRsT}/t da mesma spec no mercado: cada tonelada verticalizada vale R$ ${brl(ganhoProduzirRsT)}.${complementoVenda}`
       : recomendada === 'comprar'
-        ? `Com o trigo a R$ ${custo.tlcTrigoRsT.toFixed(1).replace('.', ',')}/t posto em ${moinho.nome} e rendimento de ${custo.rendimentoPct.toFixed(1).replace('.', ',')}%, o custo interno (R$ ${custoInternoRsT.toFixed(1).replace('.', ',')}/t) supera o mercado (R$ ${precoExternoRsT}/t): comprar a farinha economiza R$ ${Math.abs(ganhoProduzirRsT).toFixed(1).replace('.', ',')}/t e libera a capacidade para specs de maior margem.${complementoVenda}`
-        : `Produzir e estocar rende R$ ${ganhoEstoqueRsT.toFixed(1).replace('.', ',')}/t após o carrego de R$ ${carregoRsT.toFixed(1).replace('.', ',')}/t.${complementoVenda}`
+        ? `Com o trigo a R$ ${brl(custo.tlcTrigoRsT)}/t posto em ${moinho.nome} e rendimento de ${brl(custo.rendimentoPct)}%, o custo interno (R$ ${brl(custoInternoRsT)}/t) supera o mercado (R$ ${precoExternoRsT}/t): comprar a farinha evita R$ ${brl(Math.abs(ganhoProduzirRsT))}/t de perda e libera a capacidade para specs de maior margem.${alertaBase}${complementoVenda}`
+        : `Produzir e estocar rende R$ ${brl(ganhoEstoqueRsT)}/t após o carrego de R$ ${brl(carregoRsT)}/t.${complementoVenda}`
 
   return {
     id: `mbs-${moinhoId}-${farinhaId}`,
@@ -458,13 +504,16 @@ export function decisaoMakeBuySell(entrada: EntradaMbs): CenarioMakeBuySell {
     farinhaId,
     volumeT: demandaT,
     custoInternoRsT,
+    custoEvitavelRsT: evitavel,
     precoExternoRsT,
     precoVendaLiquidoRsT,
     custoServirRsT,
     capacidadeDisponivelT,
     alternativas,
     recomendada,
+    recomendadaCapacidadeOciosa,
     resultadoRs,
+    beneficioVsAlternativaRs,
     racional,
   }
 }

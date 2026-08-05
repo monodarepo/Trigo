@@ -637,8 +637,11 @@ export interface FarinhaSpec {
   /** Granulometria: % passante em peneira de 132 µm. */
   granulometria: number
   aplicacao: AplicacaoFarinha
-  /** TLC do trigo/blend que esta farinha exige (R$/t de TRIGO). */
-  tlcTrigoRsT: number
+  /** Prêmio (ou desconto) do blend desta spec sobre o blend da farinha de
+   * massas, em R$/t de TRIGO. É um DELTA: o custo absoluto do trigo sai do
+   * motor de TLC para cada moinho e só então recebe este prêmio. Farinhas soft
+   * usam blends mais baratos (delta negativo); farinhas hard, mais HRW. */
+  premioBlendRsT: number
   /** Ajuste de rendimento sobre o do moinho (pontos percentuais): farinhas mais
    * refinadas (cinzas baixas) extraem menos; farinhas rústicas extraem mais. */
   ajusteRendimentoPp: number
@@ -677,8 +680,12 @@ export interface CustoInternoFarinha {
   /** t de farelo geradas por t de farinha = (1 / rendimento) − 1. */
   fatorFareloPorFarinha: number
   componentes: ComponenteCustoFarinha[]
-  /** Custo interno da farinha (R$/t de farinha) — soma dos componentes. */
+  /** Custo interno da farinha (R$/t de farinha) — soma dos componentes.
+   * É o custo PLENO ABSORVIDO: a visão de P&L, com depreciação. */
   totalRsT: number
+  /** Custo EVITÁVEL (R$/t) = total − depreciação. É a base correta da decisão
+   * Make/Buy: a depreciação é afundada e não desaparece ao comprar de fora. */
+  custoEvitavelRsT: number
   /** Piso de curto prazo (R$/t): trigo + variáveis − crédito, sem fixos. */
   custoMarginalRsT: number
 }
@@ -816,27 +823,50 @@ export type AlternativaMbs =
   | 'estoque'
   | 'parar-moagem'
 
+/** A que tonelagem a alternativa se aplica: a demanda interna ou a folga. */
+export type EscopoAlternativaMbs = 'demanda' | 'capacidade-ociosa'
+
 export interface ResultadoAlternativaMbs {
   alternativa: AlternativaMbs
   rotulo: string
   /** Resultado econômico em R$/t de farinha, medido CONTRA a referência de
-   * comprar farinha no mercado (alternativa 'comprar' = 0 por definição). */
+   * comprar farinha no mercado (alternativa 'comprar' = 0 por definição).
+   * Base: custo PLENO, coerente com o KPI de ganho da verticalização. */
   resultadoRsT: number
-  /** Resultado no volume do cenário (R$). */
+  /** O mesmo resultado na base do custo EVITÁVEL (sem depreciação afundada) —
+   * a leitura de curto prazo. Divergir de `resultadoRsT` em sinal é o alerta
+   * de que a decisão muda conforme a base de custo escolhida. */
+  resultadoEvitavelRsT: number
+  /** Tonelagem a que ESTA alternativa se aplica (t de farinha/mês). */
+  volumeAplicavelT: number
+  /** Resultado no volume aplicável (R$). */
   resultadoRs: number
+  /** Se disputa a demanda interna ou a capacidade ociosa. */
+  escopo: EscopoAlternativaMbs
   /** false quando a alternativa esbarra em capacidade, spec ou política. */
   viavel: boolean
   nota: string
 }
 
-/** A decisão Make/Buy/Sell de um moinho × farinha, com as 5 alternativas. */
+/**
+ * A decisão Make/Buy/Sell de um moinho × farinha, com as 5 alternativas.
+ *
+ * São DUAS decisões sobre tonelagens diferentes, e por isso há duas
+ * recomendações: o que fazer com a demanda das fábricas (produzir, comprar,
+ * estocar ou parar) e o que fazer com a capacidade que sobra (vender ou
+ * deixar ociosa). Misturar as duas é o que faria "vender" parecer melhor que
+ * "produzir" sem notar que a demanda continuaria descoberta.
+ */
 export interface CenarioMakeBuySell {
   id: string
   moinhoId: MoinhoId
   farinhaId: FarinhaId
-  /** Volume em decisão (t de farinha/mês). */
+  /** Demanda interna em decisão (t de farinha/mês). */
   volumeT: number
+  /** Custo pleno absorvido (R$/t) — visão de P&L. */
   custoInternoRsT: number
+  /** Custo evitável (R$/t), sem depreciação — base da decisão Make/Buy. */
+  custoEvitavelRsT: number
   /** Preço equivalente de compra externa da MESMA spec (R$/t). */
   precoExternoRsT: number
   /** Preço líquido de venda a terceiros (R$/t). */
@@ -845,9 +875,16 @@ export interface CenarioMakeBuySell {
   /** Capacidade ociosa do moinho na janela (t de farinha/mês). */
   capacidadeDisponivelT: number
   alternativas: ResultadoAlternativaMbs[]
+  /** Melhor destino da DEMANDA interna. */
   recomendada: AlternativaMbs
-  /** Resultado da alternativa recomendada (R$). */
+  /** Melhor destino da CAPACIDADE OCIOSA (null = nada a alocar). */
+  recomendadaCapacidadeOciosa: AlternativaMbs | null
+  /** Resultado das duas recomendações somadas (R$). */
   resultadoRs: number
+  /** Valor da DECISÃO (R$): quanto a recomendada rende a mais que a segunda
+   * melhor alternativa. É o número honesto quando 'comprar' vence — evitar
+   * uma perda vale tanto quanto capturar um ganho. */
+  beneficioVsAlternativaRs: number
   racional: string
 }
 
