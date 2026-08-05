@@ -5,7 +5,8 @@
  */
 import { useQuery } from '@tanstack/react-query'
 import { useDataMode } from './dataMode'
-import { fetchFxLatest, type FxLatest } from './providers/fx'
+import { useLive } from './liveStore'
+import { fetchFxLatest, fetchFxSeries, type FxLatest, type PontoFx } from './providers/fx'
 import { fetchWeather, ZONA_NUCLEO_ROSARIO, type Clima } from './providers/weather'
 import { fetchWheatRef, type WheatRef } from './providers/wheatRef'
 import { snapshot } from '../data'
@@ -71,6 +72,28 @@ export function useClimaAoVivo(): SinalAoVivo<Clima> {
     fallback: snapshot.mercado.clima,
     fonteAoVivo: 'open-meteo',
   })
+}
+
+/** Série USD/BRL (~30 dias) — sparkline/fechamento anterior (fallback: histórico encenado). */
+export function useFxSerieAoVivo(dias = 30): SinalAoVivo<PontoFx[]> {
+  return useLiveData<PontoFx[]>({
+    chave: ['fx', 'serie', String(dias)],
+    buscar: () => fetchFxSeries(dias),
+    fallback: snapshot.previsao.cambio.historico.map((p) => ({ data: p.data, taxa: p.valor })),
+    fonteAoVivo: 'frankfurter',
+    refetchMs: 5 * 60_000,
+  })
+}
+
+/**
+ * Frescor relativo ("há 12s") de um updatedAt — re-renderiza com o tick
+ * global de 1s da camada simulada (nenhum timer novo).
+ */
+export function useFrescorRelativo(updatedAt: number | null): string | null {
+  useLive((s) => s.segundos)
+  if (updatedAt == null) return null
+  const s = Math.max(0, Math.round((Date.now() - updatedAt) / 1000))
+  return s < 90 ? `há ${s}s` : `há ${Math.round(s / 60)}min`
 }
 
 /** Referência de trigo — /api/wheat (stub até o API-4; sempre cai no cenário). */

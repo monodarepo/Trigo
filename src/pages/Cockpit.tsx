@@ -25,8 +25,11 @@ import {
 } from '../data'
 import { abrirObjeto } from '../components/object/objectBus'
 import { SourceBadge } from '../components/trust/SourceBadge'
+import { AnimatedNumber } from '../components/live/AnimatedNumber'
 import { abrirAprovacao } from '../components/approval/approvalBus'
 import { useDecisao, type ModoDecisao } from '../components/approval/decisionStore'
+import { useFrescorRelativo, useFxAoVivo } from '../live/useLiveData'
+import { FONTE_FRANKFURTER } from '../data'
 
 const { recomendacaoDoDia, kpis, tlc, compra, hedge, previsao, logistica, alertas, simulador, vro, mercado } =
   snapshot
@@ -199,6 +202,10 @@ const BOTAO_DECISAO: Record<ModoDecisao, string> = {
 export default function Cockpit() {
   const decisao = useDecisao()
   const rec = recomendacaoDoDia
+  // PERIFERIA ao vivo: só o VALOR EXIBIDO do câmbio; deltas/projeções seguem encenados
+  const fx = useFxAoVivo()
+  const frescorFx = useFrescorRelativo(fx.updatedAt)
+  const cambioExibido = fx.isLive ? fx.value.taxa : kpis.cambioAtual
 
   return (
     <div className="relative space-y-6">
@@ -303,10 +310,16 @@ export default function Cockpit() {
         />
         <KpiTile
           label="Câmbio"
-          value={fmtCambio(kpis.cambioAtual)}
+          value={<AnimatedNumber valor={cambioExibido} formatar={fmtCambio} />}
           delta={{ label: `+${formatPct(previsao.cambio.variacao30dPct, 1)} em 30d`, direction: 'up', tone: 'warning' }}
           hint={`proj. ${fmtCambio(previsao.cambio.horizontes.d90.valor)} em 90d`}
-          fonte={<SourceBadge familia="cambio" />}
+          fonte={
+            fx.isLive ? (
+              <SourceBadge familia="cambio" fonteOverride={FONTE_FRANKFURTER} frescorOverride={frescorFx ?? undefined} />
+            ) : (
+              <SourceBadge familia="cambio" />
+            )
+          }
         />
         <KpiTile
           label="Protegido vs exposto (90d)"

@@ -3,6 +3,7 @@ import { Sparkline } from '../ui'
 import { AnimatedNumber } from './AnimatedNumber'
 import { LIVE_BASE, useLive } from '../../live/liveStore'
 import { definirDataMode, useDataMode, type DataMode } from '../../live/dataMode'
+import { useFxAoVivo, useFxSerieAoVivo } from '../../live/useLiveData'
 
 /** Toggle "Ao vivo | Cenário": em Cenário, todos os useLiveData ignoram a rede. */
 function ToggleModoDados() {
@@ -73,6 +74,40 @@ function Cotacao({
   )
 }
 
+/**
+ * Câmbio do pulse: PERIFERIA ao vivo (Frankfurter) quando o modo permite —
+ * valor real, delta vs fechamento anterior e sparkline da série (~30d).
+ * Em Cenário/falha, volta à flutuação encenada em torno de R$ 5,20.
+ */
+function CotacaoCambio() {
+  const precos = useLive((s) => s.precos)
+  const historico = useLive((s) => s.historico)
+  const fx = useFxAoVivo()
+  const serie = useFxSerieAoVivo()
+
+  if (!fx.isLive) {
+    return <Cotacao rotulo="Câmbio" valor={precos.cambio} base={LIVE_BASE.cambio} casas={3} prefixo="R$" serie={historico.cambio} />
+  }
+
+  const taxas = serie.value.map((p) => p.taxa)
+  const ultima = serie.value[serie.value.length - 1]
+  // Fechamento anterior: se a série já inclui a data de hoje, usa a penúltima
+  const fechamentoAnterior =
+    serie.isLive && serie.value.length > 1
+      ? ultima.data === fx.value.data
+        ? serie.value[serie.value.length - 2].taxa
+        : ultima.taxa
+      : fx.value.taxa
+  return (
+    <span className="flex shrink-0 items-center gap-1.5">
+      <Cotacao rotulo="Câmbio" valor={fx.value.taxa} base={fechamentoAnterior} casas={3} prefixo="R$" serie={taxas} />
+      <span className="rounded-full border border-positive/40 bg-positive/10 px-1.5 py-px text-[9px] font-semibold uppercase tracking-wide text-positive">
+        ao vivo
+      </span>
+    </span>
+  )
+}
+
 /** Faixa fina de mercado ao vivo (Topbar): trigo, câmbio e frete oscilando. */
 export function MarketPulse() {
   const precos = useLive((s) => s.precos)
@@ -99,7 +134,7 @@ export function MarketPulse() {
         sufixo="/t"
         serie={historico.trigo}
       />
-      <Cotacao rotulo="Câmbio" valor={precos.cambio} base={LIVE_BASE.cambio} casas={3} prefixo="R$" serie={historico.cambio} />
+      <CotacaoCambio />
       <Cotacao
         rotulo="Frete"
         valor={precos.freteUsdT}

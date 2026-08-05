@@ -59,6 +59,10 @@ export function DetalheFonte({ fonte, frescor }: { fonte: FonteDado; frescor: st
 
 export interface SourceBadgeProps {
   familia: FamiliaDado
+  /** Substitui a fonte encenada (ex.: Frankfurter quando o câmbio está ao vivo). */
+  fonteOverride?: FonteDado
+  /** Substitui o rótulo de frescor (ex.: "há 12s" do updatedAt do react-query). */
+  frescorOverride?: string
   /** Lado em que o popover abre (default: abaixo). */
   posicao?: 'acima' | 'abaixo'
   className?: string
@@ -69,13 +73,13 @@ export interface SourceBadgeProps {
  * detalhe (fonte, método, frescor, confiabilidade, dono, validações).
  * Famílias tempo-real correm com o tick global; as demais mostram a última carga.
  */
-export function SourceBadge({ familia, posicao = 'abaixo', className = '' }: SourceBadgeProps) {
+export function SourceBadge({ familia, fonteOverride, frescorOverride, posicao = 'abaixo', className = '' }: SourceBadgeProps) {
   const [aberto, setAberto] = useState(false)
   const idPopover = useId()
-  const fonte = fonteDe(familia)
+  const fonte = fonteOverride ?? fonteDe(familia)
   const segundos = useLive((s) => s.atualizadoHaS)
   const tempoReal = fonte.metodo === 'tempo-real'
-  const frescor = tempoReal ? `há ${segundos}s` : fonte.frescorRotulo
+  const frescor = frescorOverride ?? (tempoReal ? `há ${segundos}s` : fonte.frescorRotulo)
   const conf = COR_CONFIABILIDADE[fonte.confiabilidade]
 
   return (

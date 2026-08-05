@@ -121,6 +121,26 @@ export const FONTES_LISTA: readonly FonteDado[] = Object.values(FONTES)
 export const fonteDe = (familia: FamiliaDado): FonteDado => FONTES[familia]
 
 /**
+ * Fonte do câmbio AO VIVO (periferia): quando o modo de dados é "Ao vivo",
+ * o SourceBadge do câmbio troca a fonte encenada (B3) por esta.
+ */
+export const FONTE_FRANKFURTER: FonteDado = {
+  familia: 'cambio',
+  rotulo: 'Câmbio USD/BRL — ao vivo',
+  fonte: 'Frankfurter — taxas de referência de bancos centrais (BCE)',
+  fonteCurta: 'Frankfurter',
+  metodo: 'tempo-real',
+  confiabilidade: 'alta',
+  atualizadoEm: '2025-08-12T07:00:00',
+  frescorRotulo: 'refetch a cada 60s',
+  responsavel: 'TI Dados (periferia ao vivo)',
+  validacoes: [
+    'Timeout de 6s + try/catch — qualquer falha cai no cenário (R$ 5,20)',
+    'Nenhum número de decisão consome esta fonte (núcleo encenado)',
+  ],
+}
+
+/**
  * Amostra das regras de validação em execução — as que importam hoje.
  * Os avisos abertos são exatamente os desta lista (coerência com o resumo).
  */

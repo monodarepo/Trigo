@@ -156,4 +156,4 @@ export type Snapshot = typeof snapshot
 
 export * from './types'
 export * from './format'
-export { FONTES, FONTES_LISTA, fonteDe } from './sources'
+export { FONTES, FONTES_LISTA, FONTE_FRANKFURTER, fonteDe } from './sources'
