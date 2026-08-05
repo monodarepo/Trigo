@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowRight, ChevronRight, Ship } from 'lucide-react'
 import {
@@ -26,7 +25,8 @@ import {
 } from '../data'
 import { abrirObjeto } from '../components/object/objectBus'
 import { SourceBadge } from '../components/trust/SourceBadge'
-import { emitirToast } from '../components/feedback/toastBus'
+import { abrirAprovacao } from '../components/approval/approvalBus'
+import { useDecisao, type ModoDecisao } from '../components/approval/decisionStore'
 
 const { recomendacaoDoDia, kpis, tlc, compra, hedge, previsao, logistica, alertas, simulador, vro, mercado } =
   snapshot
@@ -184,8 +184,20 @@ const excecoes = [...alertas]
 // --- Faixa de impacto projetado ---
 const perfisOrdem = ['conservador', 'recomendado', 'oportunistico'] as const
 
+/** Reflexo do estado de decisão no hero. */
+const BADGE_DECISAO: Record<ModoDecisao, { rotulo: (hora: string) => string; tone: Tone }> = {
+  aprovada: { rotulo: (h) => `Aprovada às ${h}`, tone: 'positive' },
+  ajustada: { rotulo: (h) => `Ajustada pela mesa às ${h}`, tone: 'warning' },
+  encaminhada: { rotulo: () => 'Encaminhada — aguardando alçada', tone: 'info' },
+}
+const BOTAO_DECISAO: Record<ModoDecisao, string> = {
+  aprovada: '✓ Recomendação aprovada',
+  ajustada: '✓ Ajuste registrado',
+  encaminhada: '→ Encaminhada para aprovação',
+}
+
 export default function Cockpit() {
-  const [aprovada, setAprovada] = useState(false)
+  const decisao = useDecisao()
   const rec = recomendacaoDoDia
 
   return (
@@ -217,6 +229,13 @@ export default function Cockpit() {
         }
         badges={
           <>
+            {decisao && (
+              <Badge
+                kind="status"
+                label={BADGE_DECISAO[decisao.modo].rotulo(decisao.horaRotulo)}
+                tone={BADGE_DECISAO[decisao.modo].tone}
+              />
+            )}
             <Pill tone="warning">Prob. de alta em 15 dias: {formatPct(rec.probAlta15dPct)}</Pill>
             <Pill tone="positive">
               Impacto protegido: {formatBRL(rec.impactoProtegidoRs, { compacto: true })}
@@ -246,20 +265,20 @@ export default function Cockpit() {
           <>
             <button
               type="button"
-              className={aprovada ? `${btnPrimary} cursor-default bg-positive text-navy hover:bg-positive` : btnPrimary}
-              onClick={() => {
-                setAprovada(true)
-                emitirToast({ tom: 'sucesso', titulo: 'Recomendação aprovada — encaminhada para execução' })
-              }}
-              disabled={aprovada}
+              className={decisao ? `${btnPrimary} cursor-default bg-positive text-navy hover:bg-positive` : btnPrimary}
+              onClick={() => abrirAprovacao()}
+              disabled={decisao != null}
             >
-              {aprovada ? '✓ Recomendação aprovada' : 'Aprovar'}
+              {decisao ? BOTAO_DECISAO[decisao.modo] : 'Aprovar'}
             </button>
             <Link to="/simulador" className={btnGhost}>
               Simular
             </Link>
             <Link to="/compra" className={btnGhost}>
               Ver racional
+            </Link>
+            <Link to="/exportar" className={btnGhost}>
+              Exportar
             </Link>
           </>
         }

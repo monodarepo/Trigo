@@ -63,5 +63,5 @@ Princípio: hierarquia por peso, densidade calibrada, movimento que explica, cor
 
 ## Marca
 - Original: `m-dias-branco-logo-png_seeklogo-407830.png` (raiz do repo; PNG 320×320, wordmark monocromático escuro sobre transparente — manter intacto).
-- Cópias de uso em `public/brand/`: `mdias-logo.png` (original, para fundos claros — README/tour) e `mdias-logo-branco.png` (branca gerada do canal alfa, recortada ao conteúdo 296×114, para o navy da UI).
+- Cópias de uso em `public/brand/`: `mdias-logo.png` (original, para fundos claros — README/tour), `mdias-logo-branco.png` (branca gerada do canal alfa, recortada ao conteúdo 296×114, para o navy da UI) e `mdias-logo-recorte.png` (original recortado ao conteúdo 288×106, para fundos claros em alturas pequenas — ex.: cabeçalho do one-pager /exportar).
 - Regra de uso: versão branca na sidebar (fundo navy); colorida/original apenas em fundo claro. Dimensionar SEMPRE pela altura (`h-*` com `w-auto`), preservando o aspect ratio (~2,7:1). Sempre `alt="M. Dias Branco"`.

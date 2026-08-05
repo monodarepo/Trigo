@@ -1,13 +1,15 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { AnimatePresence, motion } from 'framer-motion'
 import { BellRing, CheckCircle2, Download, ShieldCheck, SlidersHorizontal } from 'lucide-react'
 import { CommandPalette, type Comando } from './CommandPalette'
 import { ShortcutsHelp } from './ShortcutsHelp'
 import { useHotkeys } from '../../hooks/useHotkeys'
 import { emitirToast } from '../feedback/toastBus'
+import { ApprovalModal } from '../approval/ApprovalModal'
+import { aoAbrirAprovacao } from '../approval/approvalBus'
+import type { ModoDecisao } from '../approval/decisionStore'
 import { ALL_NAV_ITEMS } from '../../data/navigation'
-import { snapshot, formatBRL, formatPct } from '../../data'
+import { snapshot } from '../../data'
 
 const EVENTO_PALETTE = 'torre:abrir-palette'
 
@@ -23,12 +25,16 @@ export function CommandLayer() {
   const navigate = useNavigate()
   const [paletteAberto, setPaletteAberto] = useState(false)
   const [ajudaAberta, setAjudaAberta] = useState(false)
-  const [confirmaAprovacao, setConfirmaAprovacao] = useState(false)
+  const [aprovacao, setAprovacao] = useState<{ aberta: boolean; modo?: ModoDecisao }>({ aberta: false })
 
   useEffect(() => {
     const abre = () => setPaletteAberto(true)
     window.addEventListener(EVENTO_PALETTE, abre)
-    return () => window.removeEventListener(EVENTO_PALETTE, abre)
+    const desligaAprovacao = aoAbrirAprovacao((modo) => setAprovacao({ aberta: true, modo }))
+    return () => {
+      window.removeEventListener(EVENTO_PALETTE, abre)
+      desligaAprovacao()
+    }
   }, [])
 
   const sequencias = Object.fromEntries(
@@ -38,9 +44,9 @@ export function CommandLayer() {
   useHotkeys({
     onPalette: () => setPaletteAberto((a) => !a),
     onAjuda: () => setAjudaAberta(true),
-    onAprovar: () => setConfirmaAprovacao(true),
+    onAprovar: () => setAprovacao({ aberta: true }),
     sequencias,
-    suspenso: paletteAberto || ajudaAberta || confirmaAprovacao,
+    suspenso: paletteAberto || ajudaAberta || aprovacao.aberta,
   })
 
   const comandos: Comando[] = [
@@ -58,7 +64,7 @@ export function CommandLayer() {
       rotulo: 'Aprovar recomendação do dia',
       icone: CheckCircle2,
       atalho: 'A',
-      executar: () => setConfirmaAprovacao(true),
+      executar: () => setAprovacao({ aberta: true }),
     },
     {
       id: 'acao-simulador',
@@ -87,10 +93,12 @@ export function CommandLayer() {
     {
       id: 'acao-exportar',
       grupo: 'Ações',
-      rotulo: 'Exportar recomendação',
+      rotulo: 'Exportar recomendação (one-pager)',
       icone: Download,
-      executar: () =>
-        emitirToast({ tom: 'sucesso', titulo: 'Recomendação do dia exportada', descricao: 'PDF simulado na demo — inclui racional e memória de cálculo.' }),
+      executar: () => {
+        navigate('/exportar')
+        emitirToast({ tom: 'info', titulo: 'One-pager pronto', descricao: 'Use “Imprimir / salvar PDF” para anexar ao fluxo de aprovação.' })
+      },
     },
     ...snapshot.copiloto.chips.map((pergunta, i) => ({
       id: `ia-${i}`,
@@ -100,8 +108,6 @@ export function CommandLayer() {
       executar: () => navigate(`/copiloto?q=${encodeURIComponent(pergunta)}`),
     })),
   ]
-
-  const rec = snapshot.recomendacaoDoDia
 
   return (
     <>
@@ -113,63 +119,12 @@ export function CommandLayer() {
       />
       <ShortcutsHelp aberto={ajudaAberta} aoFechar={() => setAjudaAberta(false)} />
 
-      {/* Confirmação de aprovação (tecla A / palette) */}
-      <AnimatePresence>
-        {confirmaAprovacao && (
-          <>
-            <motion.div
-              className="fixed inset-0 z-[60] bg-black/60"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.12 }}
-              onClick={() => setConfirmaAprovacao(false)}
-              aria-hidden="true"
-            />
-            <motion.div
-              className="fixed inset-x-3 top-[24vh] z-[70] mx-auto max-w-sm"
-              initial={{ opacity: 0, scale: 0.99, y: -6 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.99, y: -6 }}
-              transition={{ duration: 0.15, ease: [0.2, 0.8, 0.2, 1] }}
-              role="alertdialog"
-              aria-modal="true"
-              aria-label="Confirmar aprovação da recomendação do dia"
-              onKeyDown={(e) => e.key === 'Escape' && setConfirmaAprovacao(false)}
-            >
-              <div className="rounded-card-lg border border-gold/30 bg-card p-5 shadow-card-gold">
-                <h3 className="font-display text-16 font-semibold text-ink">Aprovar recomendação do dia?</h3>
-                <p className="tnums mt-2 text-13 leading-relaxed text-ink-muted">
-                  Antecipar {formatPct(rec.compra.anteciparPctTrimestre)} do trimestre + proteger{' '}
-                  {formatPct(rec.hedge.coberturaAlvoPct)} do câmbio — impacto protegido de{' '}
-                  {formatBRL(rec.impactoProtegidoRs, { compacto: true })}.
-                </p>
-                <div className="mt-4 flex items-center justify-end gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setConfirmaAprovacao(false)}
-                    className="rounded-full border border-edge px-4 py-2 text-xs font-semibold text-ink-muted transition-colors hover:border-edge-strong hover:text-ink"
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    type="button"
-                    autoFocus
-                    onClick={() => {
-                      setConfirmaAprovacao(false)
-                      emitirToast({ tom: 'sucesso', titulo: 'Recomendação aprovada — encaminhada para execução' })
-                    }}
-                    className="rounded-full bg-gold px-4 py-2 text-xs font-semibold text-navy transition-colors hover:bg-gold-light"
-                  >
-                    Confirmar aprovação
-                  </button>
-                </div>
-              </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
-
+      {/* Fluxo de aprovação (tecla A / palette / botões das telas via bus) */}
+      <ApprovalModal
+        aberto={aprovacao.aberta}
+        modoInicial={aprovacao.modo}
+        aoFechar={() => setAprovacao({ aberta: false })}
+      />
     </>
   )
 }

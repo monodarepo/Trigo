@@ -114,3 +114,30 @@
     scroll-behavior: auto !important;
   }
 }
+
+/* One-pager de exportação (/exportar): impressão dedicada em fundo claro */
+.one-pager {
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+
+@page {
+  size: A4;
+  margin: 12mm;
+}
+
+@media print {
+  body {
+    background: #fff !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .one-pager {
+    margin: 0 !important;
+    max-width: none !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+  }
+}

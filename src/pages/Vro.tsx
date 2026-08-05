@@ -16,6 +16,7 @@ import { TlcWaterfall } from '../components/charts/TlcWaterfall'
 import { AnimatedNumber } from '../components/live/AnimatedNumber'
 import { abrirObjeto } from '../components/object/objectBus'
 import { SourceBadge } from '../components/trust/SourceBadge'
+import { useDecisao, type DecisaoDoDia } from '../components/approval/decisionStore'
 import { colors } from '../theme/tokens'
 import {
   snapshot,
@@ -167,7 +168,24 @@ function TooltipCurva({ active, payload, label }: { active?: boolean; payload?: 
   )
 }
 
+/** A decisão do dia (modal de aprovação) atualiza a linha pendente do placar. */
+function aplicarDecisao(r: RecomendacaoVRO, d: DecisaoDoDia): RecomendacaoVRO {
+  const comentario = d.comentario ? ` — “${d.comentario}”` : ''
+  if (d.modo === 'encaminhada') {
+    return { ...r, decisaoNota: `Encaminhada para ${d.destino} às ${d.horaRotulo}${comentario}` }
+  }
+  return {
+    ...r,
+    decisaoHumana: d.modo,
+    decisaoNota: `${d.modo === 'aprovada' ? 'Aprovada' : 'Ajustada'} às ${d.horaRotulo} (hoje)${comentario}`,
+  }
+}
+
 export default function Vro() {
+  const decisao = useDecisao()
+  const linhas = decisao
+    ? vro.recomendacoes.map((r) => (r.decisaoHumana === 'pendente' ? aplicarDecisao(r, decisao) : r))
+    : vro.recomendacoes
   return (
     <div className="space-y-6">
       <SectionTitle
@@ -221,7 +239,7 @@ export default function Vro() {
         <DataTable
           caption="Trilha de recomendações: o que a IA sugeriu, o que o humano decidiu e o resultado medido"
           columns={colunas}
-          rows={vro.recomendacoes}
+          rows={linhas}
           rowKey={(r) => r.id}
           minWidth={880}
           rowClassName={(r) => (r.status === 'projetado' ? 'bg-gold/5' : '')}

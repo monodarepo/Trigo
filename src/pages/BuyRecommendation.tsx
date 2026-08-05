@@ -11,6 +11,8 @@ import {
   type DataTableColumn,
 } from '../components/ui'
 import { emitirToast } from '../components/feedback/toastBus'
+import { abrirAprovacao } from '../components/approval/approvalBus'
+import { useDecisao, type ModoDecisao } from '../components/approval/decisionStore'
 import {
   snapshot,
   formatBRL,
@@ -197,7 +199,14 @@ const colunasDistribuicao: DataTableColumn<DistribuicaoMoinho>[] = [
   },
 ]
 
+const BADGE_DECISAO: Record<ModoDecisao, { rotulo: string; tone: 'positive' | 'warning' | 'info' }> = {
+  aprovada: { rotulo: 'Aprovada hoje', tone: 'positive' },
+  ajustada: { rotulo: 'Ajustada pela mesa', tone: 'warning' },
+  encaminhada: { rotulo: 'Encaminhada — aguardando alçada', tone: 'info' },
+}
+
 export default function BuyRecommendation() {
+  const decisao = useDecisao()
   const valorLoteRs = rec.volumeToneladas * rec.tlcRs
 
   return (
@@ -214,6 +223,9 @@ export default function BuyRecommendation() {
         rationale={rec.racional}
         badges={
           <>
+            {decisao && (
+              <Badge kind="status" label={BADGE_DECISAO[decisao.modo].rotulo} tone={BADGE_DECISAO[decisao.modo].tone} />
+            )}
             <Badge kind="acao" action="comprar" />
             <Badge kind="status" label={`Janela: próximos ${rec.janelaDias} dias`} tone="warning" />
           </>
@@ -350,12 +362,8 @@ export default function BuyRecommendation() {
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              className={btnPrimary}
-              onClick={() => emitirToast({ tom: 'sucesso', titulo: 'Recomendação aprovada — encaminhada para execução' })}
-            >
-              Aprovar
+            <button type="button" className={btnPrimary} onClick={() => abrirAprovacao()}>
+              {decisao ? 'Rever decisão' : 'Aprovar'}
             </button>
             <Link to="/simulador" className={btnGhost}>
               Ajustar
@@ -367,13 +375,12 @@ export default function BuyRecommendation() {
             >
               Rejeitar
             </button>
-            <button
-              type="button"
-              className={btnGhost}
-              onClick={() => emitirToast({ tom: 'info', titulo: 'Encaminhada para aprovação de Finanças + Supply' })}
-            >
+            <button type="button" className={btnGhost} onClick={() => abrirAprovacao('encaminhada')}>
               Encaminhar
             </button>
+            <Link to="/exportar" className={btnGhost}>
+              Exportar one-pager
+            </Link>
           </div>
         </div>
       </Card>

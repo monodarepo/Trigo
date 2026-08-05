@@ -18,6 +18,7 @@ import Alerts from './pages/Alerts'
 import BuyRecommendation from './pages/BuyRecommendation'
 import Cockpit from './pages/Cockpit'
 import Copilot from './pages/Copilot'
+import ExportOnePager from './pages/ExportOnePager'
 import Forecast from './pages/Forecast'
 import Hedge from './pages/Hedge'
 import LandedCost from './pages/LandedCost'
@@ -46,6 +47,8 @@ export default function App() {
     <MotionConfig reducedMotion="user">
       <Router>
         <Routes>
+          {/* One-pager de exportação: fora do AppShell (página clara, para imprimir) */}
+          <Route path="/exportar" element={<ExportOnePager />} />
           <Route element={<AppShell />}>
             {TELAS.map(({ path, titulo, Tela, esqueleto }) => (
               <Route
