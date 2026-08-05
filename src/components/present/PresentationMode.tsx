@@ -212,15 +212,16 @@ export function PresentationMode() {
         sair()
         return
       }
-      const alvo = e.target as HTMLElement | null
-      if (alvo && ['BUTTON', 'SELECT', 'INPUT', 'TEXTAREA'].includes(alvo.tagName)) return
-      if (e.key === 'ArrowRight') {
+      const tag = (e.target as HTMLElement | null)?.tagName ?? ''
+      if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+        // Setas não têm ação nativa em BUTTON — só cedem a campos/selects
+        if (['SELECT', 'INPUT', 'TEXTAREA'].includes(tag)) return
         e.preventDefault()
-        avancar()
-      } else if (e.key === 'ArrowLeft') {
-        e.preventDefault()
-        voltar()
+        if (e.key === 'ArrowRight') avancar()
+        else voltar()
       } else if (e.key === ' ') {
+        // Espaço ativa botões nativamente (ex.: play/pause focado) — não duplica
+        if (['BUTTON', 'SELECT', 'INPUT', 'TEXTAREA'].includes(tag)) return
         e.preventDefault()
         setTocando((t) => !t)
       }
