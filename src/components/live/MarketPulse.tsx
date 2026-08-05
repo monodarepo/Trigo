@@ -154,11 +154,19 @@ export function MarketPulse() {
   const precos = useLive((s) => s.precos)
   const historico = useLive((s) => s.historico)
   const eventos = useLive((s) => s.eventos)
+  const modo = useDataMode()
   const ultimoEvento = eventos[eventos.length - 1]
 
   return (
     <div className="flex items-center gap-4 overflow-x-auto border-t border-edge/40 px-4 py-1.5 lg:gap-5 lg:px-8 [scrollbar-width:none]">
-      <span className="flex shrink-0 items-center gap-1.5" aria-label="Sinais de mercado ao vivo (simulação)">
+      <span
+        className="flex shrink-0 items-center gap-1.5"
+        aria-label={
+          modo === 'aovivo'
+            ? 'Sinais de mercado — câmbio ao vivo, trigo sobre referência mensal, frete simulado'
+            : 'Sinais de mercado do cenário (simulação)'
+        }
+      >
         <span className="relative flex h-2 w-2" aria-hidden="true">
           <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-positive opacity-60" />
           <span className="relative inline-flex h-2 w-2 rounded-full bg-positive" />
@@ -168,15 +176,17 @@ export function MarketPulse() {
 
       <CotacaoTrigo />
       <CotacaoCambio />
-      <Cotacao
-        rotulo="Frete"
-        valor={precos.freteUsdT}
-        base={LIVE_BASE.freteUsdT}
-        casas={2}
-        prefixo="US$"
-        sufixo="/t"
-        serie={historico.frete}
-      />
+      <span className="shrink-0" title="Frete simulado sobre o cenário — sem fonte externa nesta demo">
+        <Cotacao
+          rotulo="Frete"
+          valor={precos.freteUsdT}
+          base={LIVE_BASE.freteUsdT}
+          casas={2}
+          prefixo="US$"
+          sufixo="/t"
+          serie={historico.frete}
+        />
+      </span>
 
       <span className="ml-auto hidden min-w-0 shrink items-center md:flex">
         <AnimatePresence mode="wait">

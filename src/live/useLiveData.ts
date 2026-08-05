@@ -66,6 +66,10 @@ export function useFxAoVivo(): SinalAoVivo<FxLatest> {
   })
 }
 
+/** Higiene de rate-limit: clima muda por hora, não por minuto — 5 min de polling
+ * mantém as 5 consultas Open-Meteo em ~1,4k req/dia (limite gratuito: 10k). */
+const CLIMA_REFETCH_MS = 5 * 60_000
+
 /** Clima na zona núcleo (Rosário/AR) — Open-Meteo (fallback: seca do cenário). */
 export function useClimaAoVivo(): SinalAoVivo<Clima> {
   return useLiveData<Clima>({
@@ -73,6 +77,7 @@ export function useClimaAoVivo(): SinalAoVivo<Clima> {
     buscar: () => fetchWeather(ZONA_NUCLEO_ROSARIO.lat, ZONA_NUCLEO_ROSARIO.lon),
     fallback: snapshot.mercado.clima,
     fonteAoVivo: 'open-meteo',
+    refetchMs: CLIMA_REFETCH_MS,
   })
 }
 
@@ -121,8 +126,8 @@ export function useClimaRegioesAoVivo(): ClimaRegiaoSinal[] {
       queryKey: ['clima', 'regiao', r.id],
       queryFn: () => fetchWeather(r.lat, r.lon),
       enabled: aoVivo,
-      refetchInterval: 60_000,
-      staleTime: 60_000,
+      refetchInterval: CLIMA_REFETCH_MS,
+      staleTime: CLIMA_REFETCH_MS,
       retry: 1,
     })),
   })

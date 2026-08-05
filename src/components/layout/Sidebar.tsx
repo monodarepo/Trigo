@@ -82,18 +82,45 @@ export function Sidebar({ showClose = false, onClose, onNavigate }: SidebarProps
       <div className="border-t border-edge/60 px-5 py-4">
         <p className="text-xs font-medium text-ink-muted">Monoda × Google Cloud</p>
         <p className="mt-0.5 text-[11px] text-ink-subtle">Confidencial — uso interno</p>
-        <p className="mt-1 text-[10px] text-ink-faint">
-          Clima:{' '}
+        <p className="mt-1 text-[10px] leading-relaxed text-ink-faint">
+          Dados ao vivo:{' '}
           <a
             href="https://open-meteo.com/"
             target="_blank"
             rel="noreferrer"
             className="underline-offset-2 hover:text-ink-subtle hover:underline"
           >
-            Open-Meteo.com
+            Open-Meteo
           </a>{' '}
-          (CC BY 4.0)
+          (CC BY 4.0) ·{' '}
+          <a
+            href="https://frankfurter.dev/"
+            target="_blank"
+            rel="noreferrer"
+            className="underline-offset-2 hover:text-ink-subtle hover:underline"
+          >
+            Frankfurter
+          </a>{' '}
+          ·{' '}
+          <a
+            href="https://fred.stlouisfed.org/"
+            target="_blank"
+            rel="noreferrer"
+            className="underline-offset-2 hover:text-ink-subtle hover:underline"
+          >
+            FRED
+          </a>{' '}
+          ·{' '}
+          <a
+            href="https://www.gdeltproject.org/"
+            target="_blank"
+            rel="noreferrer"
+            className="underline-offset-2 hover:text-ink-subtle hover:underline"
+          >
+            GDELT
+          </a>
         </p>
+        <p className="mt-0.5 text-[10px] text-ink-faint">Uso comercial exige revisão de licenciamento.</p>
       </div>
     </div>
   )

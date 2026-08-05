@@ -68,7 +68,14 @@ pulso oscila — o restante do app funciona exatamente igual.
 
 - **Clima**: [Open-Meteo.com](https://open-meteo.com/) — dados meteorológicos sob licença [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
 - **Câmbio**: [Frankfurter](https://frankfurter.dev/) — taxas de referência de bancos centrais (BCE).
+- **Trigo (referência mensal)**: [FRED](https://fred.stlouisfed.org/series/PWHEAMTUSDM) — série
+  `PWHEAMTUSDM` (Global price of Wheat, FMI), servida via [Alpha Vantage](https://www.alphavantage.co/)
+  pelo proxy `api/wheat.ts`.
 - **Notícias**: [GDELT Project](https://www.gdeltproject.org/) — DOC 2.0 API (monitoramento global de notícias, gratuito).
+
+> **Licenciamento**: os planos gratuitos acima cobrem este protótipo de demonstração. **Uso
+> comercial/produtivo exige revisão de licenciamento** de cada fonte (termos da Alpha Vantage,
+> atribuição CC BY 4.0 do Open-Meteo, termos de uso do GDELT e do FRED) antes de ir a produção.
 
 > No modo "Cenário (demo)" nenhum dado externo é consultado; a decisão (TLC, R$ 4,8M, blend, hedge) é sempre encenada e nunca depende de rede.
 
