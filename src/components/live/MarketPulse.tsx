@@ -2,6 +2,34 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { Sparkline } from '../ui'
 import { AnimatedNumber } from './AnimatedNumber'
 import { LIVE_BASE, useLive } from '../../live/liveStore'
+import { definirDataMode, useDataMode, type DataMode } from '../../live/dataMode'
+
+/** Toggle "Ao vivo | Cenário": em Cenário, todos os useLiveData ignoram a rede. */
+function ToggleModoDados() {
+  const modo = useDataMode()
+  const opcao = (id: DataMode, rotulo: string) => (
+    <button
+      type="button"
+      aria-pressed={modo === id}
+      onClick={() => definirDataMode(id)}
+      className={`rounded-full px-2 py-0.5 text-11 font-semibold transition-colors ${
+        modo === id ? 'bg-gold text-navy' : 'text-ink-subtle hover:text-ink'
+      }`}
+    >
+      {rotulo}
+    </button>
+  )
+  return (
+    <span
+      role="group"
+      aria-label="Fonte de dados externos"
+      className="flex shrink-0 items-center gap-0.5 rounded-full border border-edge bg-card-2 p-0.5"
+    >
+      {opcao('aovivo', 'Ao vivo')}
+      {opcao('cenario', 'Cenário')}
+    </span>
+  )
+}
 
 const fmt = (v: number, casas: number) =>
   v.toLocaleString('pt-BR', { minimumFractionDigits: casas, maximumFractionDigits: casas })
@@ -96,6 +124,8 @@ export function MarketPulse() {
           </motion.span>
         </AnimatePresence>
       </span>
+
+      <ToggleModoDados />
     </div>
   )
 }

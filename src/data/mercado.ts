@@ -1,4 +1,4 @@
-import type { SinalMercado } from './types'
+import type { ClimaSnapshot, SinalMercado } from './types'
 
 /** Preços e referências de mercado no instante da demo (terça, 12 ago · 07:00). */
 export const PRECOS_ATUAIS = {
@@ -11,6 +11,19 @@ export const PRECOS_ATUAIS = {
   /** Probabilidade de alta do trigo em 15 dias (modelo de previsão). */
   probAltaTrigo15dPct: 72,
 } as const
+
+/**
+ * Clima encenado na zona núcleo (Rosário/AR) — coerente com a narrativa de
+ * seca do cenário-âncora (inverno seco, safra revisada para baixo).
+ * É o fallback do sinal ao vivo do Open-Meteo (useClimaAoVivo).
+ */
+export const CLIMA_CENARIO: ClimaSnapshot = {
+  temperaturaC: 14,
+  precipitacaoMm: 0,
+  codigoTempo: 0,
+  chuva7dMm: 1.2,
+  horario: '2025-08-12T07:00',
+}
 
 export const SINAIS_MERCADO: SinalMercado[] = [
   {

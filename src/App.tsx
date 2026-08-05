@@ -1,6 +1,7 @@
 import type { ComponentType, ReactNode } from 'react'
 import { BrowserRouter, HashRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { MotionConfig } from 'framer-motion'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AppShell } from './components/layout/AppShell'
 import { TelaComEstado } from './components/feedback/TelaComEstado'
 import {
@@ -29,6 +30,13 @@ import Vro from './pages/Vro'
 /** Hash router para builds de preview estático (VITE_HASH_ROUTER=1). */
 const Router = import.meta.env.VITE_HASH_ROUTER === '1' ? HashRouter : BrowserRouter
 
+/** Cache + stale-while-revalidate dos sinais ao vivo (periferia). */
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: { refetchOnWindowFocus: false, retry: 1 },
+  },
+})
+
 /** Rota → tela + skeleton por layout + fronteira de erro (nunca tela branca). */
 const TELAS: Array<{ path: string; titulo: string; Tela: ComponentType; esqueleto: ReactNode }> = [
   { path: '/', titulo: 'o Cockpit Executivo', Tela: Cockpit, esqueleto: <EsqueletoCockpit /> },
@@ -44,6 +52,7 @@ const TELAS: Array<{ path: string; titulo: string; Tela: ComponentType; esquelet
 
 export default function App() {
   return (
+    <QueryClientProvider client={queryClient}>
     <MotionConfig reducedMotion="user">
       <Router>
         <Routes>
@@ -68,5 +77,6 @@ export default function App() {
         </Routes>
       </Router>
     </MotionConfig>
+    </QueryClientProvider>
   )
 }

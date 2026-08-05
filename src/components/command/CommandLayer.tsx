@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { BellRing, CheckCircle2, Download, Monitor, Play, Rows3, ShieldCheck, SlidersHorizontal } from 'lucide-react'
+import { BellRing, CheckCircle2, Download, Monitor, Play, Radio, Rows3, ShieldCheck, SlidersHorizontal } from 'lucide-react'
 import { CommandPalette, type Comando } from './CommandPalette'
 import { ShortcutsHelp } from './ShortcutsHelp'
 import { useHotkeys } from '../../hooks/useHotkeys'
@@ -10,6 +10,7 @@ import { aoAbrirAprovacao } from '../approval/approvalBus'
 import type { ModoDecisao } from '../approval/decisionStore'
 import { abrirApresentacao, useApresentacaoAtiva } from '../present/presentStore'
 import { alternarDensidade, alternarMural } from '../layout/layoutStore'
+import { alternarDataMode } from '../../live/dataMode'
 import { ALL_NAV_ITEMS } from '../../data/navigation'
 import { snapshot } from '../../data'
 
@@ -85,6 +86,13 @@ export function CommandLayer() {
       rotulo: 'Alternar densidade (compacta/confortável)',
       icone: Rows3,
       executar: () => alternarDensidade(),
+    },
+    {
+      id: 'acao-datamode',
+      grupo: 'Ações',
+      rotulo: 'Alternar dados externos (Ao vivo/Cenário)',
+      icone: Radio,
+      executar: () => alternarDataMode(),
     },
     {
       id: 'acao-mural',

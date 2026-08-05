@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { Badge, Card, ConfidenceMeter, SectionTitle, TrendArrow } from '../components/ui'
 import { ForecastChart } from '../components/charts/ForecastChart'
 import { SourceBadge } from '../components/trust/SourceBadge'
+import { SinaisExternos } from '../components/live/ExternalSignals'
 import {
   snapshot,
   formatBRL,
@@ -270,6 +271,9 @@ export default function Forecast() {
             <span className="text-positive">− alivia o preço</span>
           </p>
         </Card>
+
+        {/* 5 · Periferia ao vivo (FX/clima reais com fallback) — núcleo encenado */}
+        <SinaisExternos className="lg:col-span-3" />
       </div>
 
       {/* 6 · Rodapé com CTAs */}

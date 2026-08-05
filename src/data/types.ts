@@ -500,6 +500,16 @@ export interface RecomendacaoDoDia {
   hedge: RecomendacaoHedge
 }
 
+/** Clima encenado (estruturalmente compatível com o Clima do provider Open-Meteo). */
+export interface ClimaSnapshot {
+  temperaturaC: number
+  precipitacaoMm: number
+  /** WMO weather code (0 = céu limpo). */
+  codigoTempo: number
+  chuva7dMm: number | null
+  horario: string
+}
+
 // --- Proveniência e qualidade de dados (governança) ---
 
 /** Famílias de dado com proveniência registrada no Hub. */
