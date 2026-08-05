@@ -653,6 +653,7 @@ export type TipoComponenteCustoFarinha =
   | 'trigo'
   | 'conversao'
   | 'energia'
+  | 'logistica'
   | 'perdas'
   | 'depreciacao'
   | 'credito'
@@ -891,6 +892,57 @@ export interface CenarioMakeBuySell {
 // ---------------------------------------------------------------------------
 // KPIs executivos da cadeia trigo → farinha → margem
 // ---------------------------------------------------------------------------
+
+/** Semáforo de eficiência do moinho contra a capacidade econômica mínima. */
+export type SemaforoMoinho = 'verde' | 'ambar' | 'vermelho'
+
+/**
+ * Retrato de eficiência de um moinho na spec de referência — a linha da
+ * tabela da tela Performance dos Moinhos. Tudo derivado do motor econômico.
+ */
+export interface EficienciaMoinho {
+  moinhoId: MoinhoId
+  farinhaId: FarinhaId
+  rendimentoPct: number
+  extracaoPct: number
+  utilizacaoPct: number
+  /** Custo pleno absorvido (R$/t de farinha). */
+  custoInternoRsT: number
+  /** Custo evitável (R$/t) — sem a depreciação afundada. */
+  custoEvitavelRsT: number
+  /** Custo de produzir +1 t (R$/t) — o piso do "produzir para vender". */
+  custoMarginalRsT: number
+  /**
+   * Margem da tonelada INCREMENTAL vendida a terceiros (R$/t) =
+   * preço externo comparável − custo de servir − custo marginal. É a conta que
+   * decide aceitar um pedido spot com o moinho ocioso; comparar o preço direto
+   * com o custo marginal, sem o custo de servir, superestima e inverte sinal.
+   */
+  margemIncrementalRsT: number
+  /** Crédito do farelo no rendimento efetivo da spec (R$/t de farinha). */
+  creditoFareloRsT: number
+  /** Custo do trigo posto no moinho (R$/t de TRIGO) — vem do motor de TLC. */
+  tlcTrigoRsT: number
+  /** Custo fixo absorvido por tonelada na utilização atual (R$/t). */
+  custoFixoRsT: number
+  capacidadeFarinhaT: number
+  capacidadeOciosaT: number
+  /** Preço externo comparável da mesma spec na região do moinho (R$/t). */
+  precoExternoRsT: number
+  /** Ganho de verticalizar nesta unidade (R$/t) = preço externo − custo pleno. */
+  ganhoRsT: number
+  /**
+   * CAPACIDADE ECONÔMICA MÍNIMA: utilização (%) abaixo da qual a diluição dos
+   * custos fixos leva o custo pleno a ultrapassar o preço de mercado. null
+   * quando nenhuma utilização torna a unidade competitiva (nem a 100%).
+   */
+  utilizacaoMinimaPct: number | null
+  /** Folga em pontos percentuais entre a utilização atual e a mínima. */
+  folgaPp: number | null
+  semaforo: SemaforoMoinho
+  /** Explicação curta do semáforo, para o WhyPopover. */
+  diagnostico: string
+}
 
 /** Os 10 KPIs do elo farinha — todos derivados, nenhum digitado à mão. */
 export interface KpiFarinha {

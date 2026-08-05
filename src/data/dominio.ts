@@ -1,4 +1,4 @@
-import type { Fornecedor, Moinho, Origem, Porto } from './types'
+import type { Fornecedor, Moinho, MoinhoId, Origem, Porto, RegiaoComercial } from './types'
 
 /** Referência financeira (âncoras do CLAUDE.md). */
 export const FINANCEIRO = {
@@ -108,6 +108,9 @@ export const ECONOMIA_MOAGEM = {
   /** Parcela VARIÁVEL de conversão + energia + perdas — base do custo marginal.
    * O restante é fixo e só é absorvido com o moinho rodando. */
   parcelaVariavel: 0.72,
+  /** Rendimento canônico do produto (%) — a referência do CLAUDE.md contra a
+   * qual as unidades são comparadas nos gráficos. */
+  rendimentoCanonicoPct: 76,
 } as const
 
 const arred1 = (v: number) => Math.round(v * 10) / 10
@@ -219,6 +222,20 @@ export const MOINHOS: Moinho[] = [
 
 export function getMoinho(id: string): Moinho | undefined {
   return MOINHOS.find((m) => m.id === id)
+}
+
+/** UF → região comercial: define QUAL cotação de farinha é comparável. */
+const REGIAO_POR_UF: Record<string, RegiaoComercial> = {
+  CE: 'nordeste', RN: 'nordeste', BA: 'nordeste', PB: 'nordeste', PE: 'nordeste',
+  PR: 'sul', RS: 'sul', SC: 'sul',
+  SP: 'sudeste', MG: 'sudeste', RJ: 'sudeste', ES: 'sudeste',
+  GO: 'centro-oeste', MT: 'centro-oeste', MS: 'centro-oeste', DF: 'centro-oeste',
+  PA: 'norte', AM: 'norte',
+}
+
+/** Região comercial do moinho — o mercado contra o qual seu custo é medido. */
+export function regiaoDoMoinho(id: MoinhoId): RegiaoComercial {
+  return REGIAO_POR_UF[getMoinho(id)?.uf ?? ''] ?? 'nordeste'
 }
 
 export function getPorto(id: string): Porto | undefined {

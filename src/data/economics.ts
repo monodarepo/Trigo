@@ -15,20 +15,23 @@ import type {
   CenarioMakeBuySell,
   ComponenteCustoFarinha,
   CustoInternoFarinha,
+  EficienciaMoinho,
   FarinhaId,
   MoinhoId,
   RegiaoComercial,
   ResultadoAlternativaMbs,
+  SemaforoMoinho,
 } from './types'
-import { ECONOMIA_MOAGEM, creditoFareloRsT, getMoinho } from './dominio'
+import { ECONOMIA_MOAGEM, MOINHOS, creditoFareloRsT, getMoinho, getPorto, regiaoDoMoinho } from './dominio'
 import { getFarinha, precoExternoComparavel } from './farinha'
 import { calcularTlcMock } from './tlc'
+import { formatBRL } from './format'
 
 const arred1 = (v: number) => Math.round(v * 10) / 10
 
 /**
  * Moinho-âncora do cenário: é para ele que vale, exatamente, o custo interno
- * canônico de R$ 2.100/t (farinha de massas, TLC de R$ 1.480/t).
+ * canônico de R$ 2.100/t (farinha de massas, no TLC de regime de Fortaleza).
  */
 export const MOINHO_ANCORA: MoinhoId = 'fortaleza'
 export const FARINHA_ANCORA: FarinhaId = 'massa'
@@ -70,6 +73,25 @@ export function tlcTrigoNoMoinho(moinhoId: MoinhoId, farinhaId: FarinhaId): numb
   return arred1(tlcReferenciaMoinho(moinhoId) + getFarinha(farinhaId)!.premioBlendRsT)
 }
 
+/**
+ * Parcela de LOGÍSTICA INTERNA (porto → moinho) embutida no TLC, em R$/t de
+ * TRIGO. Sai da mesma decomposição do motor de TLC, não é redigitada: é o que
+ * separa um moinho de porto (Fortaleza, R$ 9,2/t) de um do interior
+ * (Bento Gonçalves, R$ 112/t) e a razão de o custo da farinha divergir tanto.
+ */
+export function logisticaInternaTrigoRsT(moinhoId: MoinhoId): number {
+  const moinho = getMoinho(moinhoId)!
+  const tlc = calcularTlcMock({
+    origemId: 'argentina',
+    portoId: moinho.portoPreferencialId,
+    moinhoId,
+    incoterm: 'FOB',
+  })
+  return arred1(
+    tlc.componentes.filter((c) => c.tipo === 'transporte').reduce((soma, c) => soma + c.valorRs, 0),
+  )
+}
+
 /** Rendimento efetivo (%) = rendimento do moinho + ajuste da spec da farinha. */
 export function rendimentoEfetivoPct(moinhoId: MoinhoId, farinhaId: FarinhaId): number {
   return arred1(getMoinho(moinhoId)!.rendimentoPct + getFarinha(farinhaId)!.ajusteRendimentoPp)
@@ -97,47 +119,68 @@ export function custoInternoFarinha(moinhoId: MoinhoId, farinhaId: FarinhaId): C
   const fatorFareloPorFarinha = fatorTrigoPorFarinha - 1
 
   const tlcTrigoRsT = tlcTrigoNoMoinho(moinhoId, farinhaId)
-  const trigoRs = arred1(tlcTrigoRsT * fatorTrigoPorFarinha)
+  const logisticaTrigoRsT = logisticaInternaTrigoRsT(moinhoId)
+  // O trigo entra em DUAS linhas para que a logística interna fique visível:
+  // ela é o que mais diferencia um moinho de porto de um do interior.
+  const trigoRs = arred1((tlcTrigoRsT - logisticaTrigoRsT) * fatorTrigoPorFarinha)
+  const logisticaRs = arred1(logisticaTrigoRsT * fatorTrigoPorFarinha)
   const creditoRs = creditoFareloRsT(rendimentoPct)
+
+  const pct = (v: number) => v.toFixed(1).replace('.', ',')
+  const rs = (v: number) => v.toFixed(1).replace('.', ',')
 
   const componentes: ComponenteCustoFarinha[] = [
     {
-      rotulo: 'Trigo posto no moinho',
+      rotulo: 'Trigo posto no porto, ajustado pelo rendimento',
       rotuloCurto: 'Trigo',
       valorRs: trigoRs,
       tipo: 'trigo',
-      descricao: `TLC R$ ${tlcTrigoRsT.toFixed(1).replace('.', ',')}/t de trigo ÷ rendimento de ${rendimentoPct.toFixed(1).replace('.', ',')}% = ${fatorTrigoPorFarinha.toFixed(3).replace('.', ',')} t de trigo por t de farinha`,
+      descricao: `TLC de R$ ${rs(tlcTrigoRsT)}/t de trigo, menos R$ ${rs(logisticaTrigoRsT)}/t de logística interna (linha própria), dividido pelo rendimento de ${pct(rendimentoPct)}% — ou seja, ${fatorTrigoPorFarinha.toFixed(3).replace('.', ',')} t de trigo por t de farinha.`,
     },
     {
       rotulo: 'Custo de conversão (moagem, mão de obra, embalagem)',
-      rotuloCurto: 'Conversão',
+      rotuloCurto: 'Moagem',
       valorRs: moinho.custoConversaoRsT,
       tipo: 'conversao',
+      descricao:
+        'Mão de obra, insumos de moagem e embalagem. Cerca de 72% varia com o volume; o restante é fixo e só é absorvido com o moinho rodando.',
     },
     {
       rotulo: 'Energia e manutenção',
       rotuloCurto: 'Energia/manut.',
       valorRs: moinho.energiaManutRsT,
       tipo: 'energia',
+      descricao:
+        'Energia elétrica do processo e manutenção programada. Moinhos mais antigos consomem mais por tonelada moída.',
+    },
+    {
+      rotulo: 'Logística interna (porto → moinho)',
+      rotuloCurto: 'Logística',
+      valorRs: logisticaRs,
+      tipo: 'logistica',
+      descricao: `R$ ${rs(logisticaTrigoRsT)}/t de trigo de transporte do porto ${getPorto(moinho.portoPreferencialId)?.nome ?? ''} até o moinho, convertidos para base farinha pelo rendimento. É o componente que mais separa moinhos de porto de moinhos do interior.`,
     },
     {
       rotulo: 'Perdas de processo e custo financeiro',
       rotuloCurto: 'Perdas/financeiro',
       valorRs: moinho.perdasFinanceiroRsT,
       tipo: 'perdas',
+      descricao: 'Quebra técnica no processo e custo de capital do estoque em processo.',
     },
     {
       rotulo: 'Depreciação',
       rotuloCurto: 'Depreciação',
       valorRs: moinho.depreciacaoRsT,
       tipo: 'depreciacao',
+      descricao:
+        'Custo AFUNDADO: não desaparece ao comprar farinha de terceiros. Entra no custo pleno (P&L), mas fica fora do custo evitável que decide o Make/Buy.',
     },
     {
       rotulo: 'Crédito do farelo e subprodutos',
       rotuloCurto: 'Crédito farelo',
       valorRs: -creditoRs,
       tipo: 'credito',
-      descricao: `${fatorFareloPorFarinha.toFixed(3).replace('.', ',')} t de farelo por t de farinha × R$ ${ECONOMIA_MOAGEM.precoFareloRsT}/t`,
+      descricao: `Moer 1 t de farinha gera ${fatorFareloPorFarinha.toFixed(3).replace('.', ',')} t de farelo, vendidas a R$ ${ECONOMIA_MOAGEM.precoFareloRsT}/t. É receita e ABATE o custo — rendimento menor gera mais farelo e aumenta este crédito.`,
     },
   ]
 
@@ -155,8 +198,12 @@ export function custoInternoFarinha(moinhoId: MoinhoId, farinhaId: FarinhaId): C
     // Base correta do Make/Buy: a depreciação é AFUNDADA — comprar farinha de
     // fora não a faz desaparecer, então ela não pode pesar contra o "produzir".
     custoEvitavelRsT: arred1(totalRsT - moinho.depreciacaoRsT),
-    // Piso de curto prazo: trigo + variáveis − crédito (sem fixos nem depreciação)
-    custoMarginalRsT: arred1(trigoRs + moinho.custoMarginalRsT - creditoRs),
+    // Piso de curto prazo: trigo + LOGÍSTICA INTERNA + variáveis − crédito.
+    // A logística entra porque é 100% variável: cada tonelada extra de trigo
+    // paga o mesmo frete do porto ao moinho. Omiti-la faria um moinho do
+    // interior (frete de R$ 96–112/t) parecer o melhor lugar para produzir a
+    // tonelada incremental — exatamente o inverso da verdade.
+    custoMarginalRsT: arred1(trigoRs + logisticaRs + moinho.custoMarginalRsT - creditoRs),
   }
 }
 
@@ -174,6 +221,192 @@ export function capacidadeFarinhaT(moinhoId: MoinhoId, farinhaId: FarinhaId): nu
 export function capacidadeOciosaFarinhaT(moinhoId: MoinhoId, farinhaId: FarinhaId): number {
   const moinho = getMoinho(moinhoId)!
   return Math.round((capacidadeFarinhaT(moinhoId, farinhaId) * (100 - moinho.utilizacaoPct)) / 100)
+}
+
+// ---------------------------------------------------------------------------
+// Eficiência do moinho e capacidade econômica mínima
+// ---------------------------------------------------------------------------
+
+/**
+ * Custo FIXO absorvido por tonelada na utilização atual (R$/t de farinha):
+ * a parcela não-variável de conversão/energia/perdas mais a depreciação.
+ * É o que se dilui quando o moinho roda mais — e o que sufoca quando roda menos.
+ */
+export function custoFixoRsT(moinhoId: MoinhoId): number {
+  const m = getMoinho(moinhoId)!
+  return arred1(
+    (m.custoConversaoRsT + m.energiaManutRsT + m.perdasFinanceiroRsT) *
+      (1 - ECONOMIA_MOAGEM.parcelaVariavel) +
+      m.depreciacaoRsT,
+  )
+}
+
+/** Rótulo do semáforo — FONTE ÚNICA: tela e medidor leem daqui, para o mesmo
+ * estado não aparecer com dois nomes lado a lado. */
+export const ROTULO_SEMAFORO: Record<SemaforoMoinho, string> = {
+  verde: 'Folga confortável',
+  ambar: 'Folga estreita',
+  vermelho: 'Abaixo do mínimo',
+}
+
+/** Folga (pp) a partir da qual o semáforo deixa de ser âmbar. */
+const FOLGA_CONFORTAVEL_PP = 15
+
+/**
+ * Quanto o custo da farinha CAI com +1 ponto percentual de rendimento (R$/t).
+ *
+ * Derivando custo(r) = TLC/r − (1/r − 1) × farelo em relação a r, o efeito de
+ * +1 pp é (farelo − TLC) / r² × 0,01 — negativo, porque cada ponto a mais de
+ * rendimento troca farelo barato por farinha cara. Devolve o módulo (a economia).
+ */
+export function sensibilidadeRendimentoRsT(
+  moinhoId: MoinhoId,
+  farinhaId: FarinhaId = FARINHA_ANCORA,
+): number {
+  const r = rendimentoEfetivoPct(moinhoId, farinhaId) / 100
+  const tlc = tlcTrigoNoMoinho(moinhoId, farinhaId)
+  return arred1((Math.abs(tlc - ECONOMIA_MOAGEM.precoFareloRsT) / (r * r)) * 0.01)
+}
+
+/**
+ * Retrato de eficiência do moinho na spec de referência.
+ *
+ * CAPACIDADE ECONÔMICA MÍNIMA: rodar menos não muda o custo variável, mas
+ * espalha o mesmo custo fixo por menos toneladas. Partindo do custo atual,
+ *
+ *   custo(u) = custoAtual + fixoPorT × (utilizaçãoAtual / u − 1)
+ *
+ * e a utilização mínima é o u em que custo(u) alcança o preço de mercado:
+ *
+ *   uMin = utilizaçãoAtual ÷ (1 + (preçoExterno − custoAtual) / fixoPorT)
+ *
+ * Abaixo dela, moer custa mais do que comprar pronto — é o ponto em que a
+ * ociosidade deixa de ser folga e vira destruição de valor. Quando o moinho
+ * já perde para o mercado na utilização atual, nenhum u resolve: devolve null.
+ */
+export function eficienciaMoinho(
+  moinhoId: MoinhoId,
+  farinhaId: FarinhaId = FARINHA_ANCORA,
+): EficienciaMoinho {
+  const m = getMoinho(moinhoId)!
+  const custo = custoInternoFarinha(moinhoId, farinhaId)
+  const regiao = regiaoDoMoinho(moinhoId)
+  const externo = precoExternoComparavel(farinhaId, regiao)
+  const precoExternoRsT = externo?.precoRsT ?? 0
+  const ganhoRsT = externo ? arred1(precoExternoRsT - custo.totalRsT) : 0
+  const fixo = custoFixoRsT(moinhoId)
+
+  const denominador = 1 + ganhoRsT / fixo
+  const utilizacaoMinimaBruta = denominador > 0 ? m.utilizacaoPct / denominador : Number.POSITIVE_INFINITY
+  // Mínimo acima da utilização ATUAL significa que a unidade já perde hoje —
+  // tratamos como "nenhuma utilização resolve", que é o que o número diz.
+  const utilizacaoMinimaPct =
+    externo &&
+    Number.isFinite(utilizacaoMinimaBruta) &&
+    utilizacaoMinimaBruta <= 100 &&
+    utilizacaoMinimaBruta < m.utilizacaoPct
+      ? Math.round(utilizacaoMinimaBruta * 10) / 10
+      : null
+  const folgaPp = utilizacaoMinimaPct != null ? arred1(m.utilizacaoPct - utilizacaoMinimaPct) : null
+
+  const semaforo: SemaforoMoinho =
+    utilizacaoMinimaPct == null || folgaPp == null || folgaPp <= 0
+      ? 'vermelho'
+      : folgaPp < FOLGA_CONFORTAVEL_PP
+        ? 'ambar'
+        : 'verde'
+
+  const pct = (v: number) => v.toFixed(1).replace('.', ',')
+  const brl = (v: number) => formatBRL(v, { casas: 1 })
+  const diagnostico = !externo
+    ? `Sem cotação apples-to-apples desta spec na região ${regiao}: não há preço de mercado comparável para dizer se a unidade é competitiva. Antes de decidir, ajustar canal, apresentação e base logística de uma cotação existente.`
+    : utilizacaoMinimaPct == null
+      ? `Custo pleno de ${brl(custo.totalRsT)}/t já supera o mercado (${brl(precoExternoRsT)}/t) na utilização atual: nem rodando a 100% esta unidade fica competitiva nesta spec. O caso é comprar farinha ou trocar o mix — não encher o moinho.`
+      : folgaPp! < FOLGA_CONFORTAVEL_PP
+        ? `Opera a ${pct(m.utilizacaoPct)}% contra um mínimo econômico de ${pct(utilizacaoMinimaPct)}%: folga de apenas ${pct(folgaPp!)} pp. Uma parada de linha ou queda de demanda empurra o custo acima do mercado.`
+        : `Opera a ${pct(m.utilizacaoPct)}% contra um mínimo econômico de ${pct(utilizacaoMinimaPct)}%: ${pct(folgaPp!)} pp de folga. Absorve os ${brl(fixo)}/t de custo fixo com margem.`
+
+  return {
+    moinhoId,
+    farinhaId,
+    rendimentoPct: custo.rendimentoPct,
+    extracaoPct: m.extracaoPct,
+    utilizacaoPct: m.utilizacaoPct,
+    custoInternoRsT: custo.totalRsT,
+    custoEvitavelRsT: custo.custoEvitavelRsT,
+    custoMarginalRsT: custo.custoMarginalRsT,
+    // Vender a tonelada extra também custa servir o cliente: frete, comissão,
+    // embalagem e risco de crédito. Sem isso a "folga até o mercado" mede a
+    // distância errada — e troca de sinal nas unidades apertadas.
+    margemIncrementalRsT: externo
+      ? arred1(precoExternoRsT - ECONOMIA_MOAGEM.custoServirRsT - custo.custoMarginalRsT)
+      : 0,
+    creditoFareloRsT: Math.abs(custo.componentes.find((c) => c.tipo === 'credito')!.valorRs),
+    tlcTrigoRsT: custo.tlcTrigoRsT,
+    custoFixoRsT: fixo,
+    capacidadeFarinhaT: capacidadeFarinhaT(moinhoId, farinhaId),
+    capacidadeOciosaT: capacidadeOciosaFarinhaT(moinhoId, farinhaId),
+    precoExternoRsT,
+    ganhoRsT,
+    utilizacaoMinimaPct,
+    folgaPp,
+    semaforo,
+    diagnostico,
+  }
+}
+
+/** Os 7 moinhos avaliados na MESMA spec — a comparação like-for-like. */
+export function eficienciaMoinhos(farinhaId: FarinhaId = FARINHA_ANCORA): EficienciaMoinho[] {
+  return MOINHOS.map((m) => eficienciaMoinho(m.id, farinhaId))
+}
+
+export interface ResumoParqueMoageiro {
+  farinhaId: FarinhaId
+  /** Produção mensal do parque na spec (t de farinha) = capacidade × utilização. */
+  producaoMensalT: number
+  /** Custo médio PONDERADO PELA PRODUÇÃO (R$/t) — não é média simples. */
+  custoMedioRsT: number
+  /** Unidade de menor custo pleno. */
+  maisCompetitivo: EficienciaMoinho
+  /** Unidade de maior custo pleno. */
+  menosCompetitivo: EficienciaMoinho
+  /** Unidade de menor utilização — onde a ociosidade mais pesa. */
+  menorUtilizacao: EficienciaMoinho
+  /** Diferença de custo entre a melhor e a pior unidade (R$/t). */
+  spreadRsT: number
+  /** Capacidade ociosa somada do parque (t de farinha/mês). */
+  capacidadeOciosaTotalT: number
+  /** Unidades cujo custo pleno já perde para o mercado (semáforo vermelho). */
+  abaixoDoMinimo: EficienciaMoinho[]
+}
+
+/**
+ * Retrato do parque inteiro numa spec. O custo médio é ponderado pela PRODUÇÃO
+ * de cada unidade: uma média simples daria o mesmo peso a Bento Gonçalves
+ * (6,2 kt/mês) e a Eusébio (13,4 kt/mês) e distorceria o custo da companhia.
+ */
+export function resumoParqueMoageiro(farinhaId: FarinhaId = FARINHA_ANCORA): ResumoParqueMoageiro {
+  const unidades = eficienciaMoinhos(farinhaId)
+  const producoes = unidades.map((u) => Math.round((u.capacidadeFarinhaT * u.utilizacaoPct) / 100))
+  const producaoMensalT = producoes.reduce((soma, p) => soma + p, 0)
+  const custoMedioRsT = arred1(
+    unidades.reduce((soma, u, i) => soma + u.custoInternoRsT * producoes[i], 0) / producaoMensalT,
+  )
+  const porCusto = [...unidades].sort((a, b) => a.custoInternoRsT - b.custoInternoRsT)
+  const maisCompetitivo = porCusto[0]
+  const menosCompetitivo = porCusto[porCusto.length - 1]
+
+  return {
+    farinhaId,
+    producaoMensalT,
+    custoMedioRsT,
+    maisCompetitivo,
+    menosCompetitivo,
+    menorUtilizacao: [...unidades].sort((a, b) => a.utilizacaoPct - b.utilizacaoPct)[0],
+    spreadRsT: arred1(menosCompetitivo.custoInternoRsT - maisCompetitivo.custoInternoRsT),
+    capacidadeOciosaTotalT: unidades.reduce((soma, u) => soma + u.capacidadeOciosaT, 0),
+    abaixoDoMinimo: unidades.filter((u) => u.semaforo === 'vermelho'),
+  }
 }
 
 // ---------------------------------------------------------------------------

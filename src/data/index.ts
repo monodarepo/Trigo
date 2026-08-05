@@ -24,8 +24,11 @@ import {
   capacidadeOciosaFarinhaT,
   custoInternoFarinha,
   decisaoMakeBuySell,
+  eficienciaMoinho,
+  eficienciaMoinhos,
   ganhoVerticalizacao,
   margemVendaExterna,
+  resumoParqueMoageiro,
 } from './economics'
 import {
   CALENDARIO_DEMANDA,
@@ -198,6 +201,12 @@ export const snapshot = {
     capacidadeFarinhaT,
     capacidadeOciosaFarinhaT,
   },
+  /** Performance dos moinhos: eficiência por unidade e retrato do parque. */
+  moinhos: {
+    eficiencia: eficienciaMoinho,
+    eficiencias: eficienciaMoinhos,
+    resumoParque: resumoParqueMoageiro,
+  },
   demanda: {
     familias: DEMANDA_FARINHA,
     calendario: CALENDARIO_DEMANDA,
@@ -231,7 +240,15 @@ export * from './types'
 export * from './format'
 export * from './economics'
 export { FARINHAS, PRECOS_FARINHA_EXTERNOS, getFarinha, precoExternoComparavel } from './farinha'
-export { ECONOMIA_MOAGEM, creditoFareloRsT } from './dominio'
+export {
+  ECONOMIA_MOAGEM,
+  MOINHOS,
+  creditoFareloRsT,
+  getMoinho,
+  getOrigem,
+  getPorto,
+  regiaoDoMoinho,
+} from './dominio'
 export { DEMANDA_FARINHA, CALENDARIO_DEMANDA } from './demanda'
 export { CLIENTES_EXTERNOS, OPORTUNIDADES_COMERCIAIS, getClienteExterno } from './comercial'
 export { CENARIOS_MAKE_BUY_SELL, CENARIO_MBS_ANCORA, KPIS_FARINHA } from './makeBuySell'

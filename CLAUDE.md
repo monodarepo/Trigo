@@ -22,16 +22,20 @@ Par-âncora: **moinho Fortaleza × farinha de massas**.
 
 | Componente | R$/t farinha |
 | --- | ---: |
-| Trigo posto no moinho (R$ 1.473,4/t ÷ 0,76) | 1.938,7 |
+| Trigo posto no porto (R$ 1.464,2/t ÷ 0,76) | 1.926,6 |
 | Custo de conversão (moagem, mão de obra, embalagem) | 184,0 |
 | Energia e manutenção | 100,7 |
+| Logística interna porto → moinho (R$ 9,2/t ÷ 0,76) | 12,1 |
 | Perdas e custo financeiro do estoque em processo | 44,0 |
 | Depreciação | 48,0 |
 | (−) Crédito do farelo (0,3158 t × R$ 682/t) | −215,4 |
 | **= CUSTO INTERNO DA FARINHA (pleno absorvido)** | **2.100,0** |
 | Custo **evitável** (= pleno − depreciação) | 2.052,0 |
+| Custo **marginal** (trigo + logística + variáveis − farelo) | 1.960,0 |
 
-**Custo pleno vs. custo evitável.** O pleno (R$ 2.100/t) é a visão de P&L e a base dos KPIs. Mas a decisão **Make/Buy** se faz no **evitável** (R$ 2.052/t): a depreciação é afundada e não desaparece ao comprar farinha de terceiros, então deixá-la pesar contra "produzir" fecha moinho por um custo que continua saindo. Quando as duas bases divergem em sinal, o motor emite alerta explícito no racional.
+A logística interna sai do TLC em **linha própria** porque é ela que separa um moinho de porto (Fortaleza, R$ 9,2/t de trigo) de um do interior (Bento Gonçalves, R$ 112/t): some quase todo o spread do parque. As duas primeiras linhas juntas são o trigo posto no moinho (R$ 1.938,7/t de farinha).
+
+**Três bases de custo, três decisões.** O **pleno** (R$ 2.100/t) é a visão de P&L e a base dos KPIs. A decisão **Make/Buy** se faz no **evitável** (R$ 2.052/t): a depreciação é afundada e não desaparece ao comprar farinha de terceiros, então deixá-la pesar contra "produzir" fecha moinho por um custo que continua saindo — quando as duas bases divergem em sinal, o motor emite alerta explícito no racional. Já a decisão de **vender a tonelada incremental** com o moinho ocioso se faz no **marginal** (R$ 1.960/t): fixos e depreciação já foram absorvidos pelo volume atual, mas trigo e logística interna são 100% variáveis e entram inteiros. Vender abaixo do marginal + custo de servir destrói margem mesmo com capacidade parada.
 
 ### Fórmula 1 — custo interno da farinha (R$/t farinha)
 ```
