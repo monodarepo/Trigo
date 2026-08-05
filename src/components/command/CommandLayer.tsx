@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { BellRing, CheckCircle2, Download, Monitor, Play, Radio, Rows3, ShieldCheck, SlidersHorizontal } from 'lucide-react'
+import { BellRing, CheckCircle2, Download, Monitor, Play, Radio, Rows3, ShieldCheck, SlidersHorizontal, Sparkles } from 'lucide-react'
 import { CommandPalette, type Comando } from './CommandPalette'
 import { ShortcutsHelp } from './ShortcutsHelp'
 import { useHotkeys } from '../../hooks/useHotkeys'
@@ -21,9 +21,6 @@ export function abrirCommandPalette() {
   window.dispatchEvent(new Event(EVENTO_PALETTE))
 }
 
-/** Letra da sequência "g + letra" por rota, na ordem das telas do menu. */
-const LETRAS_SEQUENCIA = ['c', 'p', 't', 'b', 'h', 's', 'a', 'i', 'l', 'v'] as const
-
 export function CommandLayer() {
   const navigate = useNavigate()
   const [paletteAberto, setPaletteAberto] = useState(false)
@@ -41,8 +38,9 @@ export function CommandLayer() {
     }
   }, [])
 
+  // Sequências "g + letra": a letra vem do próprio item de navegação (data/navigation.ts).
   const sequencias = Object.fromEntries(
-    ALL_NAV_ITEMS.map((item, i) => [LETRAS_SEQUENCIA[i], () => navigate(item.path)]),
+    ALL_NAV_ITEMS.filter((item) => item.atalho).map((item) => [item.atalho as string, () => navigate(item.path)]),
   )
 
   useHotkeys({
@@ -56,12 +54,12 @@ export function CommandLayer() {
   })
 
   const comandos: Comando[] = [
-    ...ALL_NAV_ITEMS.map((item, i) => ({
+    ...ALL_NAV_ITEMS.map((item) => ({
       id: `nav-${item.path}`,
       grupo: 'Navegar' as const,
       rotulo: item.title,
       icone: item.icon,
-      atalho: `G ${LETRAS_SEQUENCIA[i].toUpperCase()}`,
+      atalho: item.atalho ? `G ${item.atalho.toUpperCase()}` : undefined,
       executar: () => navigate(item.path),
     })),
     {
@@ -139,7 +137,7 @@ export function CommandLayer() {
       id: `ia-${i}`,
       grupo: 'Perguntar à IA' as const,
       rotulo: pergunta,
-      icone: ALL_NAV_ITEMS[7].icon,
+      icone: Sparkles,
       executar: () => navigate(`/copiloto?q=${encodeURIComponent(pergunta)}`),
     })),
   ]

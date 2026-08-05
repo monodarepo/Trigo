@@ -1,14 +1,20 @@
 import {
   BellRing,
+  CalendarRange,
+  Factory,
+  Handshake,
   Layers,
   LayoutDashboard,
   RadioTower,
+  Scale,
   ShieldCheck,
   ShoppingCart,
   SlidersHorizontal,
   Sparkles,
   TrendingUp,
   Trophy,
+  Warehouse,
+  Workflow,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
@@ -19,6 +25,8 @@ export interface NavItem {
   /** Título completo da tela, exibido na Topbar. */
   title: string
   icon: LucideIcon
+  /** Letra da sequência "g + letra" (atalho de navegação). Única em todo o menu. */
+  atalho?: string
 }
 
 export interface NavSection {
@@ -26,35 +34,55 @@ export interface NavSection {
   items: NavItem[]
 }
 
+/**
+ * Arquitetura de informação por ELO DA CADEIA (trigo → farinha → margem):
+ * Visão · Mercado & Sinais · Trigo · Moinhos & Farinha · Margem & Decisão · Governança.
+ */
 export const NAV_SECTIONS: NavSection[] = [
   {
-    label: 'Sinais & Previsão',
+    label: 'Visão',
     items: [
-      { path: '/', label: 'Cockpit', title: 'Cockpit Executivo', icon: LayoutDashboard },
-      { path: '/previsao', label: 'Previsão', title: 'Previsão de Preço e Câmbio', icon: TrendingUp },
+      { path: '/', label: 'Visão Executiva', title: 'Visão Executiva', icon: LayoutDashboard, atalho: 'v' },
     ],
   },
   {
-    label: 'Decisão',
+    label: 'Mercado & Sinais',
     items: [
-      { path: '/tlc', label: 'Total Landed Cost', title: 'Total Landed Cost', icon: Layers },
-      { path: '/compra', label: 'Compra', title: 'Recomendação de Compra', icon: ShoppingCart },
-      { path: '/hedge', label: 'Hedge', title: 'Recomendação de Hedge', icon: ShieldCheck },
-      { path: '/simulador', label: 'Simulador', title: 'Simulador de Cenários', icon: SlidersHorizontal },
+      { path: '/previsao', label: 'Mercado', title: 'Mercado de Trigo e Farinha', icon: TrendingUp, atalho: 'p' },
+      { path: '/sinais', label: 'Sinais ao Vivo', title: 'Sinais ao Vivo — Observabilidade', icon: RadioTower, atalho: 'i' },
     ],
   },
   {
-    label: 'Operação',
+    label: 'Trigo',
     items: [
-      { path: '/alertas', label: 'Alertas', title: 'Alertas Diários', icon: BellRing },
-      { path: '/copiloto', label: 'Copiloto Gemini', title: 'Copiloto Gemini', icon: Sparkles },
-      { path: '/sinais', label: 'Sinais ao Vivo', title: 'Sinais ao Vivo — Observabilidade', icon: RadioTower },
+      { path: '/tlc', label: 'Total Landed Cost', title: 'Total Landed Cost', icon: Layers, atalho: 't' },
+      { path: '/compra', label: 'Compra', title: 'Recomendação de Compra', icon: ShoppingCart, atalho: 'b' },
+      { path: '/hedge', label: 'Hedge', title: 'Hedge', icon: ShieldCheck, atalho: 'h' },
+      { path: '/estoques', label: 'Estoques & Blends', title: 'Estoques & Blends', icon: Warehouse, atalho: 'e' },
+    ],
+  },
+  {
+    label: 'Moinhos & Farinha',
+    items: [
+      { path: '/moinhos', label: 'Moinhos', title: 'Performance dos Moinhos', icon: Factory, atalho: 'm' },
+      { path: '/verticalizacao', label: 'Verticalização', title: 'Rentabilidade da Verticalização', icon: Workflow, atalho: 'z' },
+      { path: '/demanda', label: 'Demanda', title: 'Planejamento da Demanda', icon: CalendarRange, atalho: 'd' },
+    ],
+  },
+  {
+    label: 'Margem & Decisão',
+    items: [
+      { path: '/make-buy-sell', label: 'Make/Buy/Sell', title: 'Simulador Make/Buy/Sell', icon: Scale, atalho: 'k' },
+      { path: '/oportunidades', label: 'Oportunidades', title: 'Oportunidades Comerciais', icon: Handshake, atalho: 'o' },
+      { path: '/simulador', label: 'Simulador', title: 'Simulador de Cenários', icon: SlidersHorizontal, atalho: 's' },
+      { path: '/alertas', label: 'Alertas', title: 'Alertas & Decisões', icon: BellRing, atalho: 'a' },
     ],
   },
   {
     label: 'Governança',
     items: [
-      { path: '/vro', label: 'Realização de Valor', title: 'VRO — Realização de Valor', icon: Trophy },
+      { path: '/copiloto', label: 'Copiloto', title: 'Copiloto Executivo', icon: Sparkles, atalho: 'c' },
+      { path: '/vro', label: 'Realização de Valor', title: 'VRO — Realização de Valor', icon: Trophy, atalho: 'r' },
     ],
   },
 ]

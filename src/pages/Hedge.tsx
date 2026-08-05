@@ -72,7 +72,7 @@ export default function Hedge() {
   return (
     <div className="space-y-6">
       <SectionTitle
-        eyebrow="Decisão"
+        eyebrow="Trigo"
         title="Recomendação de Hedge"
         subtitle="Qual parcela da exposição proteger, com qual instrumento, em qual janela — e por quê."
       />

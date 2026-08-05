@@ -262,8 +262,8 @@ export default function Alerts() {
   return (
     <div className="space-y-6">
       <SectionTitle
-        eyebrow="Operação"
-        title="Alertas Diários"
+        eyebrow="Margem & Decisão"
+        title="Alertas & Decisões"
         subtitle="Gestão por exceção: o que mudou desde ontem e exige uma decisão hoje."
       />
 

@@ -146,7 +146,7 @@ export default function Simulator() {
   return (
     <div className="space-y-6">
       <SectionTitle
-        eyebrow="Decisão"
+        eyebrow="Margem & Decisão"
         title="Simulador de Cenários"
         subtitle="Choques de preço, câmbio, safra e logística — impacto em CPV e EBITDA por perfil de decisão."
       />

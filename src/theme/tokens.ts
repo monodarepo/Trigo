@@ -1,5 +1,5 @@
 /**
- * Design tokens v2 do Hub de Trigo — superfícies em camadas (Palantir/Stripe).
+ * Design tokens v2 da Wheat & Flour Value Tower — superfícies em camadas (Palantir/Stripe).
  * Fonte única de verdade: o tailwind.config.ts estende o tema a partir daqui.
  *
  * Compatibilidade: as chaves v1 (navy.card, text.muted, semantic.positive…)

@@ -20,7 +20,7 @@ export function Sidebar({ showClose = false, onClose, onNavigate }: SidebarProps
             alt="M. Dias Branco"
             className="h-16 w-auto max-w-full"
           />
-          <p className="mt-1.5 text-xs font-medium text-ink-subtle">Torre de Controle · Trigo</p>
+          <p className="mt-1.5 text-xs font-medium text-ink-subtle">Trigo · Farinha · Margem</p>
         </div>
         {showClose && (
           <button

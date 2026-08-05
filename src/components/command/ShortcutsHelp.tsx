@@ -1,11 +1,13 @@
 import { AnimatePresence, motion } from 'framer-motion'
 import { X } from 'lucide-react'
+import { ALL_NAV_ITEMS } from '../../data/navigation'
 
 export interface ShortcutsHelpProps {
   aberto: boolean
   aoFechar: () => void
 }
 
+/** A navegação sai do MESMO menu (data/navigation.ts) — nunca diverge da sidebar. */
 const GRUPOS: Array<{ titulo: string; atalhos: Array<{ teclas: string[]; descricao: string }> }> = [
   {
     titulo: 'Geral',
@@ -19,17 +21,10 @@ const GRUPOS: Array<{ titulo: string; atalhos: Array<{ teclas: string[]; descric
   },
   {
     titulo: 'Navegação (G + letra)',
-    atalhos: [
-      { teclas: ['G', 'C'], descricao: 'Cockpit Executivo' },
-      { teclas: ['G', 'P'], descricao: 'Previsão de Preço e Câmbio' },
-      { teclas: ['G', 'T'], descricao: 'Total Landed Cost' },
-      { teclas: ['G', 'B'], descricao: 'Recomendação de Compra' },
-      { teclas: ['G', 'H'], descricao: 'Recomendação de Hedge' },
-      { teclas: ['G', 'S'], descricao: 'Simulador de Cenários' },
-      { teclas: ['G', 'A'], descricao: 'Alertas Diários' },
-      { teclas: ['G', 'I'], descricao: 'Copiloto Gemini' },
-      { teclas: ['G', 'V'], descricao: 'VRO — Realização de Valor' },
-    ],
+    atalhos: ALL_NAV_ITEMS.filter((item) => item.atalho).map((item) => ({
+      teclas: ['G', (item.atalho as string).toUpperCase()],
+      descricao: item.title,
+    })),
   },
 ]
 

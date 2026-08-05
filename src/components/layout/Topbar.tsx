@@ -37,7 +37,7 @@ function ContextSelect({ label, options }: { label: string; options: readonly st
 
 export function Topbar({ onOpenMenu }: TopbarProps) {
   const { pathname } = useLocation()
-  const title = findNavItem(pathname)?.title ?? 'Torre de Controle do Trigo'
+  const title = findNavItem(pathname)?.title ?? 'Wheat & Flour Value Tower'
   const densidade = useDensidade()
   const mural = useMural()
   const btnIcone = (ativo: boolean) =>

@@ -1,7 +1,62 @@
-# Torre de Controle do Trigo — Contexto do Projeto (leia antes de qualquer tarefa)
+# Wheat & Flour Value Tower — Torre de Controle de Trigo, Farinha e Margem — Contexto do Projeto (leia antes de qualquer tarefa)
 
 ## O que é
-Mockup navegável (protótipo de venda, sem backend) do "Hub de Trigo": um Decision Intelligence Hub que recomenda, de forma contínua e explicável, QUANDO comprar, QUANTO, de QUAL origem, com QUAL fornecedor, por QUAL porto, para QUAL moinho, com QUAL blend e QUAL parcela proteger por hedge — otimizando pelo CUSTO TOTAL LANDED ajustado ao risco (não pelo preço nominal). Cliente: M. Dias Branco. Parceria: Monoda × Google Cloud. Público: executivos (CPO/CFO) + times de negócio e TI. Tese central: "Um Único Trigo" — todas as áreas decidindo sobre a mesma verdade.
+Mockup navegável (protótipo de venda, sem backend) da **Wheat & Flour Value Tower — Torre de Controle de Trigo, Farinha e Margem**: um Decision Intelligence Hub que recomenda, de forma contínua e explicável, a cadeia inteira — do grão à margem. No TRIGO: QUANDO comprar, QUANTO, de QUAL origem, com QUAL fornecedor, por QUAL porto, para QUAL moinho, com QUAL blend e QUAL parcela proteger por hedge, otimizando pelo CUSTO TOTAL LANDED ajustado ao risco (não pelo preço nominal). Na FARINHA: QUAL moinho processa, QUAL farinha produzir e a QUAL custo interno real. Na MARGEM: QUANTO destinar às fábricas próprias (verticalização) e QUANTO vender a terceiros, e QUANDO é melhor comprar farinha pronta em vez de moer. Cliente: M. Dias Branco. Parceria: Monoda × Google Cloud. Público: executivos (CPO/CFO) + times de negócio e TI. Tese de origem: "Um Único Trigo" — todas as áreas decidindo sobre a mesma verdade; agora evoluída para **um único número de margem**: a mesma verdade econômica atravessa compra, moagem, verticalização e venda externa.
+
+## Tese v2 — Trigo, Farinha e Margem
+**PERGUNTA CENTRAL (Make/Buy/Sell):** vale mais MOER o trigo que compramos, COMPRAR farinha pronta no mercado, ou VENDER farinha a terceiros? A resposta não é anual nem corporativa: é contínua, explicável e granular **por moinho × tipo de farinha** — recalculada a cada movimento de trigo, câmbio, frete, energia, farelo e preço de farinha.
+
+**RECOMENDAÇÃO CONSOLIDADA que o produto entrega:** qual trigo comprar (origem, volume, janela, blend, hedge) · em qual moinho processar · qual farinha produzir · quanto dessa farinha destinar às fábricas próprias · e quanto vender no mercado externo — com o "por quê" de cada número.
+
+**A otimização é pela MARGEM DA CADEIA, não pelo preço do trigo isolado.** Comprar trigo mais barato pode destruir margem (rendimento pior, farelo pior, farinha fora de especificação, moinho errado, frete interno maior). O critério de decisão é sempre margem trigo→farinha→destino, ajustada ao risco.
+
+## Modelo econômico
+**EM DESTAQUE — números canônicos do produto:** custo interno da farinha = **R$ 2.100/t** · rendimento de moagem ≈ **76%** · farelo/subprodutos ≈ **24%**. Toda tela, card, gráfico e narrativa parte destes valores; não recalcule por conta própria nem invente variantes.
+
+Parâmetros: rendimento de moagem 76% (farinha) · farelo/subprodutos 24% · preço do farelo R$ 682/t · custo de servir (venda externa) R$ 120/t · trigo posto no moinho (TLC do cenário-âncora, moinho Fortaleza) R$ 1.480/t.
+
+### Composição do custo interno da farinha (R$ por tonelada de FARINHA)
+| Componente | R$/t farinha |
+| --- | ---: |
+| Trigo posto no moinho (R$ 1.480/t ÷ 0,76) | 1.947,4 |
+| Custo de conversão (moagem, mão de obra, embalagem) | 180,0 |
+| Energia e manutenção | 98,0 |
+| Perdas e custo financeiro do estoque em processo | 42,0 |
+| Depreciação | 48,0 |
+| (−) Crédito do farelo (0,3158 t × R$ 682/t) | −215,4 |
+| **= CUSTO INTERNO DA FARINHA** | **2.100,0** |
+
+### Fórmula 1 — custo interno da farinha (R$/t farinha)
+```
+custoInterno  = TLCtrigo / rendimento + conversão + energiaManut + perdasFinanceiro + depreciação − créditoFarelo
+créditoFarelo = ((1 / rendimento) − 1) × preçoFarelo
+```
+
+### Fórmula 2 — ganho da verticalização (R$/t farinha)
+```
+ganho = preçoEquivalenteCompraExterna − custoInterno = 2.350 − 2.100 = R$ 250/t
+total = ganho × toneladas destinadas às fábricas próprias
+```
+
+### Fórmula 3 — margem de venda externa (R$/t farinha)
+```
+margem = preçoLíquidoVenda − custoInterno − custoDeServir = 2.500 − 2.100 − 120 = R$ 280/t
+```
+
+**ÂNCORAS:** custo interno canônico R$ 2.100/t · preço equivalente externo R$ 2.350/t → ganho R$ 250/t · venda líquida R$ 2.500/t → margem ~R$ 280/t · rendimento ~76% · farelo/subprodutos ~24%.
+
+## Comparação apples-to-apples
+**REGRA:** NUNCA comparar o custo interno da farinha com um "preço médio de farinha" de mercado. A comparação só é válida entre produtos equivalentes nestes 8 eixos:
+1. **Especificação** — proteína, W, cinzas, umidade.
+2. **Aplicação** — massa, biscoito, pão, bolo, pizza, doméstica, industrial.
+3. **Apresentação** — granel, big-bag, saco 25 kg, saco 1 kg.
+4. **Mercado/canal** — industrial, panificação, distribuidor, varejo.
+5. **Região** — onde a farinha é entregue/consumida.
+6. **Logística** — posto fábrica vs. posto cliente, CIF/FOB.
+7. **Condição comercial** — prazo, volume, contrato vs. spot.
+8. **Qualidade/serviço** — constância, assistência técnica, nível de serviço.
+
+Comparar sem esses eixos mistura produtos diferentes num mesmo número e faz o Make/Buy/Sell escolher pela diferença de especificação, embalagem, canal ou frete — e não pela diferença real de custo —, levando a fechar moinho, comprar farinha ou vender externo com base numa vantagem que não existe.
 
 ## Stack e convenções
 - Vite + React 18 + TypeScript + Tailwind + React Router + Recharts + lucide-react + framer-motion.
@@ -58,8 +113,38 @@ Princípio: hierarquia por peso, densidade calibrada, movimento que explica, cor
 - Exceção: navio MV Río Paraná com atraso de +6 dias → risco de demurrage; cobertura do Moinho Natal cai para 19 dias.
 - Alertas: dólar perto do limite; safra argentina revisada p/ baixo; nova janela de hedge; estoque Moinho Fortaleza abaixo da política em 21 dias.
 
-## As 8 telas (rotas)
-1. Cockpit Executivo (/) 2. Previsão de Preço e Câmbio (/previsao) 3. Total Landed Cost (/tlc) 4. Recomendação de Compra (/compra) 5. Recomendação de Hedge (/hedge) 6. Simulador de Cenários (/simulador) 7. Alertas Diários (/alertas) 8. Copiloto Gemini (/copiloto).
+## Arquitetura de informação (rotas)
+Seis seções na sidebar, do sinal à decisão. `(NOVA)` = placeholder a criar nesta etapa; as demais são telas existentes (quando marcadas "rótulo/título", só o texto muda — a tela permanece).
+
+**VISÃO**
+- `/` — **Visão Executiva** (tela atual `Cockpit.tsx` — só muda rótulo/título).
+
+**MERCADO & SINAIS**
+- `/previsao` — **Mercado de Trigo e Farinha** (tela atual `Forecast.tsx` — só muda rótulo/título).
+- `/sinais` — **Sinais ao Vivo** (tela atual `LiveSignals.tsx`).
+
+**TRIGO**
+- `/tlc` — **Total Landed Cost** (atual).
+- `/compra` — **Recomendação de Compra** (atual).
+- `/hedge` — **Hedge** (atual).
+- `/estoques` — **Estoques & Blends** (NOVA → `src/pages/Inventory.tsx`).
+
+**MOINHOS & FARINHA**
+- `/moinhos` — **Performance dos Moinhos** (NOVA → `src/pages/MillPerformance.tsx`).
+- `/verticalizacao` — **Rentabilidade da Verticalização** (NOVA → `src/pages/Verticalization.tsx`).
+- `/demanda` — **Planejamento da Demanda** (NOVA → `src/pages/DemandPlanning.tsx`).
+
+**MARGEM & DECISÃO**
+- `/make-buy-sell` — **Simulador Make/Buy/Sell** (NOVA → `src/pages/MakeBuySell.tsx`).
+- `/oportunidades` — **Oportunidades Comerciais** (NOVA → `src/pages/Opportunities.tsx`).
+- `/simulador` — **Simulador de Cenários** (tela ATUAL `Simulator.tsx` — PRESERVAR, não apagar).
+- `/alertas` — **Alertas & Decisões** (tela atual `Alerts.tsx` — só muda rótulo/título).
+
+**GOVERNANÇA**
+- `/copiloto` — **Copiloto Executivo** (tela atual `Copilot.tsx` — só muda rótulo/título).
+- `/vro` — **Realização de Valor** (atual).
+
+Rota default continua `/` (Visão Executiva). `/showcase` e `/exportar` seguem fora da sidebar, intocadas.
 
 ## Marca
 - Original: `m-dias-branco-logo-png_seeklogo-407830.png` (raiz do repo; PNG 320×320, wordmark monocromático escuro sobre transparente — manter intacto).

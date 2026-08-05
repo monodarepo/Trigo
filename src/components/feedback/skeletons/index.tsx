@@ -167,6 +167,17 @@ export function EsqueletoVro() {
   )
 }
 
+/** Genérico: cabeçalho + bloco de estado + card de apoio (telas placeholder). */
+export function EsqueletoPlaceholder() {
+  return (
+    <div className="space-y-6">
+      <Cabecalho />
+      <Caixa className="h-48" />
+      <Caixa className="h-40" />
+    </div>
+  )
+}
+
 export function EsqueletoSinais() {
   return (
     <div className="space-y-6">

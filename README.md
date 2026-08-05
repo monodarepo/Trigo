@@ -1,14 +1,17 @@
 <img src="public/brand/mdias-logo.png" alt="M. Dias Branco" height="96" />
 
-# Torre de Controle do Trigo
+# Wheat & Flour Value Tower — Torre de Controle de Trigo, Farinha e Margem
 
-Mockup navegável (protótipo de venda, sem backend) do **Hub de Trigo** — um Decision Intelligence Hub
-que recomenda, de forma contínua e explicável, quando comprar, quanto, de qual origem, por qual porto,
-para qual moinho, com qual blend e qual parcela proteger por hedge, otimizando pelo **custo total
-landed ajustado ao risco**.
+Mockup navegável (protótipo de venda, sem backend) — um Decision Intelligence Hub que recomenda, de
+forma contínua e explicável, a cadeia inteira do grão à margem. No **trigo**: quando comprar, quanto,
+de qual origem, por qual porto, para qual moinho, com qual blend e qual parcela proteger por hedge,
+otimizando pelo **custo total landed ajustado ao risco**. Na **farinha**: qual moinho processa, qual
+farinha produzir e a que custo interno real. Na **margem**: quanto verticalizar para as fábricas
+próprias, quanto vender a terceiros e quando compensa comprar farinha pronta em vez de moer
+(**Make/Buy/Sell**).
 
-Cliente: **M. Dias Branco** · Parceria: **Monoda × Google Cloud** · Tese: *"Um Único Trigo"* — todas
-as áreas decidindo sobre a mesma verdade.
+Cliente: **M. Dias Branco** · Parceria: **Monoda × Google Cloud** · Tese: *"Um Único Trigo"*, evoluída
+para **um único número de margem** — a mesma verdade econômica atravessa compra, moagem e venda.
 
 ## Rodando
 
@@ -21,18 +24,41 @@ npm run preview  # serve o build
 
 Build para hospedagem estática (rotas por hash): `VITE_HASH_ROUTER=1 npm run build`.
 
-## As 8 telas
+## As telas, por elo da cadeia
 
-| Rota | Tela |
-| --- | --- |
-| `/` | Cockpit Executivo |
-| `/previsao` | Previsão de Preço e Câmbio |
-| `/tlc` | Total Landed Cost |
-| `/compra` | Recomendação de Compra |
-| `/hedge` | Recomendação de Hedge |
-| `/simulador` | Simulador de Cenários |
-| `/alertas` | Alertas Diários |
-| `/copiloto` | Copiloto Gemini |
+| Seção | Rota | Tela |
+| --- | --- | --- |
+| Visão | `/` | Visão Executiva |
+| Mercado & Sinais | `/previsao` | Mercado de Trigo e Farinha |
+| Mercado & Sinais | `/sinais` | Sinais ao Vivo |
+| Trigo | `/tlc` | Total Landed Cost |
+| Trigo | `/compra` | Recomendação de Compra |
+| Trigo | `/hedge` | Hedge |
+| Trigo | `/estoques` | Estoques & Blends *(placeholder)* |
+| Moinhos & Farinha | `/moinhos` | Performance dos Moinhos *(placeholder)* |
+| Moinhos & Farinha | `/verticalizacao` | Rentabilidade da Verticalização *(placeholder)* |
+| Moinhos & Farinha | `/demanda` | Planejamento da Demanda *(placeholder)* |
+| Margem & Decisão | `/make-buy-sell` | Simulador Make/Buy/Sell *(placeholder)* |
+| Margem & Decisão | `/oportunidades` | Oportunidades Comerciais *(placeholder)* |
+| Margem & Decisão | `/simulador` | Simulador de Cenários |
+| Margem & Decisão | `/alertas` | Alertas & Decisões |
+| Governança | `/copiloto` | Copiloto Executivo |
+| Governança | `/vro` | Realização de Valor |
+
+## Modelo econômico
+
+O motor em `src/data/economics.ts` responde à pergunta Make/Buy/Sell com três fórmulas determinísticas,
+todas ancoradas no TLC do trigo (elo 1) — mexeu na compra, moveu a margem:
+
+```
+custoInterno = TLCtrigo / rendimento + conversão + energia + perdas + depreciação − créditoFarelo
+ganho        = preçoEquivalenteCompraExterna − custoInterno          (2.350 − 2.100 = R$ 250/t)
+margem       = preçoLíquidoVenda − custoInterno − custoDeServir      (2.500 − 2.100 − 120 = R$ 280/t)
+```
+
+Custo interno canônico **R$ 2.100/t** de farinha (Fortaleza × farinha de massas), rendimento de moagem
+**76%**, farelo/subprodutos **24%**. Preços externos só entram na comparação quando marcados como
+*apples-to-apples* — mesma spec, canal, apresentação, região e base logística. Ver [`CLAUDE.md`](CLAUDE.md).
 
 ## Arquitetura
 

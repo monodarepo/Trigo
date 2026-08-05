@@ -17,7 +17,36 @@ import {
   RESPOSTAS_MOCK,
   RESPOSTAS_RICAS,
 } from './copiloto'
-import { FINANCEIRO, FORNECEDORES, MOINHOS, ORIGENS, PORTOS } from './dominio'
+import { ECONOMIA_MOAGEM, FINANCEIRO, FORNECEDORES, MOINHOS, ORIGENS, PORTOS } from './dominio'
+import { FARINHAS, PRECOS_FARINHA_EXTERNOS, precoExternoComparavel } from './farinha'
+import {
+  capacidadeFarinhaT,
+  capacidadeOciosaFarinhaT,
+  custoInternoFarinha,
+  decisaoMakeBuySell,
+  ganhoVerticalizacao,
+  margemVendaExterna,
+} from './economics'
+import {
+  CALENDARIO_DEMANDA,
+  DEMANDA_FARINHA,
+  NECESSIDADE_FARINHA_MES_T,
+  NECESSIDADE_TRIGO_ANO_T,
+  NECESSIDADE_TRIGO_MES_T,
+} from './demanda'
+import {
+  CLIENTES_EXTERNOS,
+  MARGEM_OPORTUNIDADES_RECOMENDADAS_RS,
+  OPORTUNIDADES_COMERCIAIS,
+  VOLUME_OPORTUNIDADES_RECOMENDADAS_T,
+} from './comercial'
+import {
+  BENEFICIO_MAKE_BUY_SELL_RS,
+  CAPACIDADE_OCIOSA_TOTAL_T,
+  CENARIOS_MAKE_BUY_SELL,
+  CENARIO_MBS_ANCORA,
+  KPIS_FARINHA,
+} from './makeBuySell'
 import {
   BANDA_ORCAMENTO_PCT,
   CAMBIO_ORCADO,
@@ -55,7 +84,7 @@ import {
 } from './vro'
 import { FONTES, FONTES_LISTA, REGRAS_QUALIDADE_DADOS, RESUMO_QUALIDADE_DADOS } from './sources'
 
-/** KPIs do topo do Cockpit Executivo. */
+/** KPIs do topo da Visão Executiva. */
 export const KPIS_COCKPIT: KpiExposicao = {
   exposicaoCambial90dUsd: EXPOSICAO_90D_USD,
   cambioAtual: PRECOS_ATUAIS.cambioBrlUsd,
@@ -149,6 +178,44 @@ export const snapshot = {
     alavancas: ALAVANCAS_VRO,
     curva: CURVA_VRO,
   },
+  /**
+   * Elo 2→5 da cadeia: farinha, demanda, comercial e a decisão Make/Buy/Sell.
+   * Tudo aqui DERIVA do elo do trigo (o TLC), então o cenário continua único:
+   * mexeu na compra, moveu o custo da farinha, a margem e a recomendação.
+   */
+  farinha: {
+    specs: FARINHAS,
+    economiaMoagem: ECONOMIA_MOAGEM,
+    precosExternos: PRECOS_FARINHA_EXTERNOS,
+    precoExternoComparavel,
+    kpis: KPIS_FARINHA,
+    capacidadeOciosaTotalT: CAPACIDADE_OCIOSA_TOTAL_T,
+    /** Motor econômico — as funções que as telas chamam. */
+    custoInterno: custoInternoFarinha,
+    ganhoVerticalizacao,
+    margemVendaExterna,
+    decisaoMakeBuySell,
+    capacidadeFarinhaT,
+    capacidadeOciosaFarinhaT,
+  },
+  demanda: {
+    familias: DEMANDA_FARINHA,
+    calendario: CALENDARIO_DEMANDA,
+    necessidadeFarinhaMesT: NECESSIDADE_FARINHA_MES_T,
+    necessidadeTrigoMesT: NECESSIDADE_TRIGO_MES_T,
+    necessidadeTrigoAnoT: NECESSIDADE_TRIGO_ANO_T,
+  },
+  comercial: {
+    clientes: CLIENTES_EXTERNOS,
+    oportunidades: OPORTUNIDADES_COMERCIAIS,
+    margemRecomendadasRs: MARGEM_OPORTUNIDADES_RECOMENDADAS_RS,
+    volumeRecomendadasT: VOLUME_OPORTUNIDADES_RECOMENDADAS_T,
+  },
+  makeBuySell: {
+    cenarios: CENARIOS_MAKE_BUY_SELL,
+    ancora: CENARIO_MBS_ANCORA,
+    beneficioRs: BENEFICIO_MAKE_BUY_SELL_RS,
+  },
   /** Proveniência e qualidade de dados — a governança que a TI cobra. */
   governancaDados: {
     fontes: FONTES,
@@ -162,4 +229,10 @@ export type Snapshot = typeof snapshot
 
 export * from './types'
 export * from './format'
+export * from './economics'
+export { FARINHAS, PRECOS_FARINHA_EXTERNOS, getFarinha, precoExternoComparavel } from './farinha'
+export { ECONOMIA_MOAGEM, creditoFareloRsT } from './dominio'
+export { DEMANDA_FARINHA, CALENDARIO_DEMANDA } from './demanda'
+export { CLIENTES_EXTERNOS, OPORTUNIDADES_COMERCIAIS, getClienteExterno } from './comercial'
+export { CENARIOS_MAKE_BUY_SELL, CENARIO_MBS_ANCORA, KPIS_FARINHA } from './makeBuySell'
 export { FONTES, FONTES_LISTA, FONTE_FRANKFURTER, FONTE_OPEN_METEO, FONTE_GDELT, FONTE_WHEAT_REF, fonteDe } from './sources'

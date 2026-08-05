@@ -3,7 +3,7 @@ import { AlertTriangle, RotateCcw } from 'lucide-react'
 
 interface ErrorBoundaryProps {
   children: ReactNode
-  /** Nome amigável do que está protegido (ex.: "Cockpit Executivo"). */
+  /** Nome amigável do que está protegido (ex.: "Visão Executiva"). */
   rotulo?: string
   /** Fallback custom (recebe reset). Sem ele, usa o fallback padrão elegante. */
   fallback?: (reset: () => void, erro: Error) => ReactNode

@@ -1,5 +1,5 @@
 /**
- * Modelo de domínio do Hub de Trigo — a "verdade única" da demo.
+ * Modelo de domínio da Wheat & Flour Value Tower — a "verdade única" da demo.
  * Todos os componentes de tela consomem estes tipos via src/data.
  */
 
@@ -64,6 +64,31 @@ export interface Moinho {
   portoPreferencialId: PortoId
   perfilProduto: Array<'biscoito' | 'cracker' | 'massa' | 'pao'>
   coordenadas?: { lat: number; lon: number }
+
+  // --- Parâmetros de moagem e economia da conversão (elo trigo → farinha) ---
+
+  /** Rendimento de farinha (%): t de farinha por 100 t de trigo moído. */
+  rendimentoPct: number
+  /** Taxa de extração (%) do endosperma — define cinzas/cor da farinha. */
+  extracaoPct: number
+  /** Capacidade de moagem em t de trigo por mês. */
+  capacidadeMensalT: number
+  /** Utilização da capacidade instalada (%). */
+  utilizacaoPct: number
+  /** Custo de conversão (R$/t de farinha): moagem, mão de obra, embalagem. */
+  custoConversaoRsT: number
+  /** Energia e manutenção (R$/t de farinha). */
+  energiaManutRsT: number
+  /** Perdas de processo e custo financeiro do estoque em processo (R$/t de farinha). */
+  perdasFinanceiroRsT: number
+  /** Crédito do farelo e subprodutos (R$/t de farinha) — receita que ABATE o custo. */
+  creditoFareloRsT: number
+  /** Custo marginal de moer +1 t de farinha (R$/t): só a parcela variável de
+   * conversão, energia e perdas. NÃO inclui trigo, custos fixos nem depreciação —
+   * é o piso de decisão de curto prazo (aceitar ou recusar um pedido spot). */
+  custoMarginalRsT: number
+  /** Depreciação alocada (R$/t de farinha). */
+  depreciacaoRsT: number
 }
 
 export interface Contrato {
@@ -572,4 +597,284 @@ export interface ResumoQualidadeDados {
   falhasAbertas: number
   /** Fontes com dono nomeado (%): governança completa = 100. */
   fontesComDonoPct: number
+}
+
+// ---------------------------------------------------------------------------
+// Elo 2 — Farinha: especificação, moagem e custo interno
+// ---------------------------------------------------------------------------
+
+export type AplicacaoFarinha =
+  | 'massa'
+  | 'biscoito'
+  | 'pao'
+  | 'bolo'
+  | 'pizza'
+  | 'domestica'
+  | 'industrial'
+
+export type FarinhaId = 'massa' | 'biscoito' | 'cracker' | 'pao' | 'bolo' | 'domestica'
+
+/**
+ * Especificação técnica da farinha — a unidade de comparação apples-to-apples.
+ * Duas farinhas só podem ter preços comparados quando a spec, a aplicação e a
+ * apresentação coincidem (ver CLAUDE.md § Comparação apples-to-apples).
+ */
+export interface FarinhaSpec {
+  id: FarinhaId
+  nome: string
+  /** Proteína em % (base 14% de umidade). */
+  proteina: number
+  /** Força de glúten — W do alveógrafo. */
+  gluten: number
+  /** Cinzas em % (base seca) — proxy do tipo/extração. */
+  cinzas: number
+  /** Umidade em %. */
+  umidade: number
+  /** Falling number em segundos (atividade amilásica). */
+  fallingNumber: number
+  /** Cor Kent-Jones: quanto MENOR, mais branca a farinha. */
+  cor: number
+  /** Granulometria: % passante em peneira de 132 µm. */
+  granulometria: number
+  aplicacao: AplicacaoFarinha
+  /** TLC do trigo/blend que esta farinha exige (R$/t de TRIGO). */
+  tlcTrigoRsT: number
+  /** Ajuste de rendimento sobre o do moinho (pontos percentuais): farinhas mais
+   * refinadas (cinzas baixas) extraem menos; farinhas rústicas extraem mais. */
+  ajusteRendimentoPp: number
+  /** Blend de trigo de referência, em texto (rastreia até a tela de Compra). */
+  blendReferencia: string
+}
+
+export type TipoComponenteCustoFarinha =
+  | 'trigo'
+  | 'conversao'
+  | 'energia'
+  | 'perdas'
+  | 'depreciacao'
+  | 'credito'
+
+export interface ComponenteCustoFarinha {
+  rotulo: string
+  /** Rótulo compacto para eixo de waterfall. */
+  rotuloCurto?: string
+  /** R$ por tonelada de FARINHA. Negativo = crédito (farelo/subprodutos). */
+  valorRs: number
+  tipo: TipoComponenteCustoFarinha
+  descricao?: string
+}
+
+/** Composição do custo interno da farinha por moinho × farinha (a tabela). */
+export interface CustoInternoFarinha {
+  moinhoId: MoinhoId
+  farinhaId: FarinhaId
+  /** TLC do trigo posto no moinho (R$/t de TRIGO) — vem do elo 1. */
+  tlcTrigoRsT: number
+  /** Rendimento aplicado (%) = rendimento do moinho + ajuste da farinha. */
+  rendimentoPct: number
+  /** t de trigo consumidas por t de farinha = 1 / rendimento. */
+  fatorTrigoPorFarinha: number
+  /** t de farelo geradas por t de farinha = (1 / rendimento) − 1. */
+  fatorFareloPorFarinha: number
+  componentes: ComponenteCustoFarinha[]
+  /** Custo interno da farinha (R$/t de farinha) — soma dos componentes. */
+  totalRsT: number
+  /** Piso de curto prazo (R$/t): trigo + variáveis − crédito, sem fixos. */
+  custoMarginalRsT: number
+}
+
+// ---------------------------------------------------------------------------
+// Mercado de farinha — preço externo comparável
+// ---------------------------------------------------------------------------
+
+export type RegiaoComercial = 'nordeste' | 'norte' | 'sudeste' | 'sul' | 'centro-oeste'
+
+export type CanalFarinha = 'industrial' | 'panificacao' | 'distribuidor' | 'varejo'
+
+export type ApresentacaoFarinha = 'granel' | 'big-bag' | 'saco-25kg' | 'saco-1kg'
+
+/** Base logística do preço cotado — muda o que está incluso. */
+export type BasePrecoFarinha = 'posto-fabrica' | 'posto-cliente'
+
+/**
+ * Preço de farinha de terceiros por região × spec × canal × apresentação.
+ * `comparavel` marca as cotações que podem ser confrontadas diretamente com o
+ * custo interno da MESMA spec; as demais exigem os ajustes de `ressalva`.
+ */
+export interface PrecoFarinhaExterno {
+  id: string
+  regiao: RegiaoComercial
+  farinhaId: FarinhaId
+  canal: CanalFarinha
+  apresentacao: ApresentacaoFarinha
+  /** Preço de mercado em R$/t de farinha. */
+  precoRsT: number
+  base: BasePrecoFarinha
+  /** Prazo da condição comercial (dias). */
+  prazoDias: number
+  /** Volume mínimo da cotação (t/mês). */
+  volumeMinimoT: number
+  fonte: string
+  /** true = apples-to-apples com o custo interno da mesma farinha. */
+  comparavel: boolean
+  /** Ajustes necessários antes de comparar (obrigatório quando comparavel=false). */
+  ressalva?: string
+}
+
+// ---------------------------------------------------------------------------
+// Elo 3 — Demanda: plano de vendas → farinha → trigo
+// ---------------------------------------------------------------------------
+
+export type FamiliaProduto = 'massas' | 'biscoitos' | 'bolos' | 'torradas'
+
+export interface PontoCalendarioDemanda {
+  /** Mês de referência (ISO 'YYYY-MM'). */
+  mes: string
+  /** Necessidade de farinha no mês (t). */
+  farinhaT: number
+  /** Necessidade de trigo equivalente no mês (t). */
+  trigoT: number
+}
+
+/**
+ * Da venda do produto acabado à tonelada de trigo: a ponte que faz o
+ * planejamento de demanda e a compra de trigo falarem a mesma língua.
+ */
+export interface DemandaFarinha {
+  familia: FamiliaProduto
+  rotulo: string
+  farinhaId: FarinhaId
+  /** Plano de vendas do produto acabado (t/mês). */
+  planoVendasT: number
+  /** t de farinha por t de produto acabado (receita média da família). */
+  fatorFarinha: number
+  /** Necessidade de farinha (t/mês) = planoVendas × fatorFarinha. */
+  necessidadeFarinhaT: number
+  /** Necessidade de trigo (t/mês) = necessidadeFarinha / rendimento. */
+  necessidadeTrigoT: number
+  /** Política de estoque de segurança (dias de cobertura). */
+  estoqueSegurancaDias: number
+  estoqueSegurancaT: number
+  /** Moinhos que abastecem a família. */
+  moinhosAtendem: MoinhoId[]
+  calendario: PontoCalendarioDemanda[]
+}
+
+// ---------------------------------------------------------------------------
+// Elo 4 — Comercial: clientes externos e oportunidades de venda
+// ---------------------------------------------------------------------------
+
+export interface ClienteExterno {
+  id: string
+  nome: string
+  regiao: RegiaoComercial
+  canal: CanalFarinha
+  /** Rating de crédito do cliente. */
+  rating: 'A' | 'B' | 'C'
+  volumeMensalT: number
+  prazoDias: number
+  relacionamentoAnos: number
+}
+
+export type StatusOportunidade = 'recomendada' | 'avaliar' | 'recusar'
+
+export interface OportunidadeComercial {
+  id: string
+  clienteId: string
+  farinhaId: FarinhaId
+  /** Moinho que atenderia — define o custo interno da conta. */
+  moinhoId: MoinhoId
+  regiao: RegiaoComercial
+  canal: CanalFarinha
+  apresentacao: ApresentacaoFarinha
+  volumeT: number
+  /** Preço líquido de venda (R$/t): já sem impostos, descontos e devoluções. */
+  precoLiquidoRsT: number
+  /** Custo de servir (R$/t): frete ao cliente, comissão, embalagem e risco de crédito. */
+  custoServirRsT: number
+  /** Custo interno da farinha no moinho que atende (R$/t). */
+  custoInternoRsT: number
+  /** Margem (R$/t) = precoLíquido − custoInterno − custoDeServir. */
+  margemRsT: number
+  margemTotalRs: number
+  /** Preço mínimo (R$/t) que ainda cobre custo interno + custo de servir. */
+  precoMinimoRsT: number
+  /** Capacidade ociosa do moinho na janela (t/mês). */
+  capacidadeDisponivelT: number
+  status: StatusOportunidade
+  racional: string
+}
+
+// ---------------------------------------------------------------------------
+// Elo 5 — Make/Buy/Sell: a decisão consolidada
+// ---------------------------------------------------------------------------
+
+export type AlternativaMbs =
+  | 'produzir-consumir'
+  | 'comprar'
+  | 'produzir-vender'
+  | 'estoque'
+  | 'parar-moagem'
+
+export interface ResultadoAlternativaMbs {
+  alternativa: AlternativaMbs
+  rotulo: string
+  /** Resultado econômico em R$/t de farinha, medido CONTRA a referência de
+   * comprar farinha no mercado (alternativa 'comprar' = 0 por definição). */
+  resultadoRsT: number
+  /** Resultado no volume do cenário (R$). */
+  resultadoRs: number
+  /** false quando a alternativa esbarra em capacidade, spec ou política. */
+  viavel: boolean
+  nota: string
+}
+
+/** A decisão Make/Buy/Sell de um moinho × farinha, com as 5 alternativas. */
+export interface CenarioMakeBuySell {
+  id: string
+  moinhoId: MoinhoId
+  farinhaId: FarinhaId
+  /** Volume em decisão (t de farinha/mês). */
+  volumeT: number
+  custoInternoRsT: number
+  /** Preço equivalente de compra externa da MESMA spec (R$/t). */
+  precoExternoRsT: number
+  /** Preço líquido de venda a terceiros (R$/t). */
+  precoVendaLiquidoRsT: number
+  custoServirRsT: number
+  /** Capacidade ociosa do moinho na janela (t de farinha/mês). */
+  capacidadeDisponivelT: number
+  alternativas: ResultadoAlternativaMbs[]
+  recomendada: AlternativaMbs
+  /** Resultado da alternativa recomendada (R$). */
+  resultadoRs: number
+  racional: string
+}
+
+// ---------------------------------------------------------------------------
+// KPIs executivos da cadeia trigo → farinha → margem
+// ---------------------------------------------------------------------------
+
+/** Os 10 KPIs do elo farinha — todos derivados, nenhum digitado à mão. */
+export interface KpiFarinha {
+  /** 1. Custo do trigo posto no moinho (R$/t de trigo) — o TLC do elo 1. */
+  custoTrigoPostoRsT: number
+  /** 2. Custo da farinha produzida (R$/t de farinha). */
+  custoFarinhaRsT: number
+  /** 3. Preço equivalente de compra externa, mesma spec (R$/t de farinha). */
+  precoExternoEquivalenteRsT: number
+  /** 4. Ganho da verticalização (R$/t de farinha) = 3 − 2. */
+  ganhoVerticalizacaoRsT: number
+  /** 5. Margem de venda externa (R$/t de farinha). */
+  margemVendaExternaRsT: number
+  /** 6. Rendimento de farinha (%). */
+  rendimentoPct: number
+  /** 7. Crédito do farelo (R$/t de farinha). */
+  creditoFareloRsT: number
+  /** 8. Utilização da capacidade instalada (%). */
+  utilizacaoCapacidadePct: number
+  /** 9. Gap interno vs mercado (%): quanto o custo interno está ABAIXO do preço externo. */
+  gapInternoMercadoPct: number
+  /** 10. Benefício Make/Buy/Sell consolidado (R$/mês). */
+  beneficioMakeBuySellRs: number
 }

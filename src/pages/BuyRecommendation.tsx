@@ -212,7 +212,7 @@ export default function BuyRecommendation() {
   return (
     <div className="space-y-6">
       <SectionTitle
-        eyebrow="Decisão"
+        eyebrow="Trigo"
         title="Recomendação de Compra"
         subtitle="Quando, quanto, de qual origem e por qual porto — otimizado pelo TLC ajustado ao risco."
       />

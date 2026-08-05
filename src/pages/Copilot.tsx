@@ -245,8 +245,8 @@ export default function Copilot() {
   return (
     <div className="flex h-[calc(100dvh-10.5rem)] min-h-[540px] flex-col space-y-4">
       <SectionTitle
-        eyebrow="Operação"
-        title="Copiloto Gemini"
+        eyebrow="Governança"
+        title="Copiloto Executivo"
         subtitle="Pergunte em linguagem natural sobre a decisão do dia e os porquês."
         actions={
           <span className="flex items-center gap-2 rounded-full border border-info/40 bg-info/10 px-3 py-1.5">

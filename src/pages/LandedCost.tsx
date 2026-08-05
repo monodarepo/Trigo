@@ -192,7 +192,7 @@ export default function LandedCost() {
   return (
     <div className="space-y-6">
       <SectionTitle
-        eyebrow="Decisão"
+        eyebrow="Trigo"
         title="Total Landed Cost"
         subtitle="O custo que importa: do FOB ao moinho, ajustado ao risco — não o preço nominal."
       />

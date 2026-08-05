@@ -11,6 +11,7 @@ import {
   EsqueletoCompra,
   EsqueletoCopiloto,
   EsqueletoHedge,
+  EsqueletoPlaceholder,
   EsqueletoPrevisao,
   EsqueletoSimulador,
   EsqueletoSinais,
@@ -21,13 +22,19 @@ import Alerts from './pages/Alerts'
 import BuyRecommendation from './pages/BuyRecommendation'
 import Cockpit from './pages/Cockpit'
 import Copilot from './pages/Copilot'
+import DemandPlanning from './pages/DemandPlanning'
 import ExportOnePager from './pages/ExportOnePager'
 import Forecast from './pages/Forecast'
 import Hedge from './pages/Hedge'
+import Inventory from './pages/Inventory'
 import LandedCost from './pages/LandedCost'
 import LiveSignals from './pages/LiveSignals'
+import MakeBuySell from './pages/MakeBuySell'
+import MillPerformance from './pages/MillPerformance'
+import Opportunities from './pages/Opportunities'
 import Showcase from './pages/Showcase'
 import Simulator from './pages/Simulator'
+import Verticalization from './pages/Verticalization'
 import Vro from './pages/Vro'
 
 /** Hash router para builds de preview estático (VITE_HASH_ROUTER=1). */
@@ -40,17 +47,26 @@ const queryClient = new QueryClient({
   },
 })
 
-/** Rota → tela + skeleton por layout + fronteira de erro (nunca tela branca). */
+/**
+ * Rota → tela + skeleton por layout + fronteira de erro (nunca tela branca).
+ * Ordem = a da sidebar (elos da cadeia: visão · mercado · trigo · moinhos · margem · governança).
+ */
 const TELAS: Array<{ path: string; titulo: string; Tela: ComponentType; esqueleto: ReactNode }> = [
-  { path: '/', titulo: 'o Cockpit Executivo', Tela: Cockpit, esqueleto: <EsqueletoCockpit /> },
-  { path: '/previsao', titulo: 'a Previsão de Preço e Câmbio', Tela: Forecast, esqueleto: <EsqueletoPrevisao /> },
+  { path: '/', titulo: 'a Visão Executiva', Tela: Cockpit, esqueleto: <EsqueletoCockpit /> },
+  { path: '/previsao', titulo: 'o Mercado de Trigo e Farinha', Tela: Forecast, esqueleto: <EsqueletoPrevisao /> },
+  { path: '/sinais', titulo: 'os Sinais ao Vivo', Tela: LiveSignals, esqueleto: <EsqueletoSinais /> },
   { path: '/tlc', titulo: 'o Total Landed Cost', Tela: LandedCost, esqueleto: <EsqueletoTlc /> },
   { path: '/compra', titulo: 'a Recomendação de Compra', Tela: BuyRecommendation, esqueleto: <EsqueletoCompra /> },
-  { path: '/hedge', titulo: 'a Recomendação de Hedge', Tela: Hedge, esqueleto: <EsqueletoHedge /> },
+  { path: '/hedge', titulo: 'o Hedge', Tela: Hedge, esqueleto: <EsqueletoHedge /> },
+  { path: '/estoques', titulo: 'os Estoques & Blends', Tela: Inventory, esqueleto: <EsqueletoPlaceholder /> },
+  { path: '/moinhos', titulo: 'a Performance dos Moinhos', Tela: MillPerformance, esqueleto: <EsqueletoPlaceholder /> },
+  { path: '/verticalizacao', titulo: 'a Rentabilidade da Verticalização', Tela: Verticalization, esqueleto: <EsqueletoPlaceholder /> },
+  { path: '/demanda', titulo: 'o Planejamento da Demanda', Tela: DemandPlanning, esqueleto: <EsqueletoPlaceholder /> },
+  { path: '/make-buy-sell', titulo: 'o Simulador Make/Buy/Sell', Tela: MakeBuySell, esqueleto: <EsqueletoPlaceholder /> },
+  { path: '/oportunidades', titulo: 'as Oportunidades Comerciais', Tela: Opportunities, esqueleto: <EsqueletoPlaceholder /> },
   { path: '/simulador', titulo: 'o Simulador de Cenários', Tela: Simulator, esqueleto: <EsqueletoSimulador /> },
-  { path: '/alertas', titulo: 'os Alertas Diários', Tela: Alerts, esqueleto: <EsqueletoAlertas /> },
-  { path: '/copiloto', titulo: 'o Copiloto Gemini', Tela: Copilot, esqueleto: <EsqueletoCopiloto /> },
-  { path: '/sinais', titulo: 'os Sinais ao Vivo', Tela: LiveSignals, esqueleto: <EsqueletoSinais /> },
+  { path: '/alertas', titulo: 'os Alertas & Decisões', Tela: Alerts, esqueleto: <EsqueletoAlertas /> },
+  { path: '/copiloto', titulo: 'o Copiloto Executivo', Tela: Copilot, esqueleto: <EsqueletoCopiloto /> },
   { path: '/vro', titulo: 'a Realização de Valor', Tela: Vro, esqueleto: <EsqueletoVro /> },
 ]
 

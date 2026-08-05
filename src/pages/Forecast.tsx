@@ -191,8 +191,8 @@ export default function Forecast() {
   return (
     <div className="space-y-6">
       <SectionTitle
-        eyebrow="Sinais & Previsão"
-        title="Previsão de Preço e Câmbio"
+        eyebrow="Mercado & Sinais"
+        title="Mercado de Trigo e Farinha"
         subtitle="Trajetórias com banda de confiança e fatores explicáveis — a base da recomendação do dia."
       />
 

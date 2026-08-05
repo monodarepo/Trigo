@@ -49,8 +49,8 @@ export default function ExportOnePager() {
         <header className="flex items-start justify-between gap-4 border-b-2 border-slate-900 pb-4">
           <img src="/brand/mdias-logo-recorte.png" alt="M. Dias Branco" className="h-10 w-auto" />
           <div className="text-right">
-            <p className="font-display text-lg font-semibold leading-tight">Recomendação do dia — Hub de Trigo</p>
-            <p className="tnums mt-0.5 text-xs text-slate-500">Terça, 12 de agosto de 2025 · 07:00 · Torre de Controle do Trigo</p>
+            <p className="font-display text-lg font-semibold leading-tight">Recomendação do dia — Wheat &amp; Flour Value Tower</p>
+            <p className="tnums mt-0.5 text-xs text-slate-500">Terça, 12 de agosto de 2025 · 07:00 · Torre de Controle de Trigo, Farinha e Margem</p>
             <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">
               Confidencial · uso interno
             </p>
@@ -206,7 +206,7 @@ export default function ExportOnePager() {
             . Números do snapshot de terça, 12 ago 2025 · 07:00 — a mesma verdade exibida no Hub.
           </p>
           <p className="mt-1 text-[9px] font-medium text-slate-400">
-            Gerado pelo Hub de Trigo (mockup navegável, sem backend) · M. Dias Branco · Monoda × Google Cloud
+            Gerado pela Wheat &amp; Flour Value Tower (mockup navegável, sem backend) · M. Dias Branco · Monoda × Google Cloud
           </p>
         </footer>
       </div>

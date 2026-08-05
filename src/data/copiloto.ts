@@ -192,7 +192,7 @@ export const RESPOSTAS_MOCK: PerguntaResposta[] = [
       `${formatBRL(RECOMENDACAO_COMPRA.economiaTotalRs, { compacto: true })} no lote.`,
     referencias: [
       { rotulo: 'Recomendação de Compra', rota: '/compra' },
-      { rotulo: 'Previsão de Preço', rota: '/previsao' },
+      { rotulo: 'Mercado de Trigo e Farinha', rota: '/previsao' },
     ],
   },
   {

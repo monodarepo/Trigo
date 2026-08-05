@@ -373,7 +373,7 @@ export default function LiveSignals() {
   return (
     <div className="space-y-6">
       <SectionTitle
-        eyebrow="Operação"
+        eyebrow="Mercado & Sinais"
         title="Sinais ao Vivo"
         subtitle="Observabilidade dos feeds externos: estado, fonte, frescor, latência e payload — a periferia que alimenta os sinais."
       />
