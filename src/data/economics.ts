@@ -329,6 +329,7 @@ export function eficienciaMoinho(
   return {
     moinhoId,
     farinhaId,
+    rodaSpec: m.perfilProduto.some((aplic) => aplic === getFarinha(farinhaId)!.aplicacao),
     rendimentoPct: custo.rendimentoPct,
     extracaoPct: m.extracaoPct,
     utilizacaoPct: m.utilizacaoPct,
@@ -392,9 +393,12 @@ export function resumoParqueMoageiro(farinhaId: FarinhaId = FARINHA_ANCORA): Res
   const custoMedioRsT = arred1(
     unidades.reduce((soma, u, i) => soma + u.custoInternoRsT * producoes[i], 0) / producaoMensalT,
   )
+  // Só disputa o título de mais competitivo quem realmente roda a spec.
   const porCusto = [...unidades].sort((a, b) => a.custoInternoRsT - b.custoInternoRsT)
-  const maisCompetitivo = porCusto[0]
-  const menosCompetitivo = porCusto[porCusto.length - 1]
+  const queRodam = porCusto.filter((u) => u.rodaSpec)
+  const elegiveis = queRodam.length > 0 ? queRodam : porCusto
+  const maisCompetitivo = elegiveis[0]
+  const menosCompetitivo = elegiveis[elegiveis.length - 1]
 
   return {
     farinhaId,

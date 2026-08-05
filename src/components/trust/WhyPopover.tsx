@@ -146,7 +146,7 @@ export function WhyPopover({
           id={idPopover}
           role={temAbas ? 'group' : 'tooltip'}
           aria-label={temAbas ? `Por quê: ${titulo}` : undefined}
-          className={`absolute left-1/2 z-40 -translate-x-1/2 ${
+          className={`absolute left-0 z-40 max-w-[calc(100vw-2rem)] translate-x-0 sm:left-1/2 sm:-translate-x-1/2 ${
             posicao === 'acima'
               ? 'bottom-full pb-2 before:absolute before:inset-x-0 before:top-full before:h-2 before:content-[""]'
               : 'top-full pt-2 before:absolute before:inset-x-0 before:bottom-full before:h-2 before:content-[""]'

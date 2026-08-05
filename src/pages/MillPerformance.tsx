@@ -88,6 +88,14 @@ export default function MillPerformance() {
               {m.nome}
             </button>
             <span className="shrink-0 text-11 text-ink-faint">{m.uf}</span>
+            {!u.rodaSpec && (
+              <span
+                title={`${m.nome} não produz ${farinha.nome.toLowerCase()} (perfil: ${m.perfilProduto.join(', ')}). O custo é simulado na mesma régua, para comparar unidades.`}
+                className="shrink-0 rounded-full border border-edge px-1.5 py-0.5 text-[10px] font-medium text-ink-subtle"
+              >
+                fora do perfil
+              </span>
+            )}
             {u.moinhoId === parque.maisCompetitivo.moinhoId && (
               <Badge kind="status" label="menor custo" tone="positive" />
             )}
@@ -445,6 +453,11 @@ export default function MillPerformance() {
             Clique num cabeçalho para ordenar · clique no nome para abrir a decomposição
           </p>
         </div>
+        <p className="text-11 leading-relaxed text-ink-subtle">
+          Unidades marcadas <span className="text-ink-muted">fora do perfil</span> não produzem{' '}
+          {farinha.nome.toLowerCase()} hoje: o custo delas é simulado na mesma régua para comparar as
+          sete, mas o título de menor custo só disputa entre quem roda a spec.
+        </p>
         <DataTable
           columns={colunas}
           rows={unidades}

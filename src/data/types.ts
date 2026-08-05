@@ -903,6 +903,13 @@ export type SemaforoMoinho = 'verde' | 'ambar' | 'vermelho'
 export interface EficienciaMoinho {
   moinhoId: MoinhoId
   farinhaId: FarinhaId
+  /**
+   * O moinho realmente roda esta spec (a aplicação está no seu perfilProduto).
+   * Quando false, o custo é uma SIMULAÇÃO comparativa: útil para pôr todas as
+   * unidades na mesma régua, mas não se pode coroar de "menor custo" quem não
+   * produz o item — seria eleger um campeão numa prova que ele não disputa.
+   */
+  rodaSpec: boolean
   rendimentoPct: number
   extracaoPct: number
   utilizacaoPct: number
