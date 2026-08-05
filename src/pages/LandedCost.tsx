@@ -270,7 +270,7 @@ export default function LandedCost() {
               </p>
             </div>
           </div>
-          <div className="mt-3">
+          <div className="mt-3" data-spot="tlc">
             <TlcWaterfall
               componentes={resultado.componentes}
               totalRs={resultado.totalRs}

@@ -1,10 +1,11 @@
 import { useLocation } from 'react-router-dom'
-import { ChevronDown, Menu, Search } from 'lucide-react'
+import { ChevronDown, Menu, Play, Search } from 'lucide-react'
 import { findNavItem } from '../../data/navigation'
 import { APP_CONTEXT } from '../../data/appContext'
 import { MarketPulse } from '../live/MarketPulse'
 import { abrirCommandPalette } from '../command/CommandLayer'
 import { NotificationCenter } from '../feedback/NotificationCenter'
+import { abrirApresentacao } from '../present/presentStore'
 
 interface TopbarProps {
   onOpenMenu: () => void
@@ -71,6 +72,16 @@ export function Topbar({ onOpenMenu }: TopbarProps) {
           </button>
           <ContextSelect label="Período" options={APP_CONTEXT.periodOptions} />
           <ContextSelect label="Moinho" options={APP_CONTEXT.millOptions} />
+
+          <button
+            type="button"
+            onClick={abrirApresentacao}
+            aria-label="Iniciar modo apresentação (tecla P)"
+            className="hidden items-center gap-1.5 rounded-full border border-gold/40 bg-gold/10 px-3 py-1.5 text-xs font-semibold text-gold-light transition-colors hover:bg-gold/20 lg:flex"
+          >
+            <Play size={12} aria-hidden="true" />
+            Apresentar
+          </button>
 
           <NotificationCenter />
 

@@ -149,7 +149,7 @@ export default function Forecast() {
             </span>
             <Toggle ariaLabel="Origem da curva projetada" opcoes={ORIGENS_CURVA} valor={origem} onChange={setOrigem} />
           </div>
-          <div className="mt-4">
+          <div className="mt-4" data-spot="previsao">
             <ForecastChart
               historico={historicoVisivel}
               projecao={projecaoVisivel}

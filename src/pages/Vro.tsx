@@ -228,7 +228,7 @@ export default function Vro() {
       </div>
 
       {/* 2 · Recomendação × Decisão × Resultado */}
-      <div className="min-w-0">
+      <div className="min-w-0" data-spot="vro">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <h3 className="font-display text-base font-semibold text-ink">Recomendação × Decisão × Resultado</h3>
           <p className="flex items-center gap-1.5 text-xs text-ink-subtle">

@@ -7,6 +7,8 @@ export interface HotkeyHandlers {
   onAjuda: () => void
   /** Tecla "a" (aprovação com confirmação). */
   onAprovar: () => void
+  /** Tecla "p" (modo apresentação). */
+  onApresentar?: () => void
   /** Sequências "g + letra" → rota. */
   sequencias: Record<string, () => void>
   /** Suspende tudo enquanto um overlay próprio está aberto. */
@@ -25,14 +27,14 @@ function digitando(alvo: EventTarget | null): boolean {
  * Atalhos globais do app: ⌘K, "?", "a" e sequências estilo Linear ("g c").
  * Ignora eventos enquanto o usuário digita em campos de texto.
  */
-export function useHotkeys({ onPalette, onAjuda, onAprovar, sequencias, suspenso = false }: HotkeyHandlers) {
+export function useHotkeys({ onPalette, onAjuda, onAprovar, onApresentar, sequencias, suspenso = false }: HotkeyHandlers) {
   const pendenteG = useRef<number | null>(null)
-  const refs = useRef({ onPalette, onAjuda, onAprovar, sequencias, suspenso })
-  refs.current = { onPalette, onAjuda, onAprovar, sequencias, suspenso }
+  const refs = useRef({ onPalette, onAjuda, onAprovar, onApresentar, sequencias, suspenso })
+  refs.current = { onPalette, onAjuda, onAprovar, onApresentar, sequencias, suspenso }
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
-      const { onPalette, onAjuda, onAprovar, sequencias, suspenso } = refs.current
+      const { onPalette, onAjuda, onAprovar, onApresentar, sequencias, suspenso } = refs.current
       const tecla = e.key.toLowerCase()
 
       // ⌘K/Ctrl+K sempre disponível (abre/fecha o palette)
@@ -68,6 +70,11 @@ export function useHotkeys({ onPalette, onAjuda, onAprovar, sequencias, suspenso
       if (tecla === 'a' && !e.shiftKey) {
         e.preventDefault()
         onAprovar()
+        return
+      }
+      if (tecla === 'p' && !e.shiftKey && onApresentar) {
+        e.preventDefault()
+        onApresentar()
       }
     }
     window.addEventListener('keydown', onKeyDown)

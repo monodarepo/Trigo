@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { BellRing, CheckCircle2, Download, ShieldCheck, SlidersHorizontal } from 'lucide-react'
+import { BellRing, CheckCircle2, Download, Play, ShieldCheck, SlidersHorizontal } from 'lucide-react'
 import { CommandPalette, type Comando } from './CommandPalette'
 import { ShortcutsHelp } from './ShortcutsHelp'
 import { useHotkeys } from '../../hooks/useHotkeys'
@@ -8,6 +8,7 @@ import { emitirToast } from '../feedback/toastBus'
 import { ApprovalModal } from '../approval/ApprovalModal'
 import { aoAbrirAprovacao } from '../approval/approvalBus'
 import type { ModoDecisao } from '../approval/decisionStore'
+import { abrirApresentacao, useApresentacaoAtiva } from '../present/presentStore'
 import { ALL_NAV_ITEMS } from '../../data/navigation'
 import { snapshot } from '../../data'
 
@@ -26,6 +27,7 @@ export function CommandLayer() {
   const [paletteAberto, setPaletteAberto] = useState(false)
   const [ajudaAberta, setAjudaAberta] = useState(false)
   const [aprovacao, setAprovacao] = useState<{ aberta: boolean; modo?: ModoDecisao }>({ aberta: false })
+  const apresentando = useApresentacaoAtiva()
 
   useEffect(() => {
     const abre = () => setPaletteAberto(true)
@@ -42,11 +44,13 @@ export function CommandLayer() {
   )
 
   useHotkeys({
-    onPalette: () => setPaletteAberto((a) => !a),
+    // ⌘K fica fora do "suspenso" (fecha o próprio palette) — mas não abre por cima da apresentação
+    onPalette: () => setPaletteAberto((a) => (apresentando ? a : !a)),
     onAjuda: () => setAjudaAberta(true),
     onAprovar: () => setAprovacao({ aberta: true }),
+    onApresentar: abrirApresentacao,
     sequencias,
-    suspenso: paletteAberto || ajudaAberta || aprovacao.aberta,
+    suspenso: paletteAberto || ajudaAberta || aprovacao.aberta || apresentando,
   })
 
   const comandos: Comando[] = [
@@ -65,6 +69,14 @@ export function CommandLayer() {
       icone: CheckCircle2,
       atalho: 'A',
       executar: () => setAprovacao({ aberta: true }),
+    },
+    {
+      id: 'acao-apresentar',
+      grupo: 'Ações',
+      rotulo: 'Iniciar modo apresentação',
+      icone: Play,
+      atalho: 'P',
+      executar: () => abrirApresentacao(),
     },
     {
       id: 'acao-simulador',

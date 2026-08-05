@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { CheckCircle2, ChevronDown, PenLine } from 'lucide-react'
 import { Badge } from '../ui/Badge'
@@ -57,7 +57,9 @@ export function ApprovalModal({ aberto, modoInicial, aoFechar }: ApprovalModalPr
   const [sucesso, setSucesso] = useState(false)
   const timerFechar = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  useEffect(() => {
+  // Layout effect: o reset acontece ANTES do paint — na reabertura o formulário
+  // (com o autoFocus) monta já no primeiro frame, senão o Esc cai no body.
+  useLayoutEffect(() => {
     if (!aberto) return
     setModo(modoInicial ?? 'aprovada')
     setComentario('')

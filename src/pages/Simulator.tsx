@@ -350,7 +350,7 @@ export default function Simulator() {
                 Aplicar cenário recomendado
               </Link>
             </div>
-            <div className="mt-4">
+            <div className="mt-4" data-spot="simulador">
               <ScenarioCompareChart
                 dados={dadosGrafico}
                 ariaLabel="Comparativo do impacto no EBITDA entre os cenários conservador, recomendado e oportunístico"

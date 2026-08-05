@@ -13,6 +13,7 @@ const GRUPOS: Array<{ titulo: string; atalhos: Array<{ teclas: string[]; descric
       { teclas: ['⌘', 'K'], descricao: 'Abrir a paleta de comandos' },
       { teclas: ['?'], descricao: 'Este painel de atalhos' },
       { teclas: ['A'], descricao: 'Aprovar a recomendação do dia' },
+      { teclas: ['P'], descricao: 'Modo apresentação (demo automática)' },
       { teclas: ['Esc'], descricao: 'Fechar painéis e overlays' },
     ],
   },
