@@ -1,12 +1,14 @@
-import { useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Badge, Card, ConfidenceMeter, SectionTitle, TrendArrow } from '../components/ui'
 import { ForecastChart } from '../components/charts/ForecastChart'
 import { SourceBadge } from '../components/trust/SourceBadge'
 import { SinaisExternos } from '../components/live/ExternalSignals'
 import { WeatherPanel } from '../components/live/WeatherPanel'
-import { useFrescorRelativo, useWheatAoVivo } from '../live/useLiveData'
-import { FONTE_WHEAT_REF } from '../data'
+import { AnimatedNumber } from '../components/live/AnimatedNumber'
+import { BadgeFonteAoVivo } from '../components/live/LiveSourceBadge'
+import { useFxAoVivo, useFxSerieAoVivo, useWheatAoVivo } from '../live/useLiveData'
+import { FONTE_FRANKFURTER, FONTE_WHEAT_REF } from '../data'
 import {
   snapshot,
   formatBRL,
@@ -21,6 +23,12 @@ const { previsao, mercado, tlc, compra, hedge } = snapshot
 const cambioAtual = mercado.precos.cambioBrlUsd
 
 const fmtCambio = (v: number) => `R$ ${v.toFixed(2).replace('.', ',')}`
+const fmtTickPreco = (v: number) => Math.round(v).toLocaleString('pt-BR')
+const fmtTickCambio = (v: number) => v.toFixed(2).replace('.', ',')
+const chipAoVivo =
+  'rounded-full border border-positive/40 bg-positive/10 px-1.5 py-px text-[9px] font-semibold uppercase tracking-wide text-positive'
+const chipRefMensal =
+  'rounded-full border border-warning/40 bg-warning/10 px-1.5 py-px text-[9px] font-semibold uppercase tracking-wide text-warning'
 
 type Horizonte = 'd7' | 'd30' | 'd60' | 'd90'
 type Unidade = 'usd' | 'brl'
@@ -83,31 +91,98 @@ export default function Forecast() {
   const [unidade, setUnidade] = useState<Unidade>('usd')
   const [horizonte, setHorizonte] = useState<Horizonte>('d90')
   const [origem, setOrigem] = useState<OrigemCurva>('cbot')
-  // Referência mensal de trigo (proxy /api/wheat) — rótulo honesto ao lado
-  // do CBOT encenado; o gráfico/projeção seguem 100% do cenário.
+
+  /**
+   * ÂNCORA-E-DERIVA desta tela (periferia ao vivo, núcleo encenado):
+   * · SINAL ao vivo: câmbio spot + série ~90d (Frankfurter) e a referência
+   *   mensal de trigo (/api/wheat — FRED via Alpha Vantage).
+   * · DERIVADO-AO-VIVO (recalcula quando o sinal muda): a ESCALA dos gráficos —
+   *   trigo = cenário × (âncora mensal ÷ US$ 205), prêmios de origem intactos;
+   *   câmbio = histórico real + projeção encenada re-ancorada no spot real;
+   *   conversão R$/t ao câmbio vivo.
+   * · CENÁRIO (nunca muda com rede): a FORMA das projeções e bandas (P10–P90),
+   *   a probabilidade de alta (72%), prêmios de origem, NDF e o "E daí?"
+   *   (TLC, economia, janela) — a recomendação do dia não muda por um tick.
+   */
+  const fx = useFxAoVivo()
+  const fxSerie = useFxSerieAoVivo()
   const wheatRef = useWheatAoVivo()
-  const frescorWheat = useFrescorRelativo(wheatRef.updatedAt)
 
   const serie = previsao.precoTrigo
   const origemSelecionada = origem === 'cbot' ? null : previsao.porOrigem.find((o) => o.origemId === origem)!
 
-  // Conversão de unidade (R$/t = US$/t × câmbio atual do snapshot)
-  const conv = (v: number) => (unidade === 'brl' ? Math.round(v * cambioAtual) : v)
-  const convertePonto = (p: PontoPrevisao): PontoPrevisao => ({
-    data: p.data,
-    valor: conv(p.valor),
-    bandaMin: p.bandaMin != null ? conv(p.bandaMin) : undefined,
-    bandaMax: p.bandaMax != null ? conv(p.bandaMax) : undefined,
-  })
+  const razaoTrigo = wheatRef.isLive ? wheatRef.value.precoUsdT / serie.valorAtual : 1
+  const razaoCambio = fx.isLive ? fx.value.taxa / previsao.cambio.valorAtual : 1
+  const cambioSpot = fx.isLive ? fx.value.taxa : cambioAtual
+
+  // Conversão de unidade (R$/t = US$/t × câmbio — derivado-ao-vivo com spot real)
+  const conv = useCallback(
+    (v: number) => (unidade === 'brl' ? Math.round(v * cambioSpot) : v),
+    [unidade, cambioSpot],
+  )
 
   const dataLimite = serie.horizontes[horizonte].data
-  const projecaoBase = origemSelecionada ? origemSelecionada.projecao : serie.projecao
-  const projecaoVisivel = projecaoBase.filter((p) => p.data <= dataLimite).map(convertePonto)
-  const historicoVisivel = serie.historico.map(convertePonto)
+
+  // Projeção do trigo ancorada: a razão se aplica SÓ ao componente CBOT do
+  // ponto — o prêmio de origem (US$ absoluto, encenado) fica intacto.
+  const projecaoVisivel = useMemo(() => {
+    const base = origemSelecionada ? origemSelecionada.projecao : serie.projecao
+    const ancorar = (p: PontoPrevisao, cbot: PontoPrevisao): PontoPrevisao => {
+      if (razaoTrigo === 1) return p
+      const d = (v: number | undefined, vCbot: number | undefined) =>
+        v == null || vCbot == null ? undefined : Math.round(v + vCbot * (razaoTrigo - 1))
+      return {
+        data: p.data,
+        valor: Math.round(p.valor + cbot.valor * (razaoTrigo - 1)),
+        bandaMin: d(p.bandaMin, cbot.bandaMin),
+        bandaMax: d(p.bandaMax, cbot.bandaMax),
+      }
+    }
+    return base
+      .map((p, i) => {
+        const a = ancorar(p, serie.projecao[i])
+        return {
+          data: a.data,
+          valor: conv(a.valor),
+          bandaMin: a.bandaMin != null ? conv(a.bandaMin) : undefined,
+          bandaMax: a.bandaMax != null ? conv(a.bandaMax) : undefined,
+        }
+      })
+      .filter((p) => p.data <= dataLimite)
+  }, [origemSelecionada, serie, razaoTrigo, conv, dataLimite])
+
+  const historicoVisivel = useMemo(
+    () =>
+      serie.historico.map((p) => ({
+        data: p.data,
+        valor: conv(razaoTrigo === 1 ? p.valor : Math.round(p.valor * razaoTrigo)),
+      })),
+    [serie, razaoTrigo, conv],
+  )
   const pontoHorizonte = projecaoVisivel[projecaoVisivel.length - 1]
 
-  const fmtPreco = (v: number) => (unidade === 'brl' ? `${formatBRL(v)}/t` : `US$ ${v}/t`)
-  const fmtTickPreco = (v: number) => Math.round(v).toLocaleString('pt-BR')
+  // Câmbio: histórico REAL (Frankfurter ~90d) quando ao vivo; projeção com a
+  // forma encenada re-ancorada no spot real e datas re-baseadas no hoje real.
+  const historicoCambio = useMemo(() => {
+    if (fxSerie.isLive) return fxSerie.value.map((p) => ({ data: p.data, valor: p.taxa }))
+    return previsao.cambio.historico.filter((p) => p.data <= '2025-08-12')
+  }, [fxSerie.isLive, fxSerie.value])
+
+  const projecaoCambio = useMemo(() => {
+    const base = previsao.cambio.projecao.filter((p) => p.data <= dataLimite)
+    if (!fx.isLive || razaoCambio === 1) return base
+    const hojeEncenado = new Date(previsao.cambio.projecao[0].data).getTime()
+    const hojeReal = new Date(fx.value.data).getTime()
+    const rebase = (data: string) =>
+      new Date(hojeReal + (new Date(data).getTime() - hojeEncenado)).toISOString().slice(0, 10)
+    const esc = (v: number | undefined) => (v == null ? undefined : Number((v * razaoCambio).toFixed(3)))
+    return base.map((p) => ({ data: rebase(p.data), valor: esc(p.valor)!, bandaMin: esc(p.bandaMin), bandaMax: esc(p.bandaMax) }))
+  }, [dataLimite, fx.isLive, fx.value.data, razaoCambio])
+
+  const fmtPreco = useCallback(
+    (v: number) => (unidade === 'brl' ? `${formatBRL(v)}/t` : `US$ ${Math.round(v)}/t`),
+    [unidade],
+  )
 
   const diasHorizonte = HORIZONTES.find((h) => h.id === horizonte)!.dias
   const probAlta = mercado.precos.probAltaTrigo15dPct
@@ -126,24 +201,43 @@ export default function Forecast() {
         <Card className="lg:col-span-2">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h3 className="font-display text-base font-semibold text-ink">
-                Preço do trigo — histórico e projeção
-              </h3>
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 className="font-display text-base font-semibold text-ink">
+                  Preço do trigo — histórico e projeção
+                </h3>
+                {wheatRef.isLive && (
+                  <span
+                    className={chipRefMensal}
+                    title="Escala ancorada na referência mensal (FRED via Alpha Vantage) — não é cotação intraday CBOT"
+                  >
+                    ref. mensal
+                  </span>
+                )}
+              </div>
               <p className="tnums mt-0.5 text-xs text-ink-subtle">
-                {origemSelecionada
-                  ? `FOB ${origemSelecionada.rotulo} = CBOT + prêmio de origem (US$ ${origemSelecionada.premioAtualUsdT} hoje → US$ ${origemSelecionada.premioD90UsdT} em 90d)`
-                  : `CBOT hoje: US$ ${serie.valorAtual}/t · projeção ${formatPct(serie.variacao30dPct, 1)} em 30d`}
+                {origemSelecionada ? (
+                  `FOB ${origemSelecionada.rotulo} = CBOT + prêmio de origem (US$ ${origemSelecionada.premioAtualUsdT} hoje → US$ ${origemSelecionada.premioD90UsdT} em 90d)`
+                ) : wheatRef.isLive ? (
+                  <>
+                    Ref. mensal hoje: US${' '}
+                    <AnimatedNumber valor={serie.valorAtual * razaoTrigo} formatar={(v) => String(Math.round(v))} />
+                    /t · projeção {formatPct(serie.variacao30dPct, 1)} em 30d
+                  </>
+                ) : (
+                  `CBOT hoje: US$ ${serie.valorAtual}/t · projeção ${formatPct(serie.variacao30dPct, 1)} em 30d`
+                )}
               </p>
               <div className="-ml-1.5 mt-1 flex flex-wrap items-center gap-1">
                 <SourceBadge familia="preco" />
                 {wheatRef.isLive && (
-                  <SourceBadge familia="preco" fonteOverride={FONTE_WHEAT_REF} frescorOverride={frescorWheat ?? undefined} />
+                  <BadgeFonteAoVivo familia="preco" fonte={FONTE_WHEAT_REF} updatedAt={wheatRef.updatedAt} isLive />
                 )}
               </div>
               {wheatRef.isLive && (
                 <p className="tnums mt-1 text-11 text-ink-faint">
-                  Referência mensal: US$ {Math.round(wheatRef.value.precoUsdT)}/t ({wheatRef.value.data.slice(0, 7)})
-                  {wheatRef.value.stale ? ' · cache' : ''} — o gráfico segue o cenário encenado.
+                  Âncora: referência mensal US$ {Math.round(wheatRef.value.precoUsdT)}/t ({wheatRef.value.data.slice(0, 7)})
+                  {wheatRef.value.stale ? ' · cache' : ''} — o gráfico reescala sobre a âncora; forma, bandas e
+                  probabilidade seguem o cenário.
                 </p>
               )}
             </div>
@@ -215,7 +309,8 @@ export default function Forecast() {
             </div>
             <div className="flex items-center justify-between gap-2">
               <dt className="text-ink-subtle">Câmbio projetado (90d)</dt>
-              <dd className="tnums font-semibold text-ink">{fmtCambio(previsao.cambio.horizontes.d90.valor)}</dd>
+              {/* Derivado-ao-vivo: forma encenada × razão do spot real (cenário: razão 1) */}
+              <dd className="tnums font-semibold text-ink">{fmtCambio(previsao.cambio.horizontes.d90.valor * razaoCambio)}</dd>
             </div>
           </dl>
           <p className="mt-4 rounded-card border border-gold/30 bg-navy/40 px-3 py-2.5 text-xs leading-relaxed text-ink-muted">
@@ -227,27 +322,42 @@ export default function Forecast() {
           </p>
         </Card>
 
-        {/* 2 · Gráfico secundário — câmbio */}
+        {/* 2 · Gráfico secundário — câmbio (histórico REAL quando ao vivo) */}
         <Card className="lg:col-span-2">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h3 className="font-display text-base font-semibold text-ink">Câmbio USD/BRL — histórico e forward</h3>
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 className="font-display text-base font-semibold text-ink">Câmbio USD/BRL — histórico e forward</h3>
+                {fx.isLive && <span className={chipAoVivo}>ao vivo</span>}
+              </div>
               <p className="tnums mt-0.5 text-xs text-ink-subtle">
-                Spot {fmtCambio(cambioAtual)} · NDF 90d {fmtCambio(hedge.recomendacao.taxaForwardMedia)} · projeção 90d{' '}
-                {fmtCambio(previsao.cambio.horizontes.d90.valor)}
+                Spot{' '}
+                {fx.isLive ? (
+                  <AnimatedNumber valor={fx.value.taxa} formatar={fmtCambio} />
+                ) : (
+                  fmtCambio(cambioAtual)
+                )}{' '}
+                · NDF 90d {fmtCambio(hedge.recomendacao.taxaForwardMedia)} · projeção 90d{' '}
+                {fmtCambio(previsao.cambio.horizontes.d90.valor * razaoCambio)}
               </p>
               <div className="-ml-1.5 mt-1">
-                <SourceBadge familia="cambio" />
+                <BadgeFonteAoVivo familia="cambio" fonte={FONTE_FRANKFURTER} updatedAt={fx.updatedAt} isLive={fx.isLive} />
               </div>
+              {fx.isLive && (
+                <p className="tnums mt-1 text-11 text-ink-faint">
+                  Histórico real (Frankfurter/BCE, ~90d); projeção com a forma do cenário re-ancorada no spot — NDF e
+                  recomendação de hedge seguem encenados.
+                </p>
+              )}
             </div>
             <Badge kind="status" label={`Limite de política: ${fmtCambio(snapshot.hedge.politicaCambioLimite)}`} tone="warning" />
           </div>
           <div className="mt-4">
             <ForecastChart
-              historico={previsao.cambio.historico.filter((p) => p.data <= '2025-08-12')}
-              projecao={previsao.cambio.projecao.filter((p) => p.data <= dataLimite)}
+              historico={historicoCambio}
+              projecao={projecaoCambio}
               formatValor={fmtCambio}
-              formatTick={(v) => v.toFixed(2).replace('.', ',')}
+              formatTick={fmtTickCambio}
               rotuloProjecao="Forward / projeção"
               height={220}
               ariaLabel="Gráfico do câmbio USD/BRL: histórico e projeção com banda de confiança"

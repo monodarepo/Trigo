@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import {
   Area,
   CartesianGrid,
@@ -97,8 +98,12 @@ function ConteudoTooltip({
   )
 }
 
-/** Linha de histórico + projeção tracejada com banda de confiança sombreada. */
-export function ForecastChart({
+/**
+ * Linha de histórico + projeção tracejada com banda de confiança sombreada.
+ * memo(): só re-renderiza quando as séries/formatadores mudam de referência —
+ * quem passa as séries deve memoizá-las (useMemo) e manter formatadores estáveis.
+ */
+export const ForecastChart = memo(function ForecastChart({
   historico,
   projecao,
   formatValor,
@@ -197,4 +202,4 @@ export function ForecastChart({
       </div>
     </div>
   )
-}
+})

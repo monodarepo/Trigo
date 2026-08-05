@@ -81,8 +81,12 @@ export function useClimaAoVivo(): SinalAoVivo<Clima> {
   })
 }
 
-/** Série USD/BRL (~30 dias) — sparkline/fechamento anterior (fallback: histórico encenado). */
-export function useFxSerieAoVivo(dias = 30): SinalAoVivo<PontoFx[]> {
+/**
+ * Série USD/BRL (~90 dias) — pulse, sparklines e gráfico da Previsão.
+ * Default único de 90d: TODOS os consumidores compartilham a MESMA queryKey
+ * (um único ciclo de refetch global — nenhuma busca duplicada por tela).
+ */
+export function useFxSerieAoVivo(dias = 90): SinalAoVivo<PontoFx[]> {
   return useLiveData<PontoFx[]>({
     chave: ['fx', 'serie', String(dias)],
     buscar: () => fetchFxSeries(dias),

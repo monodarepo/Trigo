@@ -1,6 +1,6 @@
 import { Badge, Card, Pill } from '../ui'
-import { SourceBadge } from '../trust/SourceBadge'
-import { useClimaRegioesAoVivo, useFrescorRelativo, type ClimaRegiaoSinal } from '../../live/useLiveData'
+import { BadgeFonteAoVivo } from './LiveSourceBadge'
+import { useClimaRegioesAoVivo, type ClimaRegiaoSinal } from '../../live/useLiveData'
 import { FONTE_OPEN_METEO } from '../../data'
 import { colors } from '../../theme/tokens'
 
@@ -79,7 +79,6 @@ function CartaoRegiao({ sinal }: { sinal: ClimaRegiaoSinal }) {
 export function WeatherPanel({ className = '' }: { className?: string }) {
   const regioes = useClimaRegioesAoVivo()
   const primeiraViva = regioes.find((r) => r.isLive)
-  const frescor = useFrescorRelativo(primeiraViva?.updatedAt ?? null)
 
   return (
     <Card className={className}>
@@ -90,11 +89,12 @@ export function WeatherPanel({ className = '' }: { className?: string }) {
             Previsão de 16 dias por origem/porto — anomalia de chuva vira risco de safra e de qualidade.
           </p>
           <div className="-ml-1.5 mt-1">
-            {primeiraViva ? (
-              <SourceBadge familia="safra" fonteOverride={FONTE_OPEN_METEO} frescorOverride={frescor ?? undefined} />
-            ) : (
-              <SourceBadge familia="safra" />
-            )}
+            <BadgeFonteAoVivo
+              familia="safra"
+              fonte={FONTE_OPEN_METEO}
+              updatedAt={primeiraViva?.updatedAt ?? null}
+              isLive={primeiraViva != null}
+            />
           </div>
         </div>
       </div>

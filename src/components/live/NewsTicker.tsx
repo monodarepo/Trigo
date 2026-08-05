@@ -1,7 +1,7 @@
 import { Newspaper } from 'lucide-react'
 import { Card } from '../ui'
-import { SourceBadge } from '../trust/SourceBadge'
-import { useFrescorRelativo, useNoticiasAoVivo } from '../../live/useLiveData'
+import { BadgeFonteAoVivo } from './LiveSourceBadge'
+import { useNoticiasAoVivo } from '../../live/useLiveData'
 import { FONTE_GDELT } from '../../data'
 
 const hora = (iso: string) =>
@@ -14,7 +14,6 @@ const hora = (iso: string) =>
  */
 export function NewsTicker({ className = '' }: { className?: string }) {
   const noticias = useNoticiasAoVivo()
-  const frescor = useFrescorRelativo(noticias.updatedAt)
 
   return (
     <Card padding="sm" className={className}>
@@ -23,7 +22,7 @@ export function NewsTicker({ className = '' }: { className?: string }) {
           <Newspaper size={14} className="text-ink-subtle" aria-hidden="true" />
           <span className="eyebrow">Notícias · trigo & geopolítica</span>
           {noticias.isLive ? (
-            <SourceBadge familia="alertas" fonteOverride={FONTE_GDELT} frescorOverride={frescor ?? undefined} />
+            <BadgeFonteAoVivo familia="alertas" fonte={FONTE_GDELT} updatedAt={noticias.updatedAt} isLive />
           ) : (
             <span className="font-mono text-11 text-ink-faint">cenário</span>
           )}

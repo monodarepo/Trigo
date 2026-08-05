@@ -11,7 +11,8 @@ import { ExposureChart } from '../components/charts/ExposureChart'
 import { SourceBadge } from '../components/trust/SourceBadge'
 import { AnimatedNumber } from '../components/live/AnimatedNumber'
 import { emitirToast } from '../components/feedback/toastBus'
-import { useFrescorRelativo, useFxAoVivo } from '../live/useLiveData'
+import { BadgeFonteAoVivo } from '../components/live/LiveSourceBadge'
+import { useFxAoVivo } from '../live/useLiveData'
 import { snapshot, formatBRL, formatPct, formatTon, formatUSD, FONTE_FRANKFURTER } from '../data'
 
 const { hedge, compra, tlc, logistica, mercado, previsao, recomendacaoDoDia } = snapshot
@@ -64,7 +65,6 @@ export default function Hedge() {
    *    escala com o câmbio real (Frankfurter); em Cenário/falha usa R$ 5,20.
    */
   const fx = useFxAoVivo()
-  const frescorFx = useFrescorRelativo(fx.updatedAt)
   const cambioPeriferia = fx.isLive ? fx.value.taxa : mercado.precos.cambioBrlUsd
   const exposto90dRs = rec.exposicaoUsd * cambioPeriferia
   const expostoTotalRs = exposicaoTotalUsd * cambioPeriferia
@@ -83,13 +83,7 @@ export default function Hedge() {
           label="Exposição cambial (90d)"
           value={formatUSD(rec.exposicaoUsd, { compacto: true })}
           hint={`≈ ${formatBRL(exposto90dRs, { compacto: true })} ao câmbio ${fmtCambio(cambioPeriferia)} · + ${formatUSD(bucketLongoUsd, { compacto: true })} em 91–180d`}
-          fonte={
-            fx.isLive ? (
-              <SourceBadge familia="cambio" fonteOverride={FONTE_FRANKFURTER} frescorOverride={frescorFx ?? undefined} />
-            ) : (
-              <SourceBadge familia="cambio" />
-            )
-          }
+          fonte={<BadgeFonteAoVivo familia="cambio" fonte={FONTE_FRANKFURTER} updatedAt={fx.updatedAt} isLive={fx.isLive} />}
         />
         <KpiTile
           label="Coberto vs aberto (90d)"

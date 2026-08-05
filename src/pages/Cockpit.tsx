@@ -29,9 +29,16 @@ import { AnimatedNumber } from '../components/live/AnimatedNumber'
 import { abrirAprovacao } from '../components/approval/approvalBus'
 import { useDecisao, type ModoDecisao } from '../components/approval/decisionStore'
 import { NewsTicker } from '../components/live/NewsTicker'
-import { useClimaRegioesAoVivo, useFrescorRelativo, useFxAoVivo, useNoticiasAoVivo } from '../live/useLiveData'
+import { BadgeFonteAoVivo } from '../components/live/LiveSourceBadge'
+import {
+  useClimaRegioesAoVivo,
+  useFxAoVivo,
+  useFxSerieAoVivo,
+  useNoticiasAoVivo,
+  useWheatAoVivo,
+} from '../live/useLiveData'
 import { avaliarRiscoGeopolitico } from '../live/providers/news'
-import { FONTE_FRANKFURTER } from '../data'
+import { FONTE_FRANKFURTER, FONTE_WHEAT_REF } from '../data'
 
 const { recomendacaoDoDia, kpis, tlc, compra, hedge, previsao, logistica, alertas, simulador, vro, mercado } =
   snapshot
@@ -191,10 +198,20 @@ const BOTAO_DECISAO: Record<ModoDecisao, string> = {
 export default function Cockpit() {
   const decisao = useDecisao()
   const rec = recomendacaoDoDia
-  // PERIFERIA ao vivo: só o VALOR EXIBIDO do câmbio; deltas/projeções seguem encenados
+  /**
+   * ÂNCORA-E-DERIVA — periferia ao vivo, núcleo encenado:
+   * · DERIVADO-AO-VIVO: valores EXIBIDOS de câmbio e trigo (US$ 205 encenado ×
+   *   razão da referência mensal) e as sparklines de mercado.
+   * · CENÁRIO (nunca muda com rede): a recomendação do dia (TLC, R$ 4,8M,
+   *   blend, hedge), prob. 72%, níveis dos semáforos e todos os KPIs de decisão.
+   */
   const fx = useFxAoVivo()
-  const frescorFx = useFrescorRelativo(fx.updatedAt)
+  const fxSerie = useFxSerieAoVivo()
+  const wheat = useWheatAoVivo()
   const cambioExibido = fx.isLive ? fx.value.taxa : kpis.cambioAtual
+  const razaoTrigo = wheat.isLive ? wheat.value.precoUsdT / previsao.precoTrigo.valorAtual : 1
+  const trigoExibido = Math.round(previsao.precoTrigo.valorAtual * razaoTrigo)
+  const trigoD30 = Math.round(previsao.precoTrigo.horizontes.d30.valor * razaoTrigo)
 
   // Semáforo de CLIMA: ao vivo reflete o clima real das ORIGENS (Open-Meteo);
   // em Cenário/falha, o sinal encenado do Mar Negro. Nível = pior origem.
@@ -228,8 +245,12 @@ export default function Cockpit() {
   const indicadoresMercado: Array<{ rotulo: string; nivel: 'baixo' | 'medio' | 'alto'; texto: string }> = [
     {
       rotulo: 'Preço',
+      // Derivado-ao-vivo: só os valores EXIBIDOS ancoram na referência mensal;
+      // prob. 72% e o nível 'alto' são do cenário (a recomendação não muda por tick)
       nivel: 'alto',
-      texto: `Prob. de alta de ${formatPct(mercado.precos.probAltaTrigo15dPct)} em 15 dias · CBOT US$ ${previsao.precoTrigo.valorAtual} → US$ ${previsao.precoTrigo.horizontes.d30.valor} em 30d`,
+      texto: wheat.isLive
+        ? `Prob. de alta de ${formatPct(mercado.precos.probAltaTrigo15dPct)} em 15 dias · Ref. mensal (FRED): US$ ${trigoExibido} → US$ ${trigoD30} em 30d`
+        : `Prob. de alta de ${formatPct(mercado.precos.probAltaTrigo15dPct)} em 15 dias · CBOT US$ ${previsao.precoTrigo.valorAtual} → US$ ${previsao.precoTrigo.horizontes.d30.valor} em 30d`,
     },
     { rotulo: 'Safra', nivel: 'alto', texto: sinalSafra.titulo },
     linhaClima,
@@ -342,13 +363,7 @@ export default function Cockpit() {
           value={<AnimatedNumber valor={cambioExibido} formatar={fmtCambio} />}
           delta={{ label: `+${formatPct(previsao.cambio.variacao30dPct, 1)} em 30d`, direction: 'up', tone: 'warning' }}
           hint={`proj. ${fmtCambio(previsao.cambio.horizontes.d90.valor)} em 90d`}
-          fonte={
-            fx.isLive ? (
-              <SourceBadge familia="cambio" fonteOverride={FONTE_FRANKFURTER} frescorOverride={frescorFx ?? undefined} />
-            ) : (
-              <SourceBadge familia="cambio" />
-            )
-          }
+          fonte={<BadgeFonteAoVivo familia="cambio" fonte={FONTE_FRANKFURTER} updatedAt={fx.updatedAt} isLive={fx.isLive} />}
         />
         <KpiTile
           label="Protegido vs exposto (90d)"
@@ -388,22 +403,38 @@ export default function Cockpit() {
               Ver previsão <ChevronRight size={14} aria-hidden="true" />
             </Link>
           </div>
+          {/* Mini-cards de SINAL: valores e sparklines derivam do sinal real quando
+              ao vivo (trigo ancorado na ref. mensal · câmbio série Frankfurter) */}
           <div className="mt-4 grid grid-cols-2 gap-3">
             <div className="rounded-card border border-edge/60 bg-navy/40 px-3 py-2.5">
-              <p className="text-[11px] font-medium uppercase tracking-wide text-ink-subtle">Trigo CBOT</p>
+              <p className="text-[11px] font-medium uppercase tracking-wide text-ink-subtle">
+                {wheat.isLive ? 'Trigo · ref. mensal' : 'Trigo CBOT'}
+              </p>
               <div className="mt-1 flex items-center justify-between gap-2">
                 <p className="tnums font-display text-lg font-semibold text-ink">
-                  US$ {previsao.precoTrigo.valorAtual}
+                  US$ <AnimatedNumber valor={trigoExibido} formatar={(v) => String(Math.round(v))} />
                   <span className="ml-1 text-xs font-medium text-ink-subtle">/t</span>
                 </p>
-                <Sparkline data={previsao.precoTrigo.historico.map((p) => p.valor)} tone="gold" width={72} />
+                <Sparkline data={previsao.precoTrigo.historico.map((p) => p.valor * razaoTrigo)} tone="gold" width={72} />
+              </div>
+              <div className="-ml-1.5 mt-1">
+                <BadgeFonteAoVivo familia="preco" fonte={FONTE_WHEAT_REF} updatedAt={wheat.updatedAt} isLive={wheat.isLive} />
               </div>
             </div>
             <div className="rounded-card border border-edge/60 bg-navy/40 px-3 py-2.5">
               <p className="text-[11px] font-medium uppercase tracking-wide text-ink-subtle">Câmbio</p>
               <div className="mt-1 flex items-center justify-between gap-2">
-                <p className="tnums font-display text-lg font-semibold text-ink">{fmtCambio(kpis.cambioAtual)}</p>
-                <Sparkline data={previsao.cambio.historico.map((p) => p.valor)} tone="danger" width={72} />
+                <p className="tnums font-display text-lg font-semibold text-ink">
+                  <AnimatedNumber valor={cambioExibido} formatar={fmtCambio} />
+                </p>
+                <Sparkline
+                  data={fxSerie.isLive ? fxSerie.value.map((p) => p.taxa) : previsao.cambio.historico.map((p) => p.valor)}
+                  tone="danger"
+                  width={72}
+                />
+              </div>
+              <div className="-ml-1.5 mt-1">
+                <BadgeFonteAoVivo familia="cambio" fonte={FONTE_FRANKFURTER} updatedAt={fx.updatedAt} isLive={fx.isLive} />
               </div>
             </div>
           </div>
