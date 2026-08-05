@@ -26,6 +26,7 @@ import {
 } from '../data'
 import { abrirObjeto } from '../components/object/objectBus'
 import { SourceBadge } from '../components/trust/SourceBadge'
+import { emitirToast } from '../components/feedback/toastBus'
 
 const { recomendacaoDoDia, kpis, tlc, compra, hedge, previsao, logistica, alertas, simulador, vro, mercado } =
   snapshot
@@ -246,7 +247,10 @@ export default function Cockpit() {
             <button
               type="button"
               className={aprovada ? `${btnPrimary} cursor-default bg-positive text-navy hover:bg-positive` : btnPrimary}
-              onClick={() => setAprovada(true)}
+              onClick={() => {
+                setAprovada(true)
+                emitirToast({ tom: 'sucesso', titulo: 'Recomendação aprovada — encaminhada para execução' })
+              }}
               disabled={aprovada}
             >
               {aprovada ? '✓ Recomendação aprovada' : 'Aprovar'}

@@ -41,6 +41,26 @@
   .eyebrow {
     @apply text-11 font-semibold uppercase tracking-[0.14em] text-ink-subtle;
   }
+
+  /* Bloco de skeleton: superfície do card + shimmer sutil (desativado em reduced-motion) */
+  .skeleton {
+    position: relative;
+    overflow: hidden;
+    background: theme('colors.card.DEFAULT');
+  }
+  .skeleton::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.045), transparent);
+    animation: skeleton-shimmer 1.6s ease-in-out infinite;
+  }
+  @keyframes skeleton-shimmer {
+    100% {
+      transform: translateX(100%);
+    }
+  }
 }
 
 @layer utilities {

@@ -5,6 +5,7 @@ import { BellRing, CheckCircle2, Download, ShieldCheck, SlidersHorizontal } from
 import { CommandPalette, type Comando } from './CommandPalette'
 import { ShortcutsHelp } from './ShortcutsHelp'
 import { useHotkeys } from '../../hooks/useHotkeys'
+import { emitirToast } from '../feedback/toastBus'
 import { ALL_NAV_ITEMS } from '../../data/navigation'
 import { snapshot, formatBRL, formatPct } from '../../data'
 
@@ -23,13 +24,6 @@ export function CommandLayer() {
   const [paletteAberto, setPaletteAberto] = useState(false)
   const [ajudaAberta, setAjudaAberta] = useState(false)
   const [confirmaAprovacao, setConfirmaAprovacao] = useState(false)
-  const [toast, setToast] = useState<string | null>(null)
-
-  useEffect(() => {
-    if (!toast) return
-    const timer = setTimeout(() => setToast(null), 4000)
-    return () => clearTimeout(timer)
-  }, [toast])
 
   useEffect(() => {
     const abre = () => setPaletteAberto(true)
@@ -87,7 +81,7 @@ export function CommandLayer() {
       icone: ShieldCheck,
       executar: () => {
         navigate('/hedge')
-        setToast('Ordem de NDF encaminhada à Tesouraria — sujeita à aprovação humana')
+        emitirToast({ tom: 'sucesso', titulo: 'Ordem de NDF encaminhada à Tesouraria — sujeita à aprovação humana' })
       },
     },
     {
@@ -95,7 +89,8 @@ export function CommandLayer() {
       grupo: 'Ações',
       rotulo: 'Exportar recomendação',
       icone: Download,
-      executar: () => setToast('Recomendação do dia exportada — PDF simulado na demo'),
+      executar: () =>
+        emitirToast({ tom: 'sucesso', titulo: 'Recomendação do dia exportada', descricao: 'PDF simulado na demo — inclui racional e memória de cálculo.' }),
     },
     ...snapshot.copiloto.chips.map((pergunta, i) => ({
       id: `ia-${i}`,
@@ -162,7 +157,7 @@ export function CommandLayer() {
                     autoFocus
                     onClick={() => {
                       setConfirmaAprovacao(false)
-                      setToast('Recomendação aprovada — encaminhada para execução')
+                      emitirToast({ tom: 'sucesso', titulo: 'Recomendação aprovada — encaminhada para execução' })
                     }}
                     className="rounded-full bg-gold px-4 py-2 text-xs font-semibold text-navy transition-colors hover:bg-gold-light"
                   >
@@ -175,16 +170,6 @@ export function CommandLayer() {
         )}
       </AnimatePresence>
 
-      {toast && (
-        <div
-          role="status"
-          aria-live="polite"
-          className="fixed bottom-6 right-6 z-[80] flex max-w-sm items-center gap-3 rounded-card-lg border border-positive/40 bg-card-2 px-4 py-3 shadow-raised"
-        >
-          <CheckCircle2 size={18} className="shrink-0 text-positive" aria-hidden="true" />
-          <p className="text-sm text-ink">{toast}</p>
-        </div>
-      )}
     </>
   )
 }

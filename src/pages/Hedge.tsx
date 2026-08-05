@@ -1,6 +1,4 @@
-import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { CheckCircle2 } from 'lucide-react'
 import {
   Badge,
   Card,
@@ -11,6 +9,7 @@ import {
 } from '../components/ui'
 import { ExposureChart } from '../components/charts/ExposureChart'
 import { SourceBadge } from '../components/trust/SourceBadge'
+import { emitirToast } from '../components/feedback/toastBus'
 import { snapshot, formatBRL, formatPct, formatTon, formatUSD } from '../data'
 
 const { hedge, compra, tlc, logistica, mercado, previsao, recomendacaoDoDia } = snapshot
@@ -55,13 +54,6 @@ const statusBanda =
 const alertasHedge = snapshot.alertas.filter((a) => a.categoria === 'cambio' || a.categoria === 'hedge')
 
 export default function Hedge() {
-  const [toast, setToast] = useState<string | null>(null)
-  useEffect(() => {
-    if (!toast) return
-    const timer = setTimeout(() => setToast(null), 4000)
-    return () => clearTimeout(timer)
-  }, [toast])
-
   return (
     <div className="space-y-6">
       <SectionTitle
@@ -189,7 +181,9 @@ export default function Hedge() {
               <button
                 type="button"
                 className={btnPrimary}
-                onClick={() => setToast('Ordem de NDF encaminhada à Tesouraria — sujeita à aprovação humana')}
+                onClick={() =>
+                  emitirToast({ tom: 'sucesso', titulo: 'Ordem de NDF encaminhada à Tesouraria — sujeita à aprovação humana' })
+                }
               >
                 Executar hedge
               </button>
@@ -280,21 +274,21 @@ export default function Hedge() {
                   <button
                     type="button"
                     className={btnMini}
-                    onClick={() => setToast('Ordem enviada à Tesouraria para execução na janela')}
+                    onClick={() => emitirToast({ tom: 'sucesso', titulo: 'Ordem enviada à Tesouraria para execução na janela' })}
                   >
                     Executar
                   </button>
                   <button
                     type="button"
                     className={btnMini}
-                    onClick={() => setToast('Alerta adiado — reavaliação no próximo pregão')}
+                    onClick={() => emitirToast({ tom: 'info', titulo: 'Alerta adiado — reavaliação no próximo pregão' })}
                   >
                     Aguardar
                   </button>
                   <button
                     type="button"
                     className={btnMini}
-                    onClick={() => setToast('Proposta de cobertura adicional enviada ao CFO')}
+                    onClick={() => emitirToast({ tom: 'sucesso', titulo: 'Proposta de cobertura adicional enviada ao CFO' })}
                   >
                     Elevar proteção
                   </button>
@@ -309,16 +303,6 @@ export default function Hedge() {
         </Card>
       </div>
 
-      {toast && (
-        <div
-          role="status"
-          aria-live="polite"
-          className="fixed bottom-6 right-6 z-50 flex max-w-sm items-center gap-3 rounded-card-lg border border-positive/40 bg-card-2 px-4 py-3 shadow-card"
-        >
-          <CheckCircle2 size={18} className="shrink-0 text-positive" aria-hidden="true" />
-          <p className="text-sm text-ink">{toast}</p>
-        </div>
-      )}
     </div>
   )
 }

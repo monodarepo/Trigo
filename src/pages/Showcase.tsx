@@ -3,7 +3,10 @@
  * com dados de exemplo (src/data/showcase.ts). Não aparece na sidebar.
  * Acesse em /showcase. Remover quando as telas reais estiverem completas.
  */
+import { useState } from 'react'
 import { Anchor, Ship } from 'lucide-react'
+import { ErrorBoundary, FronteiraVisual } from '../components/feedback/ErrorBoundary'
+import { emitirToast } from '../components/feedback/toastBus'
 import {
   Badge,
   Card,
@@ -138,6 +141,102 @@ export default function Showcase() {
         title="Sem exceções no momento"
         description="Quando houver desvios de rota, atraso de navio ou quebra de política de estoque, eles aparecem aqui."
       />
+
+      {/* Matriz de feedback: toasts, fronteiras de erro e empty states v2 */}
+      <SectionTitle
+        eyebrow="QA interno"
+        title="Sistema de feedback"
+        subtitle="Toasts por tom, fronteiras de erro (nunca tela branca) e empty states v2."
+      />
+      <Card>
+        <p className="eyebrow">Toasts</p>
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            className="rounded-full border border-positive/40 px-4 py-2 text-xs font-semibold text-positive transition-colors hover:bg-positive/10"
+            onClick={() => emitirToast({ tom: 'sucesso', titulo: 'Ação concluída com sucesso', descricao: 'Exemplo de toast de sucesso (esmeralda).' })}
+          >
+            Toast de sucesso
+          </button>
+          <button
+            type="button"
+            className="rounded-full border border-danger/40 px-4 py-2 text-xs font-semibold text-danger transition-colors hover:bg-danger/10"
+            onClick={() => emitirToast({ tom: 'erro', titulo: 'Algo deu errado', descricao: 'Exemplo de toast de erro (rosa).' })}
+          >
+            Toast de erro
+          </button>
+          <button
+            type="button"
+            className="rounded-full border border-azure/40 px-4 py-2 text-xs font-semibold text-azure transition-colors hover:bg-azure/10"
+            onClick={() => emitirToast({ tom: 'info', titulo: 'Informação do sistema', descricao: 'Exemplo de toast informativo (azure).' })}
+          >
+            Toast de info
+          </button>
+        </div>
+      </Card>
+      <div className="grid items-start gap-4 lg:grid-cols-2">
+        <Card>
+          <p className="eyebrow">Fronteira de erro por rota</p>
+          <div className="mt-3">
+            <ErrorBoundary rotulo="a seção de demonstração">
+              <ComponenteInstavel />
+            </ErrorBoundary>
+          </div>
+        </Card>
+        <Card>
+          <p className="eyebrow">Fronteira visual (globo 3D → mapa 2D)</p>
+          <div className="mt-3">
+            <FronteiraVisual
+              alternativa={
+                <div className="flex h-40 items-center justify-center rounded-card border border-edge/60 bg-navy/40 text-xs text-ink-subtle">
+                  [ Mapa 2D de rotas — fallback estável ]
+                </div>
+              }
+            >
+              <GloboQueQuebra />
+            </FronteiraVisual>
+          </div>
+        </Card>
+      </div>
+      <div className="grid items-start gap-4 lg:grid-cols-2">
+        <EmptyState
+          tone="positive"
+          title="Tudo em dia"
+          description="EmptyState v2 com selo tonal (positivo) — usado na central de notificações."
+        />
+        <EmptyState
+          compact
+          tone="gold"
+          icon={Ship}
+          title="Nenhum resultado com estes filtros"
+          description="Variante compacta com ação de recuperação."
+          action={
+            <button type="button" className="rounded-full border border-edge px-4 py-1.5 text-xs font-semibold text-ink-muted hover:text-ink">
+              Limpar filtros
+            </button>
+          }
+        />
+      </div>
     </div>
   )
+}
+
+/** Quebra sob demanda — prova a fronteira de erro sem tela branca. */
+function ComponenteInstavel() {
+  const [quebrar, setQuebrar] = useState(false)
+  if (quebrar) throw new Error('Falha simulada de renderização (demo)')
+  return (
+    <button
+      type="button"
+      onClick={() => setQuebrar(true)}
+      className="rounded-full border border-danger/40 px-4 py-2 text-xs font-semibold text-danger transition-colors hover:bg-danger/10"
+    >
+      Simular falha de renderização
+    </button>
+  )
+}
+
+/** Sempre quebra na montagem — simula o globo 3D indisponível (WebGL). */
+function GloboQueQuebra(): never {
+  throw new Error('WebGL indisponível (demo do globo 3D)')
 }

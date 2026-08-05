@@ -1,10 +1,10 @@
 import { useLocation } from 'react-router-dom'
-import { Bell, ChevronDown, Menu, Search } from 'lucide-react'
+import { ChevronDown, Menu, Search } from 'lucide-react'
 import { findNavItem } from '../../data/navigation'
 import { APP_CONTEXT } from '../../data/appContext'
-import { snapshot } from '../../data'
 import { MarketPulse } from '../live/MarketPulse'
 import { abrirCommandPalette } from '../command/CommandLayer'
+import { NotificationCenter } from '../feedback/NotificationCenter'
 
 interface TopbarProps {
   onOpenMenu: () => void
@@ -72,19 +72,7 @@ export function Topbar({ onOpenMenu }: TopbarProps) {
           <ContextSelect label="Período" options={APP_CONTEXT.periodOptions} />
           <ContextSelect label="Moinho" options={APP_CONTEXT.millOptions} />
 
-          <button
-            type="button"
-            aria-label={`Alertas: ${snapshot.contagemAlertas} críticos ou altos`}
-            className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-edge bg-card-2 text-ink-muted hover:text-ink"
-          >
-            <Bell size={16} aria-hidden="true" />
-            <span
-              className="tnums absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-danger px-1 text-[10px] font-semibold text-ink"
-              aria-hidden="true"
-            >
-              {snapshot.contagemAlertas}
-            </span>
-          </button>
+          <NotificationCenter />
 
           <span
             className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gold text-xs font-bold text-navy"

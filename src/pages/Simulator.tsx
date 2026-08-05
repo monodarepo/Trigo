@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { RotateCcw } from 'lucide-react'
 import { Badge, Card, SectionTitle } from '../components/ui'
 import { ScenarioCompareChart } from '../components/charts/ScenarioCompareChart'
+import { emitirToast } from '../components/feedback/toastBus'
 import {
   snapshot,
   formatBRL,
@@ -339,7 +340,13 @@ export default function Simulator() {
                   trimestre · negativo = pressão de custo
                 </p>
               </div>
-              <Link to={`/compra${queryAplicar}`} className={btnPrimary}>
+              <Link
+                to={`/compra${queryAplicar}`}
+                className={btnPrimary}
+                onClick={() =>
+                  emitirToast({ tom: 'info', titulo: 'Cenário aplicado à recomendação de compra', descricao: 'Parâmetros do simulador levados para a tela de Compra.' })
+                }
+              >
                 Aplicar cenário recomendado
               </Link>
             </div>

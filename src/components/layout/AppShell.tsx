@@ -5,6 +5,7 @@ import { Sidebar } from './Sidebar'
 import { Topbar } from './Topbar'
 import { CommandLayer } from '../command/CommandLayer'
 import { ObjectPanelLayer } from '../object/ObjectPanel'
+import { ToastLayer } from '../feedback/Toast'
 import { iniciarLive } from '../../live/liveStore'
 
 const SIDEBAR_WIDTH = 264
@@ -79,6 +80,7 @@ export function AppShell() {
 
       <CommandLayer />
       <ObjectPanelLayer />
+      <ToastLayer />
     </div>
   )
 }

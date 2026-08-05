@@ -1,4 +1,3 @@
-import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { CheckCircle2, Database, ListChecks, Target, TrendingUp } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
@@ -11,6 +10,7 @@ import {
   SectionTitle,
   type DataTableColumn,
 } from '../components/ui'
+import { emitirToast } from '../components/feedback/toastBus'
 import {
   snapshot,
   formatBRL,
@@ -198,13 +198,6 @@ const colunasDistribuicao: DataTableColumn<DistribuicaoMoinho>[] = [
 ]
 
 export default function BuyRecommendation() {
-  const [toast, setToast] = useState<string | null>(null)
-  useEffect(() => {
-    if (!toast) return
-    const timer = setTimeout(() => setToast(null), 4000)
-    return () => clearTimeout(timer)
-  }, [toast])
-
   const valorLoteRs = rec.volumeToneladas * rec.tlcRs
 
   return (
@@ -360,7 +353,7 @@ export default function BuyRecommendation() {
             <button
               type="button"
               className={btnPrimary}
-              onClick={() => setToast('Recomendação aprovada — encaminhada para execução')}
+              onClick={() => emitirToast({ tom: 'sucesso', titulo: 'Recomendação aprovada — encaminhada para execução' })}
             >
               Aprovar
             </button>
@@ -370,14 +363,14 @@ export default function BuyRecommendation() {
             <button
               type="button"
               className="rounded-full border border-edge px-4 py-2 text-xs font-semibold text-ink-muted transition-colors hover:border-danger/50 hover:text-danger"
-              onClick={() => setToast('Recomendação rejeitada — feedback registrado para o modelo')}
+              onClick={() => emitirToast({ tom: 'erro', titulo: 'Recomendação rejeitada', descricao: 'Feedback registrado para o modelo — a rejeição entra na trilha do VRO.' })}
             >
               Rejeitar
             </button>
             <button
               type="button"
               className={btnGhost}
-              onClick={() => setToast('Encaminhada para aprovação de Finanças + Supply')}
+              onClick={() => emitirToast({ tom: 'info', titulo: 'Encaminhada para aprovação de Finanças + Supply' })}
             >
               Encaminhar
             </button>
@@ -385,17 +378,6 @@ export default function BuyRecommendation() {
         </div>
       </Card>
 
-      {/* Toast (sem persistência) */}
-      {toast && (
-        <div
-          role="status"
-          aria-live="polite"
-          className="fixed bottom-6 right-6 z-50 flex max-w-sm items-center gap-3 rounded-card-lg border border-positive/40 bg-card-2 px-4 py-3 shadow-card"
-        >
-          <CheckCircle2 size={18} className="shrink-0 text-positive" aria-hidden="true" />
-          <p className="text-sm text-ink">{toast}</p>
-        </div>
-      )}
     </div>
   )
 }
