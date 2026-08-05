@@ -499,3 +499,51 @@ export interface RecomendacaoDoDia {
   compra: RecomendacaoCompra
   hedge: RecomendacaoHedge
 }
+
+// --- Proveniência e qualidade de dados (governança) ---
+
+/** Famílias de dado com proveniência registrada no Hub. */
+export type FamiliaDado = 'preco' | 'cambio' | 'frete' | 'safra' | 'estoque' | 'qualidade' | 'alertas'
+
+export type ConfiabilidadeFonte = 'alta' | 'media' | 'baixa'
+
+/** Como a família é atualizada: feed contínuo, carga diária ou por contrato/evento. */
+export type MetodoFonte = 'tempo-real' | 'diario' | 'contrato'
+
+export interface FonteDado {
+  familia: FamiliaDado
+  /** Rótulo da família (ex.: "Preço do trigo"). */
+  rotulo: string
+  /** Fonte completa (ex.: "CBOT (CME) · Kansas City HRW"). */
+  fonte: string
+  /** Nome curto para o selo (ex.: "CBOT"). */
+  fonteCurta: string
+  metodo: MetodoFonte
+  confiabilidade: ConfiabilidadeFonte
+  /** Última carga (ISO, âncora terça 12 ago). Famílias tempo-real correm com o tick global. */
+  atualizadoEm: string
+  /** Rótulo humano do frescor para métodos não tempo-real (ex.: "hoje 06:30"). */
+  frescorRotulo: string
+  responsavel: string
+  /** Regras de validação aplicadas antes de o dado entrar no Hub. */
+  validacoes: readonly string[]
+}
+
+export type StatusRegraDado = 'ok' | 'aviso' | 'falha'
+
+export interface RegraQualidadeDado {
+  id: string
+  familia: FamiliaDado
+  regra: string
+  status: StatusRegraDado
+  detalhe: string
+  responsavel: string
+}
+
+export interface ResumoQualidadeDados {
+  regrasAtivas: number
+  avisosAbertos: number
+  falhasAbertas: number
+  /** Fontes com dono nomeado (%): governança completa = 100. */
+  fontesComDonoPct: number
+}

@@ -10,6 +10,7 @@ import {
   TrendArrow,
 } from '../components/ui'
 import { ExposureChart } from '../components/charts/ExposureChart'
+import { SourceBadge } from '../components/trust/SourceBadge'
 import { snapshot, formatBRL, formatPct, formatTon, formatUSD } from '../data'
 
 const { hedge, compra, tlc, logistica, mercado, previsao, recomendacaoDoDia } = snapshot
@@ -75,6 +76,7 @@ export default function Hedge() {
           label="Exposição cambial (90d)"
           value={formatUSD(rec.exposicaoUsd, { compacto: true })}
           hint={`+ ${formatUSD(bucketLongoUsd, { compacto: true })} no bucket 91–180d`}
+          fonte={<SourceBadge familia="cambio" />}
         />
         <KpiTile
           label="Coberto vs aberto (90d)"
@@ -90,6 +92,7 @@ export default function Hedge() {
             direction: 'down',
             tone: 'positive',
           }}
+          fonte={<SourceBadge familia="estoque" />}
         />
         <KpiTile
           label="VaR cambial 95% (90d)"
@@ -111,6 +114,9 @@ export default function Hedge() {
               <p className="tnums mt-0.5 text-xs text-ink-subtle">
                 Total {formatUSD(exposicaoTotalUsd, { compacto: true })} · horizonte da recomendação: 90 dias
               </p>
+              <div className="-ml-1.5 mt-1">
+                <SourceBadge familia="cambio" />
+              </div>
             </div>
             <Badge kind="status" label={`Ponderado 90d: ${formatPct(rec.coberturaAtualPct)} coberto`} tone="warning" />
           </div>
@@ -126,6 +132,12 @@ export default function Hedge() {
         <RecommendationCard
           title={`Proteger ${formatPct(rec.coberturaAlvoPct)} da exposição cambial de 90 dias`}
           rationale={rec.racional}
+          fontes={
+            <>
+              <SourceBadge familia="cambio" />
+              <SourceBadge familia="preco" />
+            </>
+          }
           badges={
             <>
               <Badge kind="acao" action="proteger" />

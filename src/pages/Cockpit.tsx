@@ -25,6 +25,7 @@ import {
   type Embarque,
 } from '../data'
 import { abrirObjeto } from '../components/object/objectBus'
+import { SourceBadge } from '../components/trust/SourceBadge'
 
 const { recomendacaoDoDia, kpis, tlc, compra, hedge, previsao, logistica, alertas, simulador, vro, mercado } =
   snapshot
@@ -205,6 +206,14 @@ export default function Cockpit() {
       <RecommendationCard
         title={rec.resumo}
         rationale={rec.compra.racional}
+        fontes={
+          <>
+            <SourceBadge familia="preco" />
+            <SourceBadge familia="cambio" />
+            <SourceBadge familia="frete" />
+            <SourceBadge familia="safra" />
+          </>
+        }
         badges={
           <>
             <Pill tone="warning">Prob. de alta em 15 dias: {formatPct(rec.probAlta15dPct)}</Pill>
@@ -258,29 +267,34 @@ export default function Cockpit() {
           label="Contratado / trimestre"
           value={formatTon(contratadoT)}
           hint={`${formatPct(pctContratado)} da necessidade de ${formatTon(compra.volumeTrimestreToneladas)}`}
+          fonte={<SourceBadge familia="estoque" />}
         />
         <KpiTile
           label="Custo landed (TLC do dia)"
           value={formatBRL(tlc.recomendadoRs)}
           unit="/t"
           delta={{ label: `−${formatBRL(tlc.baselineRs - tlc.recomendadoRs)}/t vs baseline`, direction: 'down', tone: 'positive' }}
+          fonte={<SourceBadge familia="preco" />}
         />
         <KpiTile
           label="Câmbio"
           value={fmtCambio(kpis.cambioAtual)}
           delta={{ label: `+${formatPct(previsao.cambio.variacao30dPct, 1)} em 30d`, direction: 'up', tone: 'warning' }}
           hint={`proj. ${fmtCambio(previsao.cambio.horizontes.d90.valor)} em 90d`}
+          fonte={<SourceBadge familia="cambio" />}
         />
         <KpiTile
           label="Protegido vs exposto (90d)"
           value={formatPct(kpis.protegidoPct)}
           delta={{ label: `alvo ${formatPct(kpis.protegidoAlvoPct)} após hedge`, direction: 'up', tone: 'info' }}
+          fonte={<SourceBadge familia="cambio" />}
         />
         <KpiTile
           label="Cobertura média"
           value={String(kpis.coberturaMediaDias)}
           unit="dias"
           delta={{ label: `${moinhosAbaixoPolitica} moinhos abaixo da política`, direction: 'down', tone: 'warning' }}
+          fonte={<SourceBadge familia="estoque" />}
         />
         <KpiTile
           label="Impacto EBITDA YTD (VRO)"
@@ -290,6 +304,7 @@ export default function Cockpit() {
             direction: 'up',
             tone: 'positive',
           }}
+          fonte={<SourceBadge familia="alertas" />}
         />
       </div>
 

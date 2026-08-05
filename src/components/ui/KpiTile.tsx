@@ -17,10 +17,12 @@ export interface KpiTileProps {
   unit?: string
   delta?: KpiDelta
   hint?: string
+  /** Selo de proveniência (SourceBadge) — fonte + frescor + confiabilidade. */
+  fonte?: ReactNode
   className?: string
 }
 
-export function KpiTile({ label, value, unit, delta, hint, className = '' }: KpiTileProps) {
+export function KpiTile({ label, value, unit, delta, hint, fonte, className = '' }: KpiTileProps) {
   const deltaTone: Tone = delta?.tone ?? 'neutral'
   return (
     <Card padding="sm" className={className}>
@@ -36,6 +38,7 @@ export function KpiTile({ label, value, unit, delta, hint, className = '' }: Kpi
         </p>
       )}
       {hint && <p className="mt-1 text-xs text-ink-subtle">{hint}</p>}
+      {fonte && <div className="mt-1.5 -ml-1.5">{fonte}</div>}
     </Card>
   )
 }

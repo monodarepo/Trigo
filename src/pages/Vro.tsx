@@ -15,6 +15,7 @@ import {
 import { TlcWaterfall } from '../components/charts/TlcWaterfall'
 import { AnimatedNumber } from '../components/live/AnimatedNumber'
 import { abrirObjeto } from '../components/object/objectBus'
+import { SourceBadge } from '../components/trust/SourceBadge'
 import { colors } from '../theme/tokens'
 import {
   snapshot,
@@ -23,10 +24,18 @@ import {
   formatPct,
   type ComponenteTLC,
   type RecomendacaoVRO,
+  type StatusRegraDado,
 } from '../data'
 
-const { vro } = snapshot
+const { vro, governancaDados } = snapshot
 const m = vro.metricas
+const q = governancaDados.resumoQualidade
+
+const COR_STATUS_REGRA: Record<StatusRegraDado, string> = {
+  ok: 'bg-positive/80',
+  aviso: 'bg-warning/80',
+  falha: 'bg-danger/80',
+}
 
 const fmtDelta = (v: number) => `${v < 0 ? '−' : '+'}${formatBRL(Math.abs(v), { compacto: true })}`
 const fmtPp = (v: number) =>
@@ -174,11 +183,13 @@ export default function Vro() {
           label="Valor capturado YTD (CPV)"
           value={<AnimatedNumber deZero valor={m.cpvCapturadoYtdRs} duracaoMs={900} formatar={(v) => formatBRL(v, { compacto: true })} />}
           hint="Δ vs baseline por decisão · haircut 15–20%"
+          fonte={<SourceBadge familia="alertas" />}
         />
         <KpiTile
           label="Valor protegido (hedge)"
           value={<AnimatedNumber deZero valor={m.hedgeProtegidoYtdRs} duracaoMs={900} formatar={(v) => formatBRL(v, { compacto: true })} />}
           hint="Notional × (realizado − travado)"
+          fonte={<SourceBadge familia="cambio" />}
         />
         <KpiTile
           label="Impacto EBITDA YTD"
@@ -218,6 +229,7 @@ export default function Vro() {
       </div>
 
       <div className="grid items-start gap-4 lg:grid-cols-2">
+        <div className="space-y-4">
         {/* 3 · Waterfall por alavanca */}
         <Card>
           <div className="flex flex-wrap items-end justify-between gap-3">
@@ -244,6 +256,61 @@ export default function Vro() {
             />
           </div>
         </Card>
+
+        {/* 6 · Data quality — a qualidade do dado é gerida, não presumida */}
+        <Card>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h3 className="font-display text-base font-semibold text-ink">Qualidade do dado</h3>
+              <p className="mt-0.5 text-xs text-ink-subtle">
+                Regras de validação em execução antes de qualquer número entrar no Hub.
+              </p>
+            </div>
+            <Badge
+              kind="status"
+              label={`${q.avisosAbertos} avisos · ${q.falhasAbertas} falhas`}
+              tone={q.falhasAbertas > 0 ? 'danger' : q.avisosAbertos > 0 ? 'warning' : 'positive'}
+            />
+          </div>
+          <dl className="tnums mt-3 grid grid-cols-3 gap-3 text-center">
+            <div className="rounded-card border border-edge/60 bg-navy/40 px-2 py-2">
+              <dt className="text-[11px] text-ink-subtle">Regras ativas</dt>
+              <dd className="mt-0.5 font-display text-lg font-semibold text-ink">{q.regrasAtivas}</dd>
+            </div>
+            <div className="rounded-card border border-edge/60 bg-navy/40 px-2 py-2">
+              <dt className="text-[11px] text-ink-subtle">Famílias de dado</dt>
+              <dd className="mt-0.5 font-display text-lg font-semibold text-ink">{governancaDados.fontesLista.length}</dd>
+            </div>
+            <div className="rounded-card border border-edge/60 bg-navy/40 px-2 py-2">
+              <dt className="text-[11px] text-ink-subtle">Fontes com dono</dt>
+              <dd className="mt-0.5 font-display text-lg font-semibold text-positive">
+                {formatPct(q.fontesComDonoPct)}
+              </dd>
+            </div>
+          </dl>
+          <ul className="mt-3 space-y-2.5 border-t border-edge/60 pt-3">
+            {governancaDados.regras.map((r) => (
+              <li key={r.id} className="flex items-start justify-between gap-3">
+                <div className="flex min-w-0 items-start gap-2">
+                  <span className={`mt-1 h-1.5 w-1.5 shrink-0 rounded-full ${COR_STATUS_REGRA[r.status]}`} aria-hidden="true" />
+                  <div className="min-w-0">
+                    <p className="text-xs font-medium text-ink">{r.regra}</p>
+                    <p className="mt-0.5 text-[11px] leading-snug text-ink-subtle">{r.detalhe}</p>
+                  </div>
+                </div>
+                <div className="shrink-0 text-right">
+                  <p className="font-mono text-11 text-ink-faint">{governancaDados.fontes[r.familia].fonteCurta}</p>
+                  <p className="text-[11px] text-ink-faint">{r.responsavel}</p>
+                </div>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-3 border-t border-edge/60 pt-3 text-[11px] italic text-ink-subtle">
+            A qualidade do dado é gerida, não presumida — toda fonte tem dono nomeado, método declarado e regra de
+            validação. Avisos abertos aparecem aqui e nos Alertas.
+          </p>
+        </Card>
+        </div>
 
         <div className="space-y-4">
           {/* 4 · Curva acumulada */}

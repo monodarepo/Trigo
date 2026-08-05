@@ -4,6 +4,7 @@ import { ChevronDown, Lightbulb } from 'lucide-react'
 import { Badge, Card, DataTable, SectionTitle, type DataTableColumn } from '../components/ui'
 import { TlcWaterfall } from '../components/charts/TlcWaterfall'
 import { abrirObjeto } from '../components/object/objectBus'
+import { SourceBadge } from '../components/trust/SourceBadge'
 import {
   snapshot,
   formatBRL,
@@ -252,6 +253,11 @@ export default function LandedCost() {
                 {domestica ? '' : ` → ${portoNome(portoId)}`} → moinho{' '}
                 {dominio.moinhos.find((m) => m.id === moinhoId)?.nome} · {domestica ? 'doméstico' : incoterm}
               </p>
+              <div className="-ml-1.5 mt-1 flex flex-wrap items-center gap-1">
+                <SourceBadge familia="preco" />
+                <SourceBadge familia="frete" />
+                <SourceBadge familia="cambio" />
+              </div>
             </div>
             <div className="text-right">
               <p className="tnums font-display text-2xl font-semibold text-gold-light">
@@ -277,6 +283,9 @@ export default function LandedCost() {
         <Card>
           <h3 className="font-display text-base font-semibold text-ink">Composição do risco no custo</h3>
           <p className="mt-0.5 text-xs text-ink-subtle">Risco precificado dentro do TLC — não é custo adicional.</p>
+          <div className="-ml-1.5 mt-1">
+            <SourceBadge familia="qualidade" />
+          </div>
           <div className="mt-4 flex items-end justify-between gap-2">
             <p className="tnums font-display text-3xl font-semibold leading-none text-danger">
               {formatBRL(resultado.risco.totalRs, { casas: 1 })}
@@ -354,9 +363,12 @@ export default function LandedCost() {
       <div>
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <h3 className="font-display text-base font-semibold text-ink">Comparador de alternativas</h3>
-          <p className="text-xs text-ink-subtle">
-            Necessidade: {formatTon(snapshot.compra.recomendacao.volumeToneladas)} · baseline {formatBRL(tlc.baselineRs)}/t
-          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            <SourceBadge familia="qualidade" posicao="acima" />
+            <p className="text-xs text-ink-subtle">
+              Necessidade: {formatTon(snapshot.compra.recomendacao.volumeToneladas)} · baseline {formatBRL(tlc.baselineRs)}/t
+            </p>
+          </div>
         </div>
         <DataTable
           caption="Comparativo de alternativas de compra por origem, porto e fornecedor"

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Badge, Card, ConfidenceMeter, SectionTitle, TrendArrow } from '../components/ui'
 import { ForecastChart } from '../components/charts/ForecastChart'
+import { SourceBadge } from '../components/trust/SourceBadge'
 import {
   snapshot,
   formatBRL,
@@ -125,6 +126,9 @@ export default function Forecast() {
                   ? `FOB ${origemSelecionada.rotulo} = CBOT + prêmio de origem (US$ ${origemSelecionada.premioAtualUsdT} hoje → US$ ${origemSelecionada.premioD90UsdT} em 90d)`
                   : `CBOT hoje: US$ ${serie.valorAtual}/t · projeção ${formatPct(serie.variacao30dPct, 1)} em 30d`}
               </p>
+              <div className="-ml-1.5 mt-1">
+                <SourceBadge familia="preco" />
+              </div>
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <Toggle
@@ -215,6 +219,9 @@ export default function Forecast() {
                 Spot {fmtCambio(cambioAtual)} · NDF 90d {fmtCambio(hedge.recomendacao.taxaForwardMedia)} · projeção 90d{' '}
                 {fmtCambio(previsao.cambio.horizontes.d90.valor)}
               </p>
+              <div className="-ml-1.5 mt-1">
+                <SourceBadge familia="cambio" />
+              </div>
             </div>
             <Badge kind="status" label={`Limite de política: ${fmtCambio(snapshot.hedge.politicaCambioLimite)}`} tone="warning" />
           </div>
@@ -235,6 +242,9 @@ export default function Forecast() {
         <Card>
           <h3 className="font-display text-base font-semibold text-ink">O que está movendo o preço</h3>
           <p className="mt-0.5 text-xs text-ink-subtle">Importância relativa dos fatores no modelo (soma 100%)</p>
+          <div className="-ml-1.5 mt-1">
+            <SourceBadge familia="safra" />
+          </div>
           <ul className="mt-4 space-y-3">
             {serie.fatores.map((fator) => {
               const cor = corDirecao[fator.direcao]

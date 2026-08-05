@@ -12,6 +12,8 @@ export interface RecommendationCardProps {
   /** Racional explicável da recomendação ("por quê"). */
   rationale: string
   stats?: readonly RecommendationStat[]
+  /** Selos de proveniência das fontes que alimentam o "por quê" (SourceBadge). */
+  fontes?: ReactNode
   /** Slot para badges (ação, confiança, risco). */
   badges?: ReactNode
   /** Slot extra entre os números e as ações (ex.: ConfidenceMeter). */
@@ -25,6 +27,7 @@ export function RecommendationCard({
   title,
   rationale,
   stats = [],
+  fontes,
   badges,
   extra,
   actions,
@@ -37,6 +40,12 @@ export function RecommendationCard({
         {badges && <div className="flex flex-wrap items-center gap-2">{badges}</div>}
       </div>
       <p className="mt-2 text-sm leading-relaxed text-ink-muted">{rationale}</p>
+      {fontes && (
+        <div className="mt-2 flex flex-wrap items-center gap-x-1 gap-y-1">
+          <span className="mr-1 text-[11px] font-medium uppercase tracking-wide text-ink-faint">Fontes</span>
+          {fontes}
+        </div>
+      )}
       {stats.length > 0 && (
         <dl className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
           {stats.map((stat) => (

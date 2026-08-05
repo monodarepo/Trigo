@@ -53,6 +53,7 @@ import {
   REGISTROS_VRO,
   VALOR_CAPTURADO_YTD_RS,
 } from './vro'
+import { FONTES, FONTES_LISTA, REGRAS_QUALIDADE_DADOS, RESUMO_QUALIDADE_DADOS } from './sources'
 
 /** KPIs do topo do Cockpit Executivo. */
 export const KPIS_COCKPIT: KpiExposicao = {
@@ -142,9 +143,17 @@ export const snapshot = {
     alavancas: ALAVANCAS_VRO,
     curva: CURVA_VRO,
   },
+  /** Proveniência e qualidade de dados — a governança que a TI cobra. */
+  governancaDados: {
+    fontes: FONTES,
+    fontesLista: FONTES_LISTA,
+    regras: REGRAS_QUALIDADE_DADOS,
+    resumoQualidade: RESUMO_QUALIDADE_DADOS,
+  },
 }
 
 export type Snapshot = typeof snapshot
 
 export * from './types'
 export * from './format'
+export { FONTES, FONTES_LISTA, fonteDe } from './sources'
