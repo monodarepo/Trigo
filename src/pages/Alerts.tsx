@@ -21,6 +21,7 @@ import { colors } from '../theme/tokens'
 import { abrirObjeto } from '../components/object/objectBus'
 import type { TipoObjeto } from '../data/objects'
 import {
+  ARMAZENAGEM_FARINHA_RS_T,
   snapshot,
   formatBRL,
   formatDataHoraPt,
@@ -301,7 +302,7 @@ function detalhesDoAlerta(alerta: Alerta): Array<{ rotulo: string; valor: string
         { rotulo: 'Consumo interno', valor: formatTon(p.trigoInternoT) },
         { rotulo: 'Ocupação', valor: formatPct(p.ocupacaoPct, 1) },
         { rotulo: 'Farinha sem destino', valor: formatTon(p.farinhaDisponivelT) },
-        { rotulo: 'Armazenagem', valor: `${formatBRL(8)}/t por mês` },
+        { rotulo: 'Armazenagem', valor: `${formatBRL(ARMAZENAGEM_FARINHA_RS_T)}/t por mês` },
       ]
     }
     case 'alerta-preco-farinha-ne': {

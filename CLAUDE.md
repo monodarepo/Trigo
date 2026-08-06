@@ -56,6 +56,8 @@ margem = preçoLíquidoVenda − custoInterno − custoDeServir = 2.500 − 2.10
 
 **ÂNCORAS:** custo interno canônico R$ 2.100/t · preço equivalente externo R$ 2.350/t → ganho R$ 250/t · venda líquida R$ 2.500/t → margem ~R$ 280/t · rendimento ~76% · farelo/subprodutos ~24%.
 
+**O ganho de R$ 250/t é do PAR-ÂNCORA, não do parque.** Os 12 pares moinho × spec que abastecem as fábricas vão de −R$ 146,6/t (Bento Gonçalves × massas, que destrói margem) a +R$ 451,6/t (Eusébio × bolo); o ganho médio ponderado por volume é R$ 206,5/t. Citar a média como se fosse o ganho de qualquer unidade é o que mantém um moinho destruindo margem enquanto o consolidado parece saudável — a tela de Verticalização existe para mostrar a dispersão, não a média.
+
 ### As 5 alternativas, em DUAS decisões
 O motor (`src/data/economics.ts` → `decisaoMakeBuySell`) não escolhe entre cinco opções num ranking só. São **duas decisões sobre tonelagens diferentes**, e misturá-las é o erro que faz "vender" (margem maior por tonelada) parecer melhor que "produzir" sem notar que a demanda das fábricas ficaria descoberta:
 
@@ -165,8 +167,23 @@ Seis seções na sidebar, do sinal à decisão. `(NOVA)` = placeholder a criar n
 **GOVERNANÇA**
 - `/copiloto` — **Copiloto Executivo** (tela atual `Copilot.tsx` — só muda rótulo/título).
 - `/vro` — **Realização de Valor** (atual).
+- `/poc` — **Modo POC** (`src/pages/Poc.tsx` + motor em `src/data/poc.ts`).
 
 Rota default continua `/` (Visão Executiva). `/showcase` e `/exportar` seguem fora da sidebar, intocadas.
+
+**Code-split:** só a Visão Executiva entra no bundle inicial; as demais rotas são `React.lazy` com o próprio esqueleto como fallback do Suspense (`TelaComEstado`). Ao criar uma tela nova, registre-a como `lazy` em `App.tsx` — importá-la direto devolve o Recharts (~330 kB) para a rota de entrada.
+
+## Modo POC — o piloto de 90 dias
+Recorte: **1 moinho** (Fortaleza), **2 farinhas** (massas, biscoito), **2 regiões**, **3 origens**, **2 fábricas**. Não é um produto reduzido: é a **reconstrução histórica** de 6 meses fechados que mostra qual era o custo real da farinha, o que teria custado comprar, qual seria a margem de venda, qual decisão teria maximizado o resultado e quanto valor passou pela mesa.
+
+**Três alavancas, medidas separadamente:** decisão da demanda (produzir × comprar) · folga parada (capacidade ociosa não vendida) · timing da compra (a regra dos 18% aplicada ao histórico, escolhendo dentro da janela de decisão — nunca o mínimo ex-post do semestre).
+
+**REGRA DE HONESTIDADE:** todo valor aparece em DUAS colunas — o **teto ex-post** (supõe visão perfeita) e a **captura realista**, com o mesmo haircut de 15–20% do VRO. Levar o teto para o business case é o erro que mata um piloto no segundo mês, quando o resultado medido chega abaixo do prometido.
+
+**ÂNCORA:** a série de câmbio e FOB do POC termina no cenário corrente, então o último mês reproduz por construção o TLC de regime de Fortaleza (R$ 1.473,4/t) e o custo interno canônico (R$ 2.100/t). `src/data/poc.ts` verifica isso em tempo de módulo e avisa no console se sair do lugar — ao mexer na série, re-ancore a ponta.
+
+## Os 10 agentes
+Um agente por PERGUNTA da cadeia, não por fonte de dado (`src/data/agentes.ts`): **Mercado** · **Originação** · **TLC** · **Performance dos Moinhos** · **Blend** · **Verticalização** · **Make/Buy/Sell** · **Comercial de Farinha** · **Alertas Financeiros** · **Orquestrador**. Cada um publica um número-síntese lido do MESMO motor que a tela usa — nada é digitado no catálogo. O orquestrador não calcula: arbitra conflitos entre agentes e assina a recomendação consolidada do dia. Os agentes são citados nos alertas (`agenteId`), nas respostas do copiloto (`agentes`), na trilha do VRO e na Visão Executiva.
 
 ## Marca
 - Original: `m-dias-branco-logo-png_seeklogo-407830.png` (raiz do repo; PNG 320×320, wordmark monocromático escuro sobre transparente — manter intacto).

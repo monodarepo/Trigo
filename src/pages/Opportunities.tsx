@@ -20,6 +20,7 @@ import {
   formatTon,
   getClienteExterno,
   getFarinha,
+  getMoinho,
   resumoPorRegiao,
   type CanalFarinha,
   type OportunidadeComercial,
@@ -122,6 +123,22 @@ export default function Opportunities() {
       align: 'right',
       sortValue: (o) => o.precoLiquidoRsT,
       render: (o) => <span className="font-mono">{rs0(o.precoLiquidoRsT)}</span>,
+    },
+    {
+      /**
+       * O custo interno fecha a conta na própria linha (preço − custo − servir
+       * = margem). Sem ele visível, esta tela era a única do elo da farinha em
+       * que o R$ 2.100/t não aparecia, e a margem tinha de ser aceita de fé.
+       */
+      key: 'custo',
+      header: 'Custo interno',
+      align: 'right',
+      sortValue: (o) => o.custoInternoRsT,
+      render: (o) => (
+        <span className="font-mono text-ink-subtle" title={`Moinho ${getMoinho(o.moinhoId)?.nome ?? o.moinhoId}`}>
+          {rs0(o.custoInternoRsT)}
+        </span>
+      ),
     },
     {
       key: 'margem',
@@ -429,7 +446,7 @@ export default function Opportunities() {
             columns={colunas}
             rows={oportunidades}
             rowKey={(o) => o.id}
-            minWidth={1060}
+            minWidth={1180}
             caption="Oportunidades de venda de farinha por cliente, região e canal, com preço líquido, margem, ganho de uso interno, volume, preço mínimo, capacidade disponível e o guardrail de ruptura. Ordenável por qualquer coluna."
             /* A recusa vence o destaque: uma conta reprovada não pode aparecer
                pintada de dourado só porque a margem bateria o uso interno — o

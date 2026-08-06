@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { memo, useCallback, useMemo, useState } from 'react'
 import { Check, RotateCcw, Scale, SlidersHorizontal } from 'lucide-react'
 import { Card, KpiTile, Pill, SectionTitle } from '../components/ui'
 import { AnimatedNumber } from '../components/live/AnimatedNumber'
@@ -51,7 +51,7 @@ const COR_FATIA: Record<string, string> = {
   faint: 'bg-ink-faint/40',
 }
 
-function Slider({
+const Slider = memo(function Slider({
   rotulo,
   valor,
   valorFmt,
@@ -89,9 +89,9 @@ function Slider({
       {hint && <span className="tnums mt-0.5 block text-[10px] text-ink-subtle">{hint}</span>}
     </label>
   )
-}
+})
 
-function CardAlternativa({
+const CardAlternativa = memo(function CardAlternativa({
   alt,
   selo,
   detalhe,
@@ -146,30 +146,47 @@ function CardAlternativa({
       </div>
     </Card>
   )
-}
+})
+
+/**
+ * Par-âncora resolvido UMA vez, no módulo. Antes isto era
+ * `useState(inputsIniciais().moinhoId)`: o argumento de useState é avaliado a
+ * cada render mesmo quando só o primeiro conta, então cada movimento de
+ * deslizador reconstruía o objeto de inputs — com as chamadas de motor que ele
+ * faz — duas vezes, para jogar fora as duas.
+ */
+const PAR_INICIAL = inputsIniciais()
 
 export default function MakeBuySell() {
-  const [moinhoId, setMoinhoId] = useState<MoinhoId>(inputsIniciais().moinhoId)
-  const [farinhaId, setFarinhaId] = useState<FarinhaId>(inputsIniciais().farinhaId)
-  const [inputs, setInputs] = useState<InputsSimuladorMbs>(() => inputsIniciais())
+  const [moinhoId, setMoinhoId] = useState<MoinhoId>(PAR_INICIAL.moinhoId)
+  const [farinhaId, setFarinhaId] = useState<FarinhaId>(PAR_INICIAL.farinhaId)
+  const [inputs, setInputs] = useState<InputsSimuladorMbs>(PAR_INICIAL)
   const [aplicado, setAplicado] = useState(false)
 
-  const set = <K extends keyof InputsSimuladorMbs>(chave: K, valor: InputsSimuladorMbs[K]) => {
-    setInputs((atual) => ({ ...atual, [chave]: valor }))
-    setAplicado(false)
-  }
+  /**
+   * Identidade estável: sem useCallback, `set` era uma função nova a cada
+   * render e os nove deslizadores (todos memoizados por props) re-renderizavam
+   * juntos a cada tick de arraste. Com ela, só o deslizador movido re-renderiza.
+   */
+  const set = useCallback(
+    <K extends keyof InputsSimuladorMbs>(chave: K, valor: InputsSimuladorMbs[K]) => {
+      setInputs((atual) => (atual[chave] === valor ? atual : { ...atual, [chave]: valor }))
+      setAplicado(false)
+    },
+    [],
+  )
 
-  const trocarPar = (novoMoinho: MoinhoId, novaFarinha: FarinhaId) => {
+  const trocarPar = useCallback((novoMoinho: MoinhoId, novaFarinha: FarinhaId) => {
     setMoinhoId(novoMoinho)
     setFarinhaId(novaFarinha)
     setInputs(inputsIniciais(novoMoinho, novaFarinha))
     setAplicado(false)
-  }
+  }, [])
 
-  const resetar = () => {
+  const resetar = useCallback(() => {
     setInputs(inputsIniciais(moinhoId, farinhaId))
     setAplicado(false)
-  }
+  }, [moinhoId, farinhaId])
 
   const resultado = useMemo(() => simularMakeBuySell(inputs), [inputs])
   const matriz = useMemo(() => matrizDecisao(resultado), [resultado])

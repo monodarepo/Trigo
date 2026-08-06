@@ -151,6 +151,9 @@ const oportunidades = mf.oportunidadesRegionais()
 /** Maior número de degraus entre as escadas — o título não pode mentir a contagem. */
 const maiorEscada = Math.max(...mf.escadas.map((e) => e.degraus.length))
 
+/** O preço de gôndola citado no rodapé sai da cotação, não do texto. */
+const precoGondolaRsT = mf.naoComparaveis.find((p) => p.apresentacao === 'saco-1kg')?.precoRsT ?? 0
+
 const colunasSeries: DataTableColumn<SerieFarinhaMercado>[] = [
   {
     key: 'spec',
@@ -946,7 +949,7 @@ export default function Forecast() {
           </div>
           <p className="mt-3 border-t border-edge/60 pt-3 text-[11px] leading-relaxed text-ink-subtle">
             A comparação só vale quando coincidem os 8 eixos: especificação, aplicação, apresentação, canal, região,
-            base logística, condição comercial e nível de serviço. O preço de gôndola de {rsT(3480)} embute embalagem
+            base logística, condição comercial e nível de serviço. O preço de gôndola de {rsT(precoGondolaRsT)} embute embalagem
             de 1 kg, distribuição capilar e margem do varejo — usá-lo contra um custo interno de granel é o erro
             clássico do “preço médio de farinha”.
           </p>

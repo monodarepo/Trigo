@@ -330,6 +330,37 @@ export {
 export { CENARIOS_MAKE_BUY_SELL, CENARIO_MBS_ANCORA, KPIS_FARINHA } from './makeBuySell'
 export { AGENTES, CONFLITO_ORQUESTRADO, getAgente, nomeCurtoAgente } from './agentes'
 export {
+  ELOS_VERTICALIZACAO,
+  QUEDA_QUE_ZERA_PCT,
+  RESUMO_VERTICALIZACAO,
+  SENSIBILIDADE_VERTICALIZACAO,
+  type EloVerticalizacao,
+  type PontoSensibilidade,
+  type ResumoVerticalizacao,
+} from './verticalizacao'
+export {
+  CUSTO_PADRAO_POC,
+  FABRICAS_POC,
+  FARINHAS_POC,
+  FOLGA_POC_T,
+  HAIRCUT_POC,
+  LINHAS_POC,
+  LINHAS_POC_MASSA,
+  MOINHO_POC,
+  ORIGENS_POC,
+  PRECOS_HOJE_POC,
+  PROPORCAO_POC,
+  REGIOES_POC,
+  RESUMO_POC,
+  ROTULO_DECISAO_POC,
+  TRIMESTRES_POC,
+  type DecisaoPoc,
+  type FabricaPoc,
+  type LinhaPoc,
+  type ResumoPoc,
+  type TrimestrePoc,
+} from './poc'
+export {
   CONCORRENTES_FARINHA,
   SERIES_FARINHA_MERCADO,
   TENDENCIA_FARINHA_CONSOLIDADA,

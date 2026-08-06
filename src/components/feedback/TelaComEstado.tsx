@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { Suspense, useEffect, useState, type ReactNode } from 'react'
 import { ErrorBoundary } from './ErrorBoundary'
 
 /** Rotas já carregadas nesta sessão — o skeleton só aparece na primeira visita. */
@@ -16,6 +16,12 @@ export interface TelaComEstadoProps {
 /**
  * Estados de rota: skeleton por layout (~400ms na primeira carga) +
  * fronteira de erro com fallback elegante. Nunca tela branca.
+ *
+ * O mesmo esqueleto serve de fallback do Suspense: com as telas carregadas sob
+ * demanda (React.lazy), o download do chunk e a espera encenada mostram
+ * exatamente a mesma coisa. Sem isto, o code-split introduziria um segundo
+ * estado de carregamento visualmente diferente do primeiro — o usuário veria
+ * duas transições onde antes havia uma.
  */
 export function TelaComEstado({ rota, titulo, esqueleto, children }: TelaComEstadoProps) {
   const [pronto, setPronto] = useState(() => rotasCarregadas.has(rota))
@@ -29,12 +35,16 @@ export function TelaComEstado({ rota, titulo, esqueleto, children }: TelaComEsta
     return () => clearTimeout(timer)
   }, [pronto, rota])
 
-  if (!pronto) {
-    return (
-      <div role="status" aria-busy="true" aria-label={`Carregando ${titulo}…`}>
-        {esqueleto}
-      </div>
-    )
-  }
-  return <ErrorBoundary rotulo={titulo}>{children}</ErrorBoundary>
+  const carregando = (
+    <div role="status" aria-busy="true" aria-label={`Carregando ${titulo}…`}>
+      {esqueleto}
+    </div>
+  )
+
+  if (!pronto) return carregando
+  return (
+    <ErrorBoundary rotulo={titulo}>
+      <Suspense fallback={carregando}>{children}</Suspense>
+    </ErrorBoundary>
+  )
 }

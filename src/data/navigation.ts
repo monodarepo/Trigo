@@ -1,4 +1,5 @@
 import {
+  Beaker,
   BellRing,
   CalendarRange,
   Factory,
@@ -83,6 +84,11 @@ export const NAV_SECTIONS: NavSection[] = [
     items: [
       { path: '/copiloto', label: 'Copiloto', title: 'Copiloto Executivo', icon: Sparkles, atalho: 'c' },
       { path: '/vro', label: 'Realização de Valor', title: 'VRO — Realização de Valor', icon: Trophy, atalho: 'r' },
+      /* O POC fica em Governança, e não num elo da cadeia, porque não é mais uma
+         tela de decisão: é a prova retrospectiva de que as decisões das outras
+         valem dinheiro. Mora ao lado do VRO, que mede a mesma coisa daqui para
+         a frente. */
+      { path: '/poc', label: 'Modo POC', title: 'Modo POC — piloto de 90 dias', icon: Beaker, atalho: 'q' },
     ],
   },
 ]

@@ -34,16 +34,17 @@ Build para hospedagem estática (rotas por hash): `VITE_HASH_ROUTER=1 npm run bu
 | Trigo | `/tlc` | Total Landed Cost |
 | Trigo | `/compra` | Recomendação de Compra |
 | Trigo | `/hedge` | Hedge |
-| Trigo | `/estoques` | Estoques & Blends *(placeholder)* |
-| Moinhos & Farinha | `/moinhos` | Performance dos Moinhos *(placeholder)* |
-| Moinhos & Farinha | `/verticalizacao` | Rentabilidade da Verticalização *(placeholder)* |
-| Moinhos & Farinha | `/demanda` | Planejamento da Demanda *(placeholder)* |
-| Margem & Decisão | `/make-buy-sell` | Simulador Make/Buy/Sell *(placeholder)* |
-| Margem & Decisão | `/oportunidades` | Oportunidades Comerciais *(placeholder)* |
+| Trigo | `/estoques` | Estoques & Blends — otimizador de blend de menor custo |
+| Moinhos & Farinha | `/moinhos` | Performance dos Moinhos — custeio, eficiência e custo marginal |
+| Moinhos & Farinha | `/verticalizacao` | Rentabilidade da Verticalização — ganho por moinho × spec |
+| Moinhos & Farinha | `/demanda` | Planejamento da Demanda — vendas → farinha → trigo |
+| Margem & Decisão | `/make-buy-sell` | Simulador Make/Buy/Sell — a decisão central da tese |
+| Margem & Decisão | `/oportunidades` | Oportunidades Comerciais — onde vender rende mais |
 | Margem & Decisão | `/simulador` | Simulador de Cenários |
 | Margem & Decisão | `/alertas` | Alertas & Decisões |
 | Governança | `/copiloto` | Copiloto Executivo |
 | Governança | `/vro` | Realização de Valor |
+| Governança | `/poc` | **Modo POC** — piloto de 90 dias (reconstrução histórica) |
 
 ## Modelo econômico
 
@@ -60,13 +61,46 @@ Custo interno canônico **R$ 2.100/t** de farinha (Fortaleza × farinha de massa
 **76%**, farelo/subprodutos **24%**. Preços externos só entram na comparação quando marcados como
 *apples-to-apples* — mesma spec, canal, apresentação, região e base logística. Ver [`CLAUDE.md`](CLAUDE.md).
 
+## Modo POC (`/poc`)
+
+O recorte para um piloto de 90 dias: **1 moinho** (Fortaleza), **2 farinhas** (massas e biscoito),
+**2 regiões**, **3 origens** e **2 fábricas**. Não é uma versão reduzida do produto — é uma
+**reconstrução histórica** de seis meses fechados que responde, com os dados que a empresa já tinha:
+
+- qual era o **custo real** da farinha, mês a mês (e quanto o custo-padrão errava);
+- quanto teria custado **comprar** a mesma spec no mercado;
+- qual seria a **margem de venda** do excedente;
+- qual **decisão** teria maximizado o resultado — e quanto valor passou pela mesa.
+
+O motor está em [`src/data/poc.ts`](src/data/poc.ts). A série de câmbio e FOB termina exatamente no
+cenário corrente, então o último mês do POC reproduz os números canônicos (TLC de regime
+**R$ 1.473,4/t** em Fortaleza, custo interno **R$ 2.100/t**) — há uma verificação em tempo de módulo
+que avisa no console se a âncora sair do lugar.
+
+**Duas colunas, sempre**: o resultado ex-post é um **teto** (supõe visão perfeita); ao lado dele vai a
+**captura realista**, com o mesmo haircut de 15–20% que o VRO aplica. Levar o teto para o business
+case é o erro que mata um piloto no segundo mês.
+
 ## Arquitetura
 
 - **Vite + React 18 + TypeScript** (estrito) · Tailwind · React Router · Recharts · lucide-react · framer-motion.
 - **Verdade única**: todos os números vêm de `src/data` (snapshot do cenário-âncora "terça, 7h").
   Nenhum componente inventa número.
+- **Code-split por rota**: só a Visão Executiva vem no bundle inicial; as demais telas carregam sob
+  demanda (`React.lazy`), com o mesmo esqueleto de sempre como fallback do Suspense. O Recharts
+  (~330 kB) fica fora da rota de entrada.
 - Design system navy + dourado em `src/theme/tokens.ts` (fonte única do tema Tailwind).
 - Contexto completo do projeto (âncoras de dados, cenário e convenções): [`CLAUDE.md`](CLAUDE.md).
+
+## Deploy
+
+O build é estático (`dist/`) e roda em qualquer host. As duas configurações versionadas:
+
+- **Netlify** — [`netlify.toml`](netlify.toml): `npm run build` → `dist`, redirect SPA `/* → /index.html`
+  e `/api/* → /.netlify/functions/:splat`. A função vive em [`netlify/functions/wheat.ts`](netlify/functions/wheat.ts).
+- **Vercel** — a mesma função no formato da plataforma em [`api/wheat.ts`](api/wheat.ts).
+
+As duas leem a mesma variável de ambiente e respondem o mesmo contrato; o cliente só conhece `/api/wheat`.
 
 ## Preço de trigo de referência (proxy serverless)
 
