@@ -740,7 +740,7 @@ export interface PrecoFarinhaExterno {
 // Elo 3 — Demanda: plano de vendas → farinha → trigo
 // ---------------------------------------------------------------------------
 
-export type FamiliaProduto = 'massas' | 'biscoitos' | 'bolos' | 'torradas'
+export type FamiliaProduto = 'massas' | 'biscoitos' | 'bolos' | 'torradas' | 'demais'
 
 export interface PontoCalendarioDemanda {
   /** Mês de referência (ISO 'YYYY-MM'). */
@@ -758,7 +758,9 @@ export interface PontoCalendarioDemanda {
 export interface DemandaFarinha {
   familia: FamiliaProduto
   rotulo: string
-  farinhaId: FarinhaId
+  /** null quando a família NÃO consome farinha (margarinas, gorduras): ela
+   * existe no plano de vendas e sai da cascata no passo da farinha. */
+  farinhaId: FarinhaId | null
   /** Plano de vendas do produto acabado (t/mês). */
   planoVendasT: number
   /** t de farinha por t de produto acabado (receita média da família). */
