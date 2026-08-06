@@ -28,7 +28,7 @@ import { SEVERIDADE_UI } from './severidade'
 import { ROTULO_FICHA, categoriaDe, detalhesDoAlerta, impactoFormatado } from './detalhes'
 import { AREAS, AREA_SUGERIDA, PERIODOS_ADIAMENTO } from './acoes'
 import { registrar } from './registroVro'
-import { tempoRelativo } from './tempo'
+import { horaDoCenario, tempoRelativo } from './tempo'
 
 // ---------------------------------------------------------------------------
 // Bus de abertura (mesmo padrão de centralStore/objectBus)
@@ -68,12 +68,6 @@ function useDetalheId(): string | null {
 }
 
 const MS_POR_HORA = 60 * 60 * 1000
-
-/** Hora sobre a âncora do cenário: a demo não usa o relógio da máquina. */
-const horaDoCenario = (segundos: number) => {
-  const base = new Date(Date.parse('2025-08-12T07:00:00') + segundos * 1000)
-  return `${String(base.getHours()).padStart(2, '0')}:${String(base.getMinutes()).padStart(2, '0')}`
-}
 
 const btnSecundario =
   'inline-flex items-center gap-1.5 rounded-full border border-edge px-3 py-1.5 text-11 font-semibold text-ink-muted transition-colors hover:border-gold/40 hover:text-ink'

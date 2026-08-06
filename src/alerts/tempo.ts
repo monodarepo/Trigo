@@ -14,6 +14,16 @@ import type { Alerta } from '../data/types'
 
 const MS_POR_MINUTO = 60_000
 
+/**
+ * Hora sobre a ÂNCORA DO CENÁRIO, não o relógio da máquina: a trilha do VRO
+ * precisa dizer "07:14" numa demo que começa às 07:00, e não a hora local de
+ * quem está assistindo.
+ */
+export function horaDoCenario(segundosDeSessao: number): string {
+  const base = new Date(Date.parse(DEMO_AGORA) + segundosDeSessao * 1000)
+  return `${String(base.getHours()).padStart(2, '0')}:${String(base.getMinutes()).padStart(2, '0')}`
+}
+
 export function tempoRelativo(alerta: Alerta, segundosDeSessao: number): string {
   if (alerta.recebidoEmS != null) {
     const s = Math.max(0, segundosDeSessao - alerta.recebidoEmS)
