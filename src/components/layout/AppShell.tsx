@@ -8,6 +8,7 @@ import { ObjectPanelLayer } from '../object/ObjectPanel'
 import { ToastLayer } from '../feedback/Toast'
 import { PresentationMode } from '../present/PresentationMode'
 import { AlertCenter } from '../../alerts/AlertCenter'
+import { AlertDetailLayer } from '../../alerts/AlertDetail'
 import { CriticalBanner } from '../../alerts/CriticalBanner'
 import { useMural } from './layoutStore'
 import { iniciarLive } from '../../live/liveStore'
@@ -92,6 +93,8 @@ export function AppShell() {
           dá para consultar a fila com uma ficha aberta, mas a demo em tela
           cheia continua soberana. */}
       <AlertCenter />
+      {/* Acima da Central: o detalhe é sempre o que se abriu por último. */}
+      <AlertDetailLayer />
       <ToastLayer />
       <PresentationMode />
     </div>

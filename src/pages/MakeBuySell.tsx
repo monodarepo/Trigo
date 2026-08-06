@@ -26,6 +26,7 @@ import {
   type InputsSimuladorMbs,
   type NivelRisco,
 } from '../data/simuladorMbs'
+import { AlertBanner, AlertChip } from '../alerts/AlertBanner'
 
 /**
  * Simulador Make/Buy/Sell — o centro da tese v2.
@@ -223,6 +224,8 @@ export default function MakeBuySell() {
         actions={<SourceBadge familia="estoque" />}
       />
 
+      <AlertBanner rota="/make-buy-sell" />
+
       {/* Par em decisão + inputs */}
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.9fr)] xl:items-start">
         <Card className="space-y-4">
@@ -235,6 +238,10 @@ export default function MakeBuySell() {
               <h2 className="mt-1 font-display text-16 font-semibold text-ink">
                 {moinho.nome} · {farinha.nome}
               </h2>
+              {/* Chip por ENTIDADE: segue o moinho do cenário. Trocar de
+                  Fortaleza para Bento Gonçalves troca o alerta junto — é o que
+                  liga o aviso ao par que está sendo decidido, e não à tela. */}
+              <AlertChip entidadeId={moinhoId} className="mt-2" />
             </div>
             <button
               type="button"

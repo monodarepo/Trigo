@@ -35,6 +35,7 @@ import {
   type SerieFarinhaMercado,
   type TendenciaFarinha,
 } from '../data'
+import { AlertBanner } from '../alerts/AlertBanner'
 
 const { previsao, mercado, tlc, compra, hedge, farinha } = snapshot
 const mf = farinha.mercado
@@ -429,6 +430,8 @@ export default function Forecast() {
         title="Mercado de Trigo e Farinha"
         subtitle="Trajetórias com banda de confiança e fatores explicáveis — a base da recomendação do dia."
       />
+
+      <AlertBanner rota="/previsao" />
 
       <div className="grid items-start gap-4 lg:grid-cols-3">
         {/* 1 · Gráfico principal — preço do trigo */}

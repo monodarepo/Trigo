@@ -16,6 +16,7 @@ import {
   type OrigemId,
   type PortoId,
 } from '../data'
+import { AlertBanner } from '../alerts/AlertBanner'
 
 const { tlc, dominio } = snapshot
 
@@ -196,6 +197,8 @@ export default function LandedCost() {
         title="Total Landed Cost"
         subtitle="O custo que importa: do FOB ao moinho, ajustado ao risco — não o preço nominal."
       />
+
+      <AlertBanner rota="/tlc" />
 
       {/* 3 · Seletores */}
       <Card padding="sm">

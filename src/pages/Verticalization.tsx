@@ -35,6 +35,7 @@ import {
   formatTon,
   type EloVerticalizacao,
 } from '../data'
+import { AlertBanner } from '../alerts/AlertBanner'
 
 const v = RESUMO_VERTICALIZACAO
 
@@ -190,6 +191,8 @@ export default function Verticalization() {
         subtitle="Quanto vale abastecer a própria fábrica em vez de comprar farinha pronta — por moinho, por especificação, e até onde isso aguenta."
         actions={<SourceBadge familia="preco" />}
       />
+
+      <AlertBanner rota="/verticalizacao" />
 
       {/* 1 · O número da tese, e o que ele esconde */}
       <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-5">

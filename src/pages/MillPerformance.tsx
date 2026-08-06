@@ -33,6 +33,7 @@ import {
   type MoinhoId,
   type SemaforoMoinho,
 } from '../data'
+import { AlertBanner, AlertChip } from '../alerts/AlertBanner'
 
 /**
  * Performance dos Moinhos — o custo REAL da farinha, unidade a unidade.
@@ -177,6 +178,8 @@ export default function MillPerformance() {
         actions={<SourceBadge familia={FAMILIA_CUSTO} />}
       />
 
+      <AlertBanner rota="/moinhos" />
+
       {/* 1 · Retrato do parque — contexto silencioso em quatro números */}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <KpiTile
@@ -302,6 +305,8 @@ export default function MillPerformance() {
               {unidade.ganhoRsT >= 0 ? '+' : '−'}
               {rs1(Math.abs(unidade.ganhoRsT))}/t vs mercado
             </span>
+            {/* O alerta da unidade selecionada, no cabeçalho do painel dela. */}
+            <AlertChip entidadeId={unidade.moinhoId} />
             <button
               type="button"
               onClick={() => abrirObjeto('moinho', unidade.moinhoId)}

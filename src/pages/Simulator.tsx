@@ -14,6 +14,7 @@ import {
   type PerfilSimulacao,
   type SimuladorInputs,
 } from '../data'
+import { AlertBanner } from '../alerts/AlertBanner'
 
 const { simulador, mercado, dominio, recomendacaoDoDia } = snapshot
 const cambioSpot = mercado.precos.cambioBrlUsd
@@ -150,6 +151,8 @@ export default function Simulator() {
         title="Simulador de Cenários"
         subtitle="Choques de preço, câmbio, safra e logística — impacto em CPV e EBITDA por perfil de decisão."
       />
+
+      <AlertBanner rota="/simulador" />
 
       <div className="grid items-start gap-4 lg:grid-cols-4">
         {/* 1 · Painel de inputs */}

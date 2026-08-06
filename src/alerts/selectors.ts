@@ -33,6 +33,18 @@ const PESO_SEVERIDADE: Record<SeveridadeAlerta, number> = {
 export const ORDEM_SEVERIDADE = PESO_SEVERIDADE
 
 /**
+ * A ORDEM ÚNICA de urgência: severidade, depois dinheiro, depois recência. Um
+ * crítico de R$ 100 mil precede um médio de R$ 1M — urgência não se compra com
+ * impacto; o impacto desempata dentro do mesmo nível. A fila da Central, o
+ * banner da tela e o chip do painel usam esta mesma função: com duas ordens
+ * diferentes, o "alerta mais importante" da tela não seria o primeiro da fila.
+ */
+const porUrgencia = (a: Alerta, b: Alerta) =>
+  PESO_SEVERIDADE[a.severidade] - PESO_SEVERIDADE[b.severidade] ||
+  (b.impactoRs ?? 0) - (a.impactoRs ?? 0) ||
+  b.timestamp.localeCompare(a.timestamp)
+
+/**
  * ATIVOS = tudo que não foi resolvido. Adiado continua ativo de propósito: ele
  * sai da FILA (abaixo), não da lista — um risco adiado que sumisse da tela
  * seria um risco esquecido.
@@ -77,12 +89,7 @@ export const contagemNaoVistos = memoPorLista((lista) => naoVistos(lista).length
 export const filaExigeDecisao = memoPorLista((lista) =>
   ativos(lista)
     .filter((a) => a.exigeDecisao && a.status !== 'adiado' && a.status !== 'reconhecido')
-    .sort(
-      (a, b) =>
-        PESO_SEVERIDADE[a.severidade] - PESO_SEVERIDADE[b.severidade] ||
-        (b.impactoRs ?? 0) - (a.impactoRs ?? 0) ||
-        b.timestamp.localeCompare(a.timestamp),
-    ),
+    .sort(porUrgencia),
 )
 
 /** O alerta mais crítico da fila — o que o cockpit destaca. */
@@ -118,14 +125,14 @@ function memoPorListaEChave<T>(calcular: (lista: readonly Alerta[], chave: strin
 export const paraTela = memoPorListaEChave((lista, rota) =>
   ativos(lista)
     .filter((a) => a.telasRelacionadas.includes(rota))
-    .sort((a, b) => PESO_SEVERIDADE[a.severidade] - PESO_SEVERIDADE[b.severidade]),
+    .sort(porUrgencia),
 )
 
-/** Alertas ligados a um objeto do domínio — o banner dentro do ObjectPanel. */
+/** Alertas ligados a um objeto do domínio — o chip no cabeçalho do painel. */
 export const paraEntidade = memoPorListaEChave((lista, id) =>
   ativos(lista)
     .filter((a) => a.entidade?.id === id)
-    .sort((a, b) => PESO_SEVERIDADE[a.severidade] - PESO_SEVERIDADE[b.severidade]),
+    .sort(porUrgencia),
 )
 
 /** Ids dos objetos com alerta ATIVO que exige decisão — destaque de linha. */

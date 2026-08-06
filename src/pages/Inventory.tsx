@@ -30,6 +30,7 @@ import {
   type AlertaLote,
   type AnaliseLote,
 } from '../data/estoqueTrigo'
+import { AlertBanner } from '../alerts/AlertBanner'
 
 /**
  * Estoques & Blends — o que está em silo e o blend de menor custo que ele
@@ -298,6 +299,8 @@ export default function Inventory() {
         subtitle="O que está em silo e o blend de menor custo que ele permite — com a especificação inteira atendida, não só a proteína."
         actions={<SourceBadge familia="estoque" />}
       />
+
+      <AlertBanner rota="/estoques" />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <KpiTile

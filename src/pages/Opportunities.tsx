@@ -28,6 +28,7 @@ import {
   type SemaforoRuptura,
   type StatusOportunidade,
 } from '../data'
+import { AlertBanner } from '../alerts/AlertBanner'
 
 /**
  * Oportunidades Comerciais — onde vender farinha rende mais que usar
@@ -252,6 +253,8 @@ export default function Opportunities() {
         subtitle="Onde vender farinha rende mais que consumir nas fábricas — com o guardrail que impede a venda de romper o abastecimento interno."
         actions={<SourceBadge familia="estoque" />}
       />
+
+      <AlertBanner rota="/oportunidades" />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <KpiTile

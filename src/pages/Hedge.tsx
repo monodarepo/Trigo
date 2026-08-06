@@ -14,8 +14,7 @@ import { emitirToast } from '../components/feedback/toastBus'
 import { BadgeFonteAoVivo } from '../components/live/LiveSourceBadge'
 import { useFxAoVivo } from '../live/useLiveData'
 import { snapshot, formatBRL, formatPct, formatTon, formatUSD, FONTE_FRANKFURTER } from '../data'
-import { useAlertas } from '../alerts/alertStore'
-import { paraTela } from '../alerts/selectors'
+import { AlertBanner } from '../alerts/AlertBanner'
 
 const { hedge, compra, tlc, logistica, mercado, previsao, recomendacaoDoDia } = snapshot
 const rec = hedge.recomendacao
@@ -26,8 +25,6 @@ const btnPrimary =
   'rounded-full bg-gold px-4 py-2 text-xs font-semibold text-navy transition-colors hover:bg-gold-light'
 const btnGhost =
   'rounded-full border border-edge px-4 py-2 text-xs font-semibold text-ink-muted transition-colors hover:border-gold/40 hover:text-ink'
-const btnMini =
-  'rounded-full border border-edge px-3 py-1 text-[11px] font-semibold text-ink-muted transition-colors hover:border-gold/40 hover:text-ink'
 
 // --- Exposição (derivada do snapshot) ---
 const exposicaoTotalUsd = hedge.posicoes.reduce((s, p) => s + p.expostoUsd, 0) // US$ 108M
@@ -58,14 +55,6 @@ const statusBanda =
 
 export default function Hedge() {
   /**
-   * Banner contextual pelo STORE: é o alerta que declara em quais telas
-   * aparece (`telasRelacionadas`), não a tela que filtra por categoria. O
-   * filtro antigo (`cambio || hedge`) deixava de fora o alerta de câmbio que
-   * inverte a decisão de moagem — que é justamente um alerta de hedge.
-   */
-  const alertasHedge = useAlertas((lista) => paraTela(lista, '/hedge'))
-
-  /**
    * ÂNCORA-E-DERIVA — o que é AO VIVO e o que é CENÁRIO nesta tela:
    *  · ÂNCORA (cenário, nunca muda com rede): exposição em US$ (72M/108M),
    *    recomendação "proteger 60%", R$ 4,8M protegidos, VaR, NDF R$ 5,27.
@@ -84,6 +73,8 @@ export default function Hedge() {
         title="Recomendação de Hedge"
         subtitle="Qual parcela da exposição proteger, com qual instrumento, em qual janela — e por quê."
       />
+
+      <AlertBanner rota="/hedge" />
 
       {/* 1 · Exposição atual — KPIs */}
       <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
@@ -224,8 +215,9 @@ export default function Hedge() {
           }
         />
 
-        {/* 3 · Banda de orçamento */}
-        <Card>
+        {/* 3 · Banda de orçamento — linha inteira desde que a lista de alertas
+             saiu daqui: a régua é horizontal e ganha em largura. */}
+        <Card className="md:col-span-2">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <h3 className="font-display text-base font-semibold text-ink">Banda de orçamento cambial</h3>
@@ -280,57 +272,13 @@ export default function Hedge() {
             riscos). A projeção de 90 dias ({fmtCambio(proj90)}) já ultrapassa o teto — por isso a janela atual de NDF é
             valiosa.
           </p>
-        </Card>
-
-        {/* 4 · Alertas de hedge */}
-        <Card>
-          <h3 className="font-display text-base font-semibold text-ink">Alertas de hedge</h3>
-          <ul className="mt-4 space-y-3">
-            {alertasHedge.map((alerta) => (
-              <li key={alerta.id} className="rounded-card border border-edge/60 bg-navy/30 p-3">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium text-ink">{alerta.titulo}</p>
-                    <p className="mt-1 text-xs leading-snug text-ink-subtle">{alerta.descricao}</p>
-                  </div>
-                  <Badge
-                    kind="status"
-                    label={alerta.severidade === 'alto' ? 'Alto' : 'Médio'}
-                    tone={alerta.severidade === 'alto' ? 'warning' : 'info'}
-                    className="shrink-0"
-                  />
-                </div>
-                <div className="mt-3 flex flex-wrap items-center gap-2">
-                  <button
-                    type="button"
-                    className={btnMini}
-                    onClick={() => emitirToast({ tom: 'sucesso', titulo: 'Ordem enviada à Tesouraria para execução na janela' })}
-                  >
-                    Executar
-                  </button>
-                  <button
-                    type="button"
-                    className={btnMini}
-                    onClick={() => emitirToast({ tom: 'info', titulo: 'Alerta adiado — reavaliação no próximo pregão' })}
-                  >
-                    Aguardar
-                  </button>
-                  <button
-                    type="button"
-                    className={btnMini}
-                    onClick={() => emitirToast({ tom: 'sucesso', titulo: 'Proposta de cobertura adicional enviada ao CFO' })}
-                  >
-                    Elevar proteção
-                  </button>
-                </div>
-              </li>
-            ))}
-          </ul>
-          {/* 5 · Nota fixa */}
+          {/* Nota fixa — qualifica a recomendação, e por isso ficou aqui
+              quando a lista de alertas saiu da tela para o banner do topo. */}
           <p className="mt-4 border-t border-edge/60 pt-3 text-xs italic text-ink-subtle">
             Sujeito à política financeira e à aprovação humana (Tesouraria/CFO).
           </p>
         </Card>
+
       </div>
 
     </div>

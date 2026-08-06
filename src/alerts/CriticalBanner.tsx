@@ -10,7 +10,7 @@
  *    lê a mesma fila do sino e da Central.
  */
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { AlertOctagon, X } from 'lucide-react'
 import { marcarVisto, useListaAlertas } from './alertStore'
@@ -18,10 +18,24 @@ import { filaExigeDecisao } from './selectors'
 
 export function CriticalBanner() {
   const navigate = useNavigate()
+  const { pathname } = useLocation()
   const lista = useListaAlertas()
   const [dispensados, setDispensados] = useState<string[]>([])
   const criticos = filaExigeDecisao(lista).filter((a) => a.severidade === 'critico')
-  const critico = criticos.find((a) => !dispensados.includes(a.id))
+  /**
+   * A faixa mostra o crítico que a TELA AINDA NÃO ESTÁ MOSTRANDO. Se o alerta
+   * declara esta rota em `telasRelacionadas`, o banner contextual já o exibe
+   * logo abaixo do título — com impacto e CTA —, e a faixa viraria a mesma
+   * frase duas vezes na mesma dobra. Crítico sempre encabeça a ordenação do
+   * banner, então "declara a rota" equivale a "está visível ali".
+   *
+   * O efeito colateral é o melhor da mudança: no TLC a faixa passa a anunciar
+   * o crítico de Bento Gonçalves, que o banner do TLC não cobre — duas
+   * superfícies, dois fatos.
+   */
+  const critico = criticos.find(
+    (a) => !dispensados.includes(a.id) && !a.telasRelacionadas.includes(pathname),
+  )
   const quantos = criticos.length
 
   return (

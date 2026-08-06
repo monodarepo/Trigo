@@ -41,6 +41,7 @@ import {
 } from '../live/useLiveData'
 import { avaliarRiscoGeopolitico } from '../live/providers/news'
 import { FONTE_FRANKFURTER, FONTE_WHEAT_REF } from '../data'
+import { AlertBanner } from '../alerts/AlertBanner'
 
 const {
   recomendacaoDoDia,
@@ -352,6 +353,10 @@ export default function Cockpit() {
         title="A decisão de hoje"
         subtitle={`A mesma verdade para todas as áreas — ${formatDataHoraPt(snapshot.agora)}.`}
       />
+
+      {/* Limite 1 aqui, e só aqui: a Visão Executiva tem UM dominante — a
+          decisão do dia. Duas faixas de alerta acima dela disputariam o posto. */}
+      <AlertBanner rota="/" limite={1} />
 
       {/* 1+2 · HERO + KPIs — no ultrawide (≥1800px) viram uma linha do grid de parede */}
       <div className="space-y-6 wide:grid wide:grid-cols-3 wide:items-start wide:gap-4 wide:space-y-0">

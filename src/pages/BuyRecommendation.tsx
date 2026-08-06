@@ -23,6 +23,7 @@ import {
 import { abrirObjeto } from '../components/object/objectBus'
 import { useAlertas } from '../alerts/alertStore'
 import { entidadesComAlerta } from '../alerts/selectors'
+import { AlertBanner } from '../alerts/AlertBanner'
 
 const { compra, tlc, previsao, mercado, logistica } = snapshot
 const rec = compra.recomendacao
@@ -223,6 +224,8 @@ export default function BuyRecommendation() {
         title="Recomendação de Compra"
         subtitle="Quando, quanto, de qual origem e por qual porto — otimizado pelo TLC ajustado ao risco."
       />
+
+      <AlertBanner rota="/compra" />
 
       {/* 1 · Card principal */}
       <RecommendationCard

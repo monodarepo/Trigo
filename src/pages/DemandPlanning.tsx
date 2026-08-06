@@ -22,6 +22,7 @@ import {
   planoPorMoinho,
 } from '../data/demanda'
 import { VOLUME_TRIMESTRE_T } from '../data/compra'
+import { AlertBanner } from '../alerts/AlertBanner'
 
 /**
  * Planejamento da Demanda — a ponte do plano de vendas até o trigo.
@@ -207,6 +208,8 @@ export default function DemandPlanning() {
         subtitle="Do plano de vendas à tonelada de trigo: a conta que faz Marketing, Indústria e Suprimentos falarem do mesmo número."
         actions={<SourceBadge familia="estoque" />}
       />
+
+      <AlertBanner rota="/demanda" />
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <KpiTile
