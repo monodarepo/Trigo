@@ -15,18 +15,14 @@ import { formatBRL, formatDataPt, formatPct, formatTon, formatUSD } from './form
 import { OPORTUNIDADES_COMERCIAIS, getClienteExterno } from './comercial'
 import { getFarinha } from './farinha'
 import { custoInternoFarinha } from './economics'
-import type { Embarque, OrigemId } from './types'
+import type { Embarque, OrigemId, TipoObjeto } from './types'
 
-export type TipoObjeto =
-  | 'navio'
-  | 'contrato'
-  | 'moinho'
-  | 'origem'
-  | 'porto'
-  | 'fornecedor'
-  | 'lote'
-  | 'recomendacao'
-  | 'oportunidade'
+/**
+ * Re-exportado de types.ts, onde passou a viver: o modelo de Alerta precisa
+ * referenciá-lo (campo `entidade`) e types.ts é a base da pirâmide de imports —
+ * defini-lo aqui criaria um ciclo objects → types → objects.
+ */
+export type { TipoObjeto } from './types'
 
 export type TomObjeto = 'neutro' | 'positivo' | 'atencao' | 'risco' | 'info'
 

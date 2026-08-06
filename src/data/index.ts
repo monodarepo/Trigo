@@ -4,13 +4,7 @@
  */
 import type { KpiExposicao, RecomendacaoDoDia } from './types'
 import { AGENTES, CONFLITO_ORQUESTRADO, MOINHO_MAIS_COMPETITIVO, getAgente } from './agentes'
-import {
-  ALERTAS,
-  CONTAGEM_ALERTAS_SINO,
-  IMPACTO_ALERTAS_RS,
-  OPORTUNIDADE_ALERTAS_RS,
-  RISCO_ALERTAS_RS,
-} from './alertas'
+import { ALERTAS } from './alertas'
 import {
   COBERTURA_MEDIA_DIAS,
   ESTOQUE_MOINHOS,
@@ -202,13 +196,12 @@ export const snapshot = {
     simular: simularCenario,
   },
   logistica: { contratos: CONTRATOS, embarques: EMBARQUES, navioAtrasado: MV_RIO_PARANA },
+  /**
+   * SEMENTE dos alertas. Quem precisa do estado vivo (contagens, fila,
+   * banners) lê do store em `src/alerts` — este campo existe para o snapshot
+   * continuar completo, não para ser consumido direto por tela.
+   */
   alertas: ALERTAS,
-  /** Contagem exibida no sino da Topbar (críticos + altos). */
-  contagemAlertas: CONTAGEM_ALERTAS_SINO,
-  /** O que está em jogo nos alertas mensais com ação pendente (R$/mês). */
-  impactoAlertasRs: IMPACTO_ALERTAS_RS,
-  oportunidadeAlertasRs: OPORTUNIDADE_ALERTAS_RS,
-  riscoAlertasRs: RISCO_ALERTAS_RS,
   /** Os 10 agentes do hub — quem responde por cada elo da cadeia. */
   agentes: {
     lista: AGENTES,

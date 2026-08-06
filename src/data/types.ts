@@ -390,38 +390,73 @@ export interface CenarioSimulador {
 // ---------------------------------------------------------------------------
 
 /**
- * Categorias de alerta. As quatro últimas nasceram com o elo da farinha:
- * `farinha` (custo/preço da farinha), `moinho` (eficiência e capacidade),
- * `margem` (a decisão Make/Buy/Sell muda) e `comercial` (venda a terceiros).
+ * Tipos de objeto do domínio que abrem ficha no ObjectPanel. Vive aqui, e não
+ * em objects.ts, porque o modelo de Alerta aponta para eles.
+ */
+export type TipoObjeto =
+  | 'navio'
+  | 'contrato'
+  | 'moinho'
+  | 'origem'
+  | 'porto'
+  | 'fornecedor'
+  | 'lote'
+  | 'recomendacao'
+  | 'oportunidade'
+
+/**
+ * Categorias de alerta, uma por elo da cadeia: mercado e safra no sinal;
+ * câmbio, logística, estoque, hedge e qualidade no trigo; moagem e farinha no
+ * moinho; comercial na venda. É a mesma taxonomia da sidebar — um alerta sabe
+ * dizer a que parte do negócio pertence sem precisar de tradução.
  */
 export type CategoriaAlerta =
   | 'mercado'
   | 'cambio'
+  | 'safra'
   | 'logistica'
   | 'estoque'
   | 'hedge'
-  | 'qualidade'
+  | 'moagem'
   | 'farinha'
-  | 'moinho'
-  | 'margem'
   | 'comercial'
+  | 'qualidade'
+
+export type SeveridadeAlerta = 'critico' | 'alto' | 'medio' | 'informativo'
+
+/**
+ * Ciclo de vida do alerta. `novo` → `visto` acontece só de abrir o sino;
+ * `reconhecido` é ato deliberado ("eu assumo"); `adiado` sai da fila até uma
+ * data; `resolvido` sai de vez. Sem esse estado, cada superfície inventava o
+ * seu (o sino tinha um Set de "não lidas" que ninguém mais enxergava).
+ */
+export type StatusAlerta = 'novo' | 'visto' | 'reconhecido' | 'adiado' | 'resolvido'
+
+/** O impacto é uma magnitude; a direção vem do tipo. */
+export type TipoImpactoAlerta = 'risco' | 'oportunidade'
+
+/** Objeto de domínio que o alerta aponta — abre a ficha no ObjectPanel. */
+export interface EntidadeAlerta {
+  tipo: TipoObjeto
+  id: string
+}
 
 export interface Alerta {
   id: string
-  severidade: 'critico' | 'alto' | 'medio' | 'info'
+  severidade: SeveridadeAlerta
   categoria: CategoriaAlerta
-  timestamp: string
   titulo: string
   descricao: string
-  /** Rota da tela onde a ação sugerida acontece. */
-  acaoRota: string
-  acaoRotulo: string
+  timestamp: string
   /**
-   * Impacto financeiro do alerta. POSITIVO = valor a capturar se agir;
-   * NEGATIVO = perda em curso ou risco a evitar. Ausente quando o alerta é
-   * informativo e não tem número atribuível — preferir omitir a inventar.
+   * Magnitude do impacto financeiro (R$, sempre ≥ 0) — é o que ordena a fila.
+   * A DIREÇÃO vive em `tipo`: guardar o sinal aqui obrigaria todo consumidor a
+   * lembrar de usar Math.abs antes de comparar, e um esquecimento colocaria a
+   * maior perda no fim da fila. Ausente quando não há número atribuível —
+   * preferir omitir a inventar.
    */
   impactoRs?: number
+  tipo?: TipoImpactoAlerta
   /**
    * A BASE do impacto. Sem isto, um desvio trimestral de orçamento entraria no
    * mesmo somatório de um custo mensal de armazenagem e o total do topo seria
@@ -430,6 +465,22 @@ export interface Alerta {
   impactoBase?: 'mes' | 'trimestre' | 'evento'
   /** Qualifica o impacto ("potencial, sem pedido fechado", "no lote"). */
   impactoNota?: string
+  status: StatusAlerta
+  /** Quando adiado, até quando (ISO). */
+  adiadoAte?: string
+  /** Área/pessoa a quem o alerta foi atribuído. */
+  atribuidoA?: string
+  /** Exige uma decisão humana — separa a fila de trabalho do que é contexto. */
+  exigeDecisao: boolean
+  acaoLabel: string
+  /** Rota da tela onde a ação sugerida acontece. */
+  acaoRota: string
+  /** Objeto do domínio que o alerta aponta (abre a ficha). */
+  entidade?: EntidadeAlerta
+  /** Rotas em que o alerta deve aparecer como banner contextual. */
+  telasRelacionadas: string[]
+  /** De onde veio o sinal, em uma linha. */
+  fonte: string
   /** Agente que levantou o alerta (src/data/agentes.ts). */
   agenteId?: AgenteId
 }

@@ -24,6 +24,8 @@ import {
   type Embarque,
 } from '../data'
 import { abrirObjeto } from '../components/object/objectBus'
+import { useAlertas } from '../alerts/alertStore'
+import { topoDaFila } from '../alerts/selectors'
 import { SourceBadge } from '../components/trust/SourceBadge'
 import { AnimatedNumber } from '../components/live/AnimatedNumber'
 import { abrirAprovacao } from '../components/approval/approvalBus'
@@ -48,7 +50,6 @@ const {
   hedge,
   previsao,
   logistica,
-  alertas,
   simulador,
   vro,
   mercado,
@@ -182,22 +183,18 @@ const oportunidades = [
 ].sort((a, b) => b.valorRs - a.valorRs)
 
 // --- Top 5 exceções ---
-const ordemSeveridade: Record<Alerta['severidade'], number> = { critico: 0, alto: 1, medio: 2, info: 3 }
 const toneSeveridade: Record<Alerta['severidade'], Tone> = {
   critico: 'danger',
   alto: 'warning',
   medio: 'info',
-  info: 'neutral',
+  informativo: 'neutral',
 }
 const rotuloSeveridade: Record<Alerta['severidade'], string> = {
   critico: 'Crítico',
   alto: 'Alto',
   medio: 'Médio',
-  info: 'Info',
+  informativo: 'Info',
 }
-const excecoes = [...alertas]
-  .sort((a, b) => ordemSeveridade[a.severidade] - ordemSeveridade[b.severidade])
-  .slice(0, 5)
 
 // --- Faixa de impacto projetado ---
 const perfisOrdem = ['conservador', 'recomendado', 'oportunistico'] as const
@@ -274,6 +271,13 @@ const BOTAO_DECISAO: Record<ModoDecisao, string> = {
 
 export default function Cockpit() {
   const decisao = useDecisao()
+  /**
+   * As "exceções que exigem decisão" são a FILA do store — mesma ordenação
+   * (severidade, depois impacto) que a tela de Alertas usa. Antes o cockpit
+   * fatiava a lista bruta por severidade e podia mostrar um alerta já
+   * resolvido noutra superfície.
+   */
+  const excecoes = useAlertas((lista) => topoDaFila(lista, '5'))
   const rec = recomendacaoDoDia
   /**
    * ÂNCORA-E-DERIVA — periferia ao vivo, núcleo encenado:
@@ -794,7 +798,7 @@ export default function Cockpit() {
                     <span className="truncate text-sm text-ink-muted group-hover:text-ink">{alerta.titulo}</span>
                   </span>
                   <span className="flex shrink-0 items-center gap-1 text-xs font-medium text-gold">
-                    {alerta.acaoRotulo}
+                    {alerta.acaoLabel}
                     <ChevronRight size={14} aria-hidden="true" />
                   </span>
                 </Link>

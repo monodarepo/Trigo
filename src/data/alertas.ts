@@ -120,13 +120,24 @@ const custoRolandiaNoP90RsT =
 const perdaRolandiaNoP90Rs = (custoRolandiaNoP90RsT - precoSulRsT) * producaoRolandiaT
 
 /**
- * Alertas do cenário-âncora ("terça, 7h"). O badge do sino conta os de
- * severidade crítico + alto. Textos e impactos interpolam os mesmos objetos
- * usados nas telas — nenhuma cópia manual, nenhum número digitado.
+ * Semente do catálogo: tudo o que um alerta É, sem o que ele VIRA.
+ * `status` é estado de runtime e mora no store (src/alerts/alertStore.ts);
+ * `exigeDecisao` tem regra padrão e só aparece aqui quando foge dela.
  */
-export const ALERTAS: Alerta[] = [
+type SementeAlerta = Omit<Alerta, 'status' | 'exigeDecisao'> & { exigeDecisao?: boolean }
+
+/**
+ * Alertas do cenário-âncora ("terça, 7h"). Textos e impactos interpolam os
+ * mesmos objetos usados nas telas — nenhuma cópia manual, nenhum número
+ * digitado: mexeu no TLC do trigo, mexeu no impacto em R$ de cada alerta.
+ */
+const CATALOGO: SementeAlerta[] = [
   {
     id: 'alerta-rio-parana',
+    tipo: 'risco',
+    entidade: { tipo: 'navio', id: 'mv-rio-parana' },
+    telasRelacionadas: ['/', '/tlc', '/compra'],
+    fonte: 'Rastreamento AIS + agente marítimo no porto de Natal',
     severidade: 'critico',
     categoria: 'logistica',
     timestamp: '2025-08-12T05:40:00',
@@ -136,14 +147,18 @@ export const ALERTAS: Alerta[] = [
       `Risco de demurrage de ${formatBRL(MV_RIO_PARANA.riscoDemurrageRs!, { compacto: true })} e cobertura do Moinho Natal ` +
       `reduzida para ${estoqueNatal.coberturaDias} dias.`,
     acaoRota: '/tlc',
-    acaoRotulo: 'Ver impacto no TLC',
-    impactoRs: -(MV_RIO_PARANA.riscoDemurrageRs ?? 0),
+    acaoLabel: 'Ver impacto no TLC',
+    impactoRs: MV_RIO_PARANA.riscoDemurrageRs ?? 0,
     impactoBase: 'evento',
     impactoNota: 'risco neste embarque',
     agenteId: 'tlc',
   },
   {
     id: 'alerta-farinha-abaixo-custo',
+    tipo: 'oportunidade',
+    entidade: { tipo: 'moinho', id: 'bento-goncalves' },
+    telasRelacionadas: ['/make-buy-sell', '/moinhos', '/verticalizacao'],
+    fonte: 'Motor econômico × cotação de moageiros PR/RS (industrial · granel · posto fábrica)',
     severidade: 'critico',
     categoria: 'farinha',
     timestamp: '2025-08-12T06:35:00',
@@ -153,13 +168,16 @@ export const ALERTAS: Alerta[] = [
       `Comprar a mesma spec no mercado do Sul economiza ${rsT(economiaComprarRsT)} nas ${formatTon(cenarioBento.volumeT)} da janela. ` +
       'Perto da origem do trigo o mercado bate a moagem própria — a decisão certa aqui é comprar, não moer.',
     acaoRota: '/make-buy-sell',
-    acaoRotulo: 'Abrir Make/Buy/Sell',
+    acaoLabel: 'Abrir Make/Buy/Sell',
     impactoRs: economiaComprarRs,
     impactoBase: 'mes',
     agenteId: 'make-buy-sell',
   },
   {
     id: 'alerta-dolar-limite',
+    tipo: 'oportunidade',
+    telasRelacionadas: ['/', '/hedge'],
+    fonte: 'Spot B3 × limite da política cambial',
     severidade: 'alto',
     categoria: 'cambio',
     timestamp: '2025-08-12T06:20:00',
@@ -168,7 +186,7 @@ export const ALERTAS: Alerta[] = [
       `Limite de política em R$ ${POLITICA_CAMBIO_LIMITE.toFixed(2).replace('.', ',')}. ` +
       'Projeção de R$ 5,35 em 90 dias com banda até R$ 5,60; cobertura atual de 27% está abaixo do alvo.',
     acaoRota: '/hedge',
-    acaoRotulo: 'Rever hedge cambial',
+    acaoLabel: 'Rever hedge cambial',
     impactoRs: RECOMENDACAO_HEDGE.protecaoEstimadaRs,
     impactoBase: 'evento',
     impactoNota: 'proteção no horizonte de 90 dias',
@@ -176,6 +194,9 @@ export const ALERTAS: Alerta[] = [
   },
   {
     id: 'alerta-venda-supera-interno',
+    tipo: 'oportunidade',
+    telasRelacionadas: ['/oportunidades', '/make-buy-sell'],
+    fonte: 'Portfólio comercial × ganho de verticalização por tonelada',
     severidade: 'alto',
     categoria: 'comercial',
     timestamp: '2025-08-12T06:30:00',
@@ -185,13 +206,16 @@ export const ALERTAS: Alerta[] = [
       `${rsT(melhorPedido.ganhoUsoInternoRsT ?? 0)} de ganho se a mesma farinha for para as fábricas — diferença de ` +
       `${rsT(melhorPedido.margemRsT - (melhorPedido.ganhoUsoInternoRsT ?? 0))}. Todos cabem na folga do parque: nenhuma tonelada sai do consumo próprio.`,
     acaoRota: '/oportunidades',
-    acaoRotulo: 'Ver oportunidades',
+    acaoLabel: 'Ver oportunidades',
     impactoRs: ganhoAcimaDoInternoRs,
     impactoBase: 'mes',
     agenteId: 'comercial-farinha',
   },
   {
     id: 'alerta-orcamento-trigo',
+    tipo: 'risco',
+    telasRelacionadas: ['/tlc', '/compra'],
+    fonte: 'TLC do dia × orçamento aprovado do trimestre',
     severidade: 'alto',
     categoria: 'mercado',
     timestamp: '2025-08-12T06:15:00',
@@ -201,23 +225,27 @@ export const ALERTAS: Alerta[] = [
       `Sobre as ${formatTon(VOLUME_TRIMESTRE_T)} ainda a comprar, o desvio é de ${formatBRL(desvioOrcamentoRs, { compacto: true })} no trimestre. ` +
       'Atenção à régua: contra o baseline de não agir (R$ 1.520/t) o mesmo lote é economia — orçamento é compromisso, baseline é previsão.',
     acaoRota: '/tlc',
-    acaoRotulo: 'Abrir decomposição do TLC',
-    impactoRs: -desvioOrcamentoRs,
+    acaoLabel: 'Abrir decomposição do TLC',
+    impactoRs: desvioOrcamentoRs,
     impactoBase: 'trimestre',
     impactoNota: 'sobre o volume ainda a comprar',
     agenteId: 'tlc',
   },
   {
     id: 'alerta-safra-argentina',
+    tipo: 'oportunidade',
+    entidade: { tipo: 'origem', id: 'argentina' },
+    telasRelacionadas: ['/previsao', '/compra'],
+    fonte: 'Bolsa de Cereales — estimativa de safra',
     severidade: 'alto',
-    categoria: 'mercado',
+    categoria: 'safra',
     timestamp: '2025-08-12T05:15:00',
     titulo: 'Safra argentina revisada para baixo (−2,1 Mt)',
     descricao:
       'Bolsa de Cereales corta a safra de 52,0 para 49,9 Mt por seca. Probabilidade de alta do trigo em 15 dias sobe para ' +
       `${PRECOS_ATUAIS.probAltaTrigo15dPct}% — reforça a antecipação de compra.`,
     acaoRota: '/previsao',
-    acaoRotulo: 'Ver previsão de preço',
+    acaoLabel: 'Ver previsão de preço',
     impactoRs: RECOMENDACAO_COMPRA.economiaTotalRs,
     impactoBase: 'evento',
     impactoNota: 'no lote antecipado',
@@ -225,8 +253,12 @@ export const ALERTAS: Alerta[] = [
   },
   {
     id: 'alerta-rendimento-cabedelo',
+    tipo: 'risco',
+    entidade: { tipo: 'moinho', id: 'cabedelo' },
+    telasRelacionadas: ['/moinhos'],
+    fonte: 'Balanço de moagem do MES — rendimento medido vs regime',
     severidade: 'alto',
-    categoria: 'moinho',
+    categoria: 'moagem',
     timestamp: '2025-08-12T04:50:00',
     titulo: `Rendimento de Cabedelo caiu ${pp(QUEDA_RENDIMENTO_PP)} vs o regime`,
     descricao:
@@ -234,13 +266,17 @@ export const ALERTAS: Alerta[] = [
       `A queda encarece as ${formatTon(producaoCabedeloT)} do mês em ${rsT(custoQuedaRendimentoRsT)}. ` +
       'Padrão típico de desgaste de cilindros — a manutenção preventiva custa uma fração disto.',
     acaoRota: '/moinhos',
-    acaoRotulo: 'Ver performance dos moinhos',
-    impactoRs: -custoQuedaRendimentoRs,
+    acaoLabel: 'Ver performance dos moinhos',
+    impactoRs: custoQuedaRendimentoRs,
     impactoBase: 'mes',
     agenteId: 'moinhos',
   },
   {
     id: 'alerta-estoque-fortaleza',
+    tipo: 'risco',
+    entidade: { tipo: 'moinho', id: 'fortaleza' },
+    telasRelacionadas: ['/compra', '/estoques'],
+    fonte: 'ERP SAP — posição de silo por moinho',
     severidade: 'alto',
     categoria: 'estoque',
     timestamp: '2025-08-11T21:00:00',
@@ -249,11 +285,15 @@ export const ALERTAS: Alerta[] = [
       `Cobertura de ${estoqueFortaleza.coberturaDias} dias vs política mínima de ${estoqueFortaleza.politicaMinimaDias} dias. ` +
       'A compra recomendada destina 12.000 t a Fortaleza, recompondo para 39 dias.',
     acaoRota: '/compra',
-    acaoRotulo: 'Ver recomendação de compra',
+    acaoLabel: 'Ver recomendação de compra',
     agenteId: 'originacao',
   },
   {
     id: 'alerta-ruptura-cerrado',
+    tipo: 'risco',
+    entidade: { tipo: 'oportunidade', id: 'op-panificio-cerrado' },
+    telasRelacionadas: ['/oportunidades', '/make-buy-sell'],
+    fonte: 'Guardrail de ruptura — pedido × capacidade ociosa',
     severidade: 'alto',
     categoria: 'comercial',
     timestamp: '2025-08-12T06:10:00',
@@ -263,16 +303,20 @@ export const ALERTAS: Alerta[] = [
       `com o custo de reposição, entrega ${formatBRL(margemRealRs, { compacto: true })}. ` +
       `Aceitar às cegas superestima o resultado em ${formatBRL(Math.abs(margemQueNaoSeRealizaRs), { compacto: true })}.`,
     acaoRota: '/oportunidades',
-    acaoRotulo: 'Ver guardrail de ruptura',
-    impactoRs: margemQueNaoSeRealizaRs,
+    acaoLabel: 'Ver guardrail de ruptura',
+    impactoRs: Math.abs(margemQueNaoSeRealizaRs),
     impactoBase: 'mes',
     impactoNota: 'margem aparente que não se realiza',
     agenteId: 'comercial-farinha',
   },
   {
     id: 'alerta-capacidade-ociosa-salvador',
+    tipo: 'oportunidade',
+    entidade: { tipo: 'moinho', id: 'salvador' },
+    telasRelacionadas: ['/make-buy-sell', '/moinhos', '/oportunidades'],
+    fonte: 'Motor econômico — custo marginal × preço comparável',
     severidade: 'medio',
-    categoria: 'margem',
+    categoria: 'moagem',
     timestamp: '2025-08-12T05:55:00',
     titulo: `${formatTon(salvador.capacidadeOciosaT)} ociosas em Salvador com preço ${rsT(salvador.margemIncrementalRsT)} acima do custo marginal`,
     descricao:
@@ -280,7 +324,7 @@ export const ALERTAS: Alerta[] = [
       `já descontado o custo de servir. Os fixos e a depreciação estão absorvidos pelo volume atual (${formatPct(salvador.utilizacaoPct)}), ` +
       'então a tonelada incremental entra quase inteira na margem. Potencial ainda NÃO contratado — depende de fechar cliente.',
     acaoRota: '/make-buy-sell',
-    acaoRotulo: 'Simular a folga',
+    acaoLabel: 'Simular a folga',
     impactoRs: potencialSalvadorRs,
     impactoBase: 'mes',
     impactoNota: 'potencial, sem pedido fechado',
@@ -288,8 +332,12 @@ export const ALERTAS: Alerta[] = [
   },
   {
     id: 'alerta-capacidade-minima-rolandia',
+    tipo: 'risco',
+    entidade: { tipo: 'moinho', id: 'rolandia' },
+    telasRelacionadas: ['/moinhos', '/verticalizacao'],
+    fonte: 'Motor econômico — capacidade econômica mínima',
     severidade: 'medio',
-    categoria: 'moinho',
+    categoria: 'moagem',
     timestamp: '2025-08-12T05:30:00',
     titulo: `Rolândia a ${pp(rolandia.folgaPp ?? 0)} da capacidade econômica mínima`,
     descricao:
@@ -297,16 +345,20 @@ export const ALERTAS: Alerta[] = [
       `leva o custo pleno (${rsT(rolandia.custoInternoRsT)}) acima do preço de mercado do Sul (${rsT(rolandia.precoExternoRsT)}). ` +
       `A vantagem hoje é de apenas ${rsT(rolandia.ganhoRsT)} — a menor do parque.`,
     acaoRota: '/moinhos',
-    acaoRotulo: 'Ver capacidade mínima',
-    impactoRs: -valorEmRiscoRolandiaRs,
+    acaoLabel: 'Ver capacidade mínima',
+    impactoRs: valorEmRiscoRolandiaRs,
     impactoBase: 'mes',
     impactoNota: 'em risco se a utilização cair à mínima',
     agenteId: 'moinhos',
   },
   {
     id: 'alerta-cambio-vira-decisao',
+    tipo: 'risco',
+    entidade: { tipo: 'moinho', id: 'rolandia' },
+    telasRelacionadas: ['/make-buy-sell', '/previsao', '/hedge'],
+    fonte: 'Decomposição cambial do TLC × preço de mercado do Sul',
     severidade: 'medio',
-    categoria: 'margem',
+    categoria: 'farinha',
     timestamp: '2025-08-12T06:40:00',
     titulo: `Câmbio a R$ ${cambioDeVirada.toFixed(2).replace('.', ',')} inverte a recomendação em Rolândia`,
     descricao:
@@ -315,14 +367,16 @@ export const ALERTAS: Alerta[] = [
       `os ${rsT(precoSulRsT)} do mercado do Sul e a resposta passa de PRODUZIR para COMPRAR. ` +
       `No topo da banda o custo chega a ${rsT(custoRolandiaNoP90RsT)}. É a mesma mecânica que já colocou Bento Gonçalves do outro lado.`,
     acaoRota: '/make-buy-sell',
-    acaoRotulo: 'Testar o câmbio no simulador',
-    impactoRs: -perdaRolandiaNoP90Rs,
+    acaoLabel: 'Testar o câmbio no simulador',
+    impactoRs: perdaRolandiaNoP90Rs,
     impactoBase: 'mes',
     impactoNota: 'perda no topo da banda de 90 dias (R$ 5,60)',
     agenteId: 'orquestrador',
   },
   {
     id: 'alerta-janela-hedge',
+    telasRelacionadas: ['/hedge'],
+    fonte: 'Mesa de câmbio — cotação de NDF 90 dias',
     severidade: 'medio',
     categoria: 'hedge',
     timestamp: '2025-08-12T06:05:00',
@@ -331,11 +385,14 @@ export const ALERTAS: Alerta[] = [
       'Forward points recuaram e o NDF de 90 dias abriu desconto de R$ 0,08 vs cenário-base de R$ 5,35. ' +
       'Janela estimada de 2–3 pregões.',
     acaoRota: '/hedge',
-    acaoRotulo: 'Abrir recomendação de hedge',
+    acaoLabel: 'Abrir recomendação de hedge',
     agenteId: 'alertas-financeiros',
   },
   {
     id: 'alerta-lote-incompativel',
+    tipo: 'risco',
+    telasRelacionadas: ['/estoques', '/compra'],
+    fonte: 'Laudo de qualidade do silo — DON por lote',
     severidade: 'medio',
     categoria: 'qualidade',
     timestamp: '2025-08-12T04:20:00',
@@ -345,13 +402,17 @@ export const ALERTAS: Alerta[] = [
       `a mistura não resolve. ${loteBloqueado.recomendacao} O capital parado é de ${formatBRL(capitalParadoRs, { compacto: true })}, ` +
       `com carregamento de ${formatBRL(carregamentoLoteRs, { compacto: true })} por mês.`,
     acaoRota: '/estoques',
-    acaoRotulo: 'Ver lotes e blends',
-    impactoRs: -carregamentoLoteRs,
+    acaoLabel: 'Ver lotes e blends',
+    impactoRs: carregamentoLoteRs,
     impactoBase: 'mes',
     agenteId: 'blend',
   },
   {
     id: 'alerta-farinha-sem-destino',
+    tipo: 'risco',
+    entidade: { tipo: 'moinho', id: 'rolandia' },
+    telasRelacionadas: ['/demanda', '/make-buy-sell'],
+    fonte: 'Plano de demanda × capacidade instalada',
     severidade: 'medio',
     categoria: 'estoque',
     timestamp: '2025-08-12T05:20:00',
@@ -361,13 +422,16 @@ export const ALERTAS: Alerta[] = [
       `Produzir sem comprador vira estoque, a ${formatBRL(ARMAZENAGEM_FARINHA_RS_T)}/t de armazenagem mais o custo financeiro — ` +
       `${formatBRL(carregamentoFarinhaRs, { compacto: true })} por mês. Ou se vende, ou não se produz.`,
     acaoRota: '/demanda',
-    acaoRotulo: 'Ver plano de demanda',
-    impactoRs: -carregamentoFarinhaRs,
+    acaoLabel: 'Ver plano de demanda',
+    impactoRs: carregamentoFarinhaRs,
     impactoBase: 'mes',
     agenteId: 'verticalizacao',
   },
   {
     id: 'alerta-cobertura-natal',
+    entidade: { tipo: 'moinho', id: 'natal' },
+    telasRelacionadas: ['/compra', '/tlc'],
+    fonte: 'ERP SAP — cobertura em dias por moinho',
     severidade: 'medio',
     categoria: 'estoque',
     timestamp: '2025-08-12T05:45:00',
@@ -376,11 +440,14 @@ export const ALERTAS: Alerta[] = [
       `Efeito do atraso do ${MV_RIO_PARANA.navio}. A compra recomendada aloca 7.000 t a Natal ` +
       '(cobertura volta a 38 dias após descarga).',
     acaoRota: '/compra',
-    acaoRotulo: 'Ver distribuição por moinho',
+    acaoLabel: 'Ver distribuição por moinho',
     agenteId: 'originacao',
   },
   {
     id: 'alerta-restricao-exportacao',
+    entidade: { tipo: 'origem', id: 'russia' },
+    telasRelacionadas: ['/simulador', '/tlc'],
+    fonte: 'Acompanhamento regulatório de origens',
     severidade: 'medio',
     categoria: 'mercado',
     timestamp: '2025-08-11T23:20:00',
@@ -389,24 +456,28 @@ export const ALERTAS: Alerta[] = [
       'Ministério avalia cota adicional para o 4º trimestre. A alternativa Mar Negro pode ficar indisponível na ' +
       'janela — teste o impacto com a restrição de origem no Simulador.',
     acaoRota: '/simulador',
-    acaoRotulo: 'Simular restrição de origem',
+    acaoLabel: 'Simular restrição de origem',
     agenteId: 'mercado',
   },
   {
     id: 'alerta-prob-alta',
-    severidade: 'info',
+    telasRelacionadas: ['/previsao'],
+    fonte: 'Modelo de previsão de preço — banda P10–P90',
+    severidade: 'informativo',
     categoria: 'mercado',
     timestamp: '2025-08-12T05:00:00',
     titulo: `Probabilidade de alta em 15 dias subiu para ${PRECOS_ATUAIS.probAltaTrigo15dPct}%`,
     descricao:
       'Modelo de previsão incorporou o corte da safra argentina e a seca no Mar Negro; projeção de US$ 214/t em 30 dias.',
     acaoRota: '/previsao',
-    acaoRotulo: 'Ver fatores do modelo',
+    acaoLabel: 'Ver fatores do modelo',
     agenteId: 'mercado',
   },
   {
     id: 'alerta-preco-farinha-ne',
-    severidade: 'info',
+    telasRelacionadas: ['/previsao', '/verticalizacao'],
+    fonte: 'Cotação comparável de moageiros CE/PE',
+    severidade: 'informativo',
     categoria: 'farinha',
     timestamp: '2025-08-12T05:10:00',
     titulo: 'Farinha de massas no Nordeste sobe pela 4ª semana',
@@ -415,12 +486,15 @@ export const ALERTAS: Alerta[] = [
       'com repasse do trigo importado defasado em 30–45 dias. Cada real de alta aqui amplia o ganho da verticalização — ' +
       'e a base de comparação segue a mesma do custo interno, sem embalagem nem frete ao cliente.',
     acaoRota: '/previsao',
-    acaoRotulo: 'Ver mercado de farinha',
+    acaoLabel: 'Ver mercado de farinha',
     agenteId: 'mercado',
   },
   {
     id: 'alerta-don-russia',
-    severidade: 'info',
+    entidade: { tipo: 'lote', id: 'alt-russia-suape' },
+    telasRelacionadas: ['/tlc'],
+    fonte: 'Laudo de pré-embarque — amostra da origem',
+    severidade: 'informativo',
     categoria: 'qualidade',
     timestamp: '2025-08-11T19:30:00',
     titulo: 'Lote russo reprovado na triagem de pré-embarque: DON 1.800 ppb',
@@ -428,35 +502,21 @@ export const ALERTAS: Alerta[] = [
       'Amostra da alternativa Mar Negro acima da política para biscoito (≤ 1.000 ppb). ' +
       'Alternativa mantida fora da recomendação — distinta do lote de mesma origem já bloqueado em silo.',
     acaoRota: '/tlc',
-    acaoRotulo: 'Comparar alternativas',
+    acaoLabel: 'Comparar alternativas',
     agenteId: 'blend',
   },
 ]
 
-/** Contagem para o sino da Topbar: alertas críticos + altos. */
-export const CONTAGEM_ALERTAS_SINO = ALERTAS.filter(
-  (a) => a.severidade === 'critico' || a.severidade === 'alto',
-).length
-
 /**
- * Agregados de impacto. SÓ entram os alertas de base MENSAL e que exigem
- * decisão: somar o desvio trimestral de orçamento com um custo mensal de
- * armazenagem daria um total que não é nem mês nem trimestre, e os
- * informativos não têm ação a tomar. Ganho e risco andam separados de
- * propósito — um líquido esconderia que R$ 1 a capturar e R$ 1 a evitar
- * exigem times, prazos e decisões diferentes.
+ * O catálogo semeado. Todo alerta nasce `novo`; `exigeDecisao` segue a
+ * severidade — informativo é contexto, o resto pede uma decisão humana.
+ *
+ * As CONTAGENS e os TOTAIS que viviam aqui viraram seletores em
+ * `src/alerts/selectors.ts`: eles dependem do estado (um alerta resolvido sai
+ * da conta), e estado é do store — mantê-los aqui os congelaria na semente.
  */
-const mensaisComAcao = ALERTAS.filter((a) => a.severidade !== 'info' && a.impactoBase === 'mes')
-
-/** O que há a CAPTURAR neste mês (R$) — impactos positivos. */
-export const OPORTUNIDADE_ALERTAS_RS = mensaisComAcao
-  .filter((a) => (a.impactoRs ?? 0) > 0)
-  .reduce((soma, a) => soma + (a.impactoRs ?? 0), 0)
-
-/** O que há a EVITAR neste mês (R$, valor absoluto) — impactos negativos. */
-export const RISCO_ALERTAS_RS = Math.abs(
-  mensaisComAcao.filter((a) => (a.impactoRs ?? 0) < 0).reduce((soma, a) => soma + (a.impactoRs ?? 0), 0),
-)
-
-/** Soma em jogo neste mês: o que se captura mais o que se evita. */
-export const IMPACTO_ALERTAS_RS = OPORTUNIDADE_ALERTAS_RS + RISCO_ALERTAS_RS
+export const ALERTAS: Alerta[] = CATALOGO.map((a) => ({
+  ...a,
+  exigeDecisao: a.exigeDecisao ?? a.severidade !== 'informativo',
+  status: 'novo',
+}))

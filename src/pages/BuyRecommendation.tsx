@@ -21,6 +21,8 @@ import {
   type DistribuicaoMoinho,
 } from '../data'
 import { abrirObjeto } from '../components/object/objectBus'
+import { useAlertas } from '../alerts/alertStore'
+import { entidadesComAlerta } from '../alerts/selectors'
 
 const { compra, tlc, previsao, mercado, logistica } = snapshot
 const rec = compra.recomendacao
@@ -156,9 +158,6 @@ const CORES_SEGMENTO = ['bg-gold', 'bg-gold/70', 'bg-info/80', 'bg-positive/80']
 const politicaDe = (moinhoId: string) =>
   compra.estoqueMoinhos.find((e) => e.moinhoId === moinhoId)?.politicaMinimaDias ?? 30
 
-/** Moinhos com alerta de estoque ativo (Natal e Fortaleza no cenário-âncora). */
-const temAlertaEstoque = (moinhoId: string) =>
-  snapshot.alertas.some((a) => a.categoria === 'estoque' && a.titulo.includes(moinhoNome(moinhoId)))
 
 const colunasDistribuicao: DataTableColumn<DistribuicaoMoinho>[] = [
   {
@@ -206,6 +205,14 @@ const BADGE_DECISAO: Record<ModoDecisao, { rotulo: string; tone: 'positive' | 'w
 }
 
 export default function BuyRecommendation() {
+  /**
+   * Moinhos com alerta ativo, pelo STORE. Antes isto casava o NOME do moinho
+   * dentro do título do alerta — um alerta reescrito ou um moinho com nome
+   * parecido quebrava o destaque em silêncio. Agora a ligação é o campo
+   * `entidade`, que o alerta declara.
+   */
+  const moinhosComAlerta = useAlertas(entidadesComAlerta)
+
   const decisao = useDecisao()
   const valorLoteRs = rec.volumeToneladas * rec.tlcRs
 
@@ -340,7 +347,7 @@ export default function BuyRecommendation() {
             rows={rec.distribuicaoMoinhos}
             rowKey={(d) => d.moinhoId}
             minWidth={440}
-            rowClassName={(d) => (temAlertaEstoque(d.moinhoId) ? 'bg-danger/5' : '')}
+            rowClassName={(d) => (moinhosComAlerta.has(d.moinhoId) ? '[&>td]:bg-danger/5' : '')}
           />
           <p className="mt-2 text-[11px] text-ink-subtle">
             Natal ({rec.distribuicaoMoinhos.find((d) => d.moinhoId === 'natal')?.coberturaAtualDias}d, efeito do{' '}

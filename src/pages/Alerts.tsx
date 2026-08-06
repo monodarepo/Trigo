@@ -7,9 +7,9 @@ import {
   Factory,
   FlaskConical,
   Package,
-  Scale,
   ShieldCheck,
   Ship,
+  Sprout,
   Store,
   TrendingUp,
   Wheat,
@@ -19,7 +19,15 @@ import type { LucideIcon } from 'lucide-react'
 import { Badge, Card, EmptyState, KpiTile, SectionTitle, type Tone } from '../components/ui'
 import { colors } from '../theme/tokens'
 import { abrirObjeto } from '../components/object/objectBus'
-import type { TipoObjeto } from '../data/objects'
+import { useListaAlertas } from '../alerts/alertStore'
+import {
+  ORDEM_SEVERIDADE,
+  ativos,
+  contagemNaoVistos,
+  filaExigeDecisao,
+  impactoTotal,
+  porSeveridade,
+} from '../alerts/selectors'
 import {
   ARMAZENAGEM_FARINHA_RS_T,
   snapshot,
@@ -36,8 +44,6 @@ import {
 } from '../data'
 import { ORCAMENTO_TRIGO_RS_T } from '../data/compra'
 
-const { alertas } = snapshot
-
 type Categoria = Alerta['categoria']
 type Severidade = Alerta['severidade']
 
@@ -52,9 +58,9 @@ const CATEGORIAS: Array<{ id: Categoria; rotulo: string; icone: LucideIcon; cor:
   { id: 'hedge', rotulo: 'Hedge', icone: ShieldCheck, cor: colors.semantic.positive },
   { id: 'qualidade', rotulo: 'Qualidade', icone: FlaskConical, cor: colors.iconBadge.internal },
   // --- Elo farinha → margem ---
+  { id: 'safra', rotulo: 'Safra', icone: Sprout, cor: colors.semantic.positive },
+  { id: 'moagem', rotulo: 'Moagem', icone: Factory, cor: colors.semantic.cyan },
   { id: 'farinha', rotulo: 'Farinha', icone: Wheat, cor: colors.semantic.violet },
-  { id: 'moinho', rotulo: 'Moinhos', icone: Factory, cor: colors.semantic.cyan },
-  { id: 'margem', rotulo: 'Margem', icone: Scale, cor: colors.gold.light },
   { id: 'comercial', rotulo: 'Comercial', icone: Store, cor: colors.semantic.info },
 ]
 const categoriaDe = (id: Categoria) => CATEGORIAS.find((c) => c.id === id)!
@@ -71,44 +77,43 @@ const ROTULO_BASE: Record<NonNullable<Alerta['impactoBase']>, string> = {
 }
 function impactoFormatado(a: Alerta): { texto: string; positivo: boolean } | null {
   if (a.impactoRs == null) return null
-  const positivo = a.impactoRs > 0
-  const sinal = positivo ? '+' : '−'
+  // `impactoRs` é magnitude; quem dá a direção é `tipo`. Ler o sinal do número
+  // voltaria a espalhar Math.abs por toda superfície que ordena ou soma.
+  const positivo = a.tipo === 'oportunidade'
   return {
-    texto: `${sinal}${formatBRL(Math.abs(a.impactoRs), { compacto: true })}${ROTULO_BASE[a.impactoBase ?? 'evento']}`,
+    texto: `${positivo ? '+' : '−'}${formatBRL(a.impactoRs, { compacto: true })}${ROTULO_BASE[a.impactoBase ?? 'evento']}`,
     positivo,
   }
 }
 
-const ORDEM_SEV: Record<Severidade, number> = { critico: 0, alto: 1, medio: 2, info: 3 }
-const TONE_SEV: Record<Severidade, Tone> = { critico: 'danger', alto: 'warning', medio: 'info', info: 'neutral' }
-const ROTULO_SEV: Record<Severidade, string> = { critico: 'Crítico', alto: 'Alto', medio: 'Médio', info: 'Info' }
-
-const exigeDecisao = (a: Alerta) => a.severidade !== 'info'
-
-/** Ficha de objeto relacionada a cada alerta (padrão Foundry). */
-const FICHA_DO_ALERTA: Record<string, { tipo: TipoObjeto; id: string; rotulo: string }> = {
-  'alerta-rio-parana': { tipo: 'navio', id: 'mv-rio-parana', rotulo: 'Ficha do navio' },
-  'alerta-cobertura-natal': { tipo: 'moinho', id: 'natal', rotulo: 'Ficha do Moinho Natal' },
-  'alerta-estoque-fortaleza': { tipo: 'moinho', id: 'fortaleza', rotulo: 'Ficha do Moinho Fortaleza' },
-  'alerta-don-russia': { tipo: 'lote', id: 'alt-russia-suape', rotulo: 'Ficha do lote russo' },
-  'alerta-restricao-exportacao': { tipo: 'origem', id: 'russia', rotulo: 'Ficha da origem Rússia' },
-  'alerta-farinha-abaixo-custo': { tipo: 'moinho', id: 'bento-goncalves', rotulo: 'Ficha do Moinho Bento Gonçalves' },
-  'alerta-rendimento-cabedelo': { tipo: 'moinho', id: 'cabedelo', rotulo: 'Ficha do Moinho Cabedelo' },
-  'alerta-capacidade-minima-rolandia': { tipo: 'moinho', id: 'rolandia', rotulo: 'Ficha do Moinho Rolândia' },
-  'alerta-capacidade-ociosa-salvador': { tipo: 'moinho', id: 'salvador', rotulo: 'Ficha do Moinho Salvador' },
-  'alerta-cambio-vira-decisao': { tipo: 'moinho', id: 'rolandia', rotulo: 'Ficha do Moinho Rolândia' },
-  'alerta-farinha-sem-destino': { tipo: 'moinho', id: 'rolandia', rotulo: 'Ficha do Moinho Rolândia' },
+const TONE_SEV: Record<Severidade, Tone> = {
+  critico: 'danger',
+  alto: 'warning',
+  medio: 'info',
+  informativo: 'neutral',
+}
+const ROTULO_SEV: Record<Severidade, string> = {
+  critico: 'Crítico',
+  alto: 'Alto',
+  medio: 'Médio',
+  informativo: 'Info',
 }
 
-const ordenados = [...alertas].sort(
-  (a, b) => ORDEM_SEV[a.severidade] - ORDEM_SEV[b.severidade] || b.timestamp.localeCompare(a.timestamp),
-)
-
-const contagem = {
-  total: alertas.length,
-  critico: alertas.filter((a) => a.severidade === 'critico').length,
-  alto: alertas.filter((a) => a.severidade === 'alto').length,
-  medio: alertas.filter((a) => a.severidade === 'medio').length,
+/**
+ * Rótulo do botão que abre a ficha. O QUE abrir vem do próprio alerta
+ * (`entidade`) — antes havia um mapa id→objeto aqui, uma segunda verdade que
+ * silenciosamente não cobria alertas novos.
+ */
+const ROTULO_FICHA: Record<string, string> = {
+  navio: 'Ficha do navio',
+  moinho: 'Ficha do moinho',
+  origem: 'Ficha da origem',
+  lote: 'Ficha do lote',
+  porto: 'Ficha do porto',
+  contrato: 'Ficha do contrato',
+  fornecedor: 'Ficha do fornecedor',
+  recomendacao: 'Ficha da recomendação',
+  oportunidade: 'Ficha da oportunidade',
 }
 
 // --- Dados relacionados por alerta (tudo do snapshot) ---
@@ -392,7 +397,7 @@ function LinhaAlerta({ alerta, onAbrir }: { alerta: Alerta; onAbrir: () => void 
           to={alerta.acaoRota}
           className="flex items-center gap-1 rounded-full border border-edge px-3 py-1.5 text-[11px] font-semibold text-gold transition-colors hover:border-gold/40"
         >
-          {alerta.acaoRotulo}
+          {alerta.acaoLabel}
           <ChevronRight size={12} aria-hidden="true" />
         </Link>
       </div>
@@ -415,18 +420,34 @@ export default function Alerts() {
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [aberto])
 
+  // TUDO vem do store: a tela não guarda lista própria nem recalcula contagem.
+  const lista = useListaAlertas()
+  const ordenados = useMemo(
+    () =>
+      [...ativos(lista)].sort(
+        (a, b) =>
+          ORDEM_SEVERIDADE[a.severidade] - ORDEM_SEVERIDADE[b.severidade] ||
+          b.timestamp.localeCompare(a.timestamp),
+      ),
+    [lista],
+  )
+  const severidades = porSeveridade(lista)
+  const impacto = impactoTotal(lista)
+  const fila = filaExigeDecisao(lista)
+  const naoVistos = contagemNaoVistos(lista)
+
   const filtrados = useMemo(
     () =>
       ordenados.filter(
         (a) =>
           (categoria === 'todas' || a.categoria === categoria) &&
           (severidade === 'todas' || a.severidade === severidade) &&
-          (grupo === 'todos' || (grupo === 'decisao' ? exigeDecisao(a) : !exigeDecisao(a))),
+          (grupo === 'todos' || (grupo === 'decisao' ? a.exigeDecisao : !a.exigeDecisao)),
       ),
-    [categoria, severidade, grupo],
+    [ordenados, categoria, severidade, grupo],
   )
-  const decisao = filtrados.filter(exigeDecisao)
-  const informativos = filtrados.filter((a) => !exigeDecisao(a))
+  const decisao = filtrados.filter((a) => a.exigeDecisao)
+  const informativos = filtrados.filter((a) => !a.exigeDecisao)
   const limparFiltros = () => {
     setCategoria('todas')
     setSeveridade('todas')
@@ -453,7 +474,11 @@ export default function Alerts() {
       {/* 4 contadores + o card de impacto (col-span-2) = 6 unidades numa linha */}
       <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-6">
         <button type="button" className="min-w-0 text-left" onClick={limparFiltros} aria-pressed={severidade === 'todas'}>
-          <KpiTile label="Total de alertas" value={String(contagem.total)} hint={`${snapshot.contagemAlertas} no sino (críticos + altos)`} />
+          <KpiTile
+            label="Alertas ativos"
+            value={String(ordenados.length)}
+            hint={`${naoVistos} ainda não vistos · ${fila.length} na fila de decisão`}
+          />
         </button>
         <button
           type="button"
@@ -461,7 +486,7 @@ export default function Alerts() {
           onClick={() => setSeveridade(severidade === 'critico' ? 'todas' : 'critico')}
           aria-pressed={severidade === 'critico'}
         >
-          <KpiTile label="Críticos" value={String(contagem.critico)} delta={{ label: 'ação imediata', direction: 'up', tone: 'danger' }} />
+          <KpiTile label="Críticos" value={String(severidades.critico)} delta={{ label: 'ação imediata', direction: 'up', tone: 'danger' }} />
         </button>
         <button
           type="button"
@@ -469,7 +494,7 @@ export default function Alerts() {
           onClick={() => setSeveridade(severidade === 'alto' ? 'todas' : 'alto')}
           aria-pressed={severidade === 'alto'}
         >
-          <KpiTile label="Altos" value={String(contagem.alto)} delta={{ label: 'decidir hoje', direction: 'up', tone: 'warning' }} />
+          <KpiTile label="Altos" value={String(severidades.alto)} delta={{ label: 'decidir hoje', direction: 'up', tone: 'warning' }} />
         </button>
         <button
           type="button"
@@ -477,7 +502,7 @@ export default function Alerts() {
           onClick={() => setSeveridade(severidade === 'medio' ? 'todas' : 'medio')}
           aria-pressed={severidade === 'medio'}
         >
-          <KpiTile label="Médios" value={String(contagem.medio)} delta={{ label: 'monitorar', direction: 'flat', tone: 'info' }} />
+          <KpiTile label="Médios" value={String(severidades.medio)} delta={{ label: 'monitorar', direction: 'flat', tone: 'info' }} />
         </button>
         {/* O número que o CFO lê primeiro: quanto vale agir sobre estes alertas.
             Só entram os de base MENSAL — misturar com o desvio trimestral de
@@ -485,9 +510,9 @@ export default function Alerts() {
         <div className="min-w-0 xl:col-span-2">
           <KpiTile
             label="Em jogo neste mês"
-            value={formatBRL(snapshot.impactoAlertasRs, { compacto: true })}
+            value={formatBRL(impacto.emJogoRs, { compacto: true })}
             delta={{
-              label: `${formatBRL(snapshot.oportunidadeAlertasRs, { compacto: true })} a capturar · ${formatBRL(snapshot.riscoAlertasRs, { compacto: true })} a evitar`,
+              label: `${formatBRL(impacto.oportunidadeRs, { compacto: true })} a capturar · ${formatBRL(impacto.riscoRs, { compacto: true })} a evitar`,
               direction: 'flat',
               tone: 'gold',
             }}
@@ -515,7 +540,7 @@ export default function Alerts() {
                 { id: 'critico' as const, rotulo: 'Crítico' },
                 { id: 'alto' as const, rotulo: 'Alto' },
                 { id: 'medio' as const, rotulo: 'Médio' },
-                { id: 'info' as const, rotulo: 'Info' },
+                { id: 'informativo' as const, rotulo: 'Info' },
               ]}
             />
             <FiltroChips
@@ -666,20 +691,20 @@ export default function Alerts() {
                   to={aberto.acaoRota}
                   className="inline-flex items-center gap-1.5 rounded-full bg-gold px-4 py-2 text-xs font-semibold text-navy transition-colors hover:bg-gold-light"
                 >
-                  {aberto.acaoRotulo}
+                  {aberto.acaoLabel}
                   <ChevronRight size={14} aria-hidden="true" />
                 </Link>
-                {FICHA_DO_ALERTA[aberto.id] && (
+                {aberto.entidade && (
                   <button
                     type="button"
                     onClick={() => {
-                      const ficha = FICHA_DO_ALERTA[aberto.id]
+                      const entidade = aberto.entidade!
                       setAberto(null)
-                      abrirObjeto(ficha.tipo, ficha.id)
+                      abrirObjeto(entidade.tipo, entidade.id)
                     }}
                     className="rounded-full border border-edge px-4 py-2 text-xs font-semibold text-ink-muted transition-colors hover:border-gold/40 hover:text-ink"
                   >
-                    {FICHA_DO_ALERTA[aberto.id].rotulo}
+                    {ROTULO_FICHA[aberto.entidade.tipo] ?? 'Abrir ficha'}
                   </button>
                 )}
               </div>

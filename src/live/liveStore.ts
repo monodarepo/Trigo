@@ -14,6 +14,7 @@
  */
 import { useSyncExternalStore } from 'react'
 import { PRECOS_ATUAIS } from '../data/mercado'
+import { publicarChegadasAte } from '../alerts/chegadaAoVivo'
 
 export interface PrecosLive {
   trigoUsdT: number
@@ -127,6 +128,14 @@ function passo() {
 
   state = { ...state, segundos, tick, atualizadoHaS, precos, historico, eventos }
   emit()
+
+  /**
+   * Chegada de alerta ao vivo. Publica no STORE DE ALERTAS, não num canal
+   * próprio: é o que faz o sino, a tela de Alertas e o banner contextual
+   * reagirem juntos. Fica depois do emit() para que o tick não espere a
+   * notificação dos assinantes do outro store.
+   */
+  publicarChegadasAte(segundos)
 }
 
 /** Inicia o tick global (idempotente — um único timer para o app inteiro). */

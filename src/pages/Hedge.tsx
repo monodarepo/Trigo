@@ -14,6 +14,8 @@ import { emitirToast } from '../components/feedback/toastBus'
 import { BadgeFonteAoVivo } from '../components/live/LiveSourceBadge'
 import { useFxAoVivo } from '../live/useLiveData'
 import { snapshot, formatBRL, formatPct, formatTon, formatUSD, FONTE_FRANKFURTER } from '../data'
+import { useAlertas } from '../alerts/alertStore'
+import { paraTela } from '../alerts/selectors'
 
 const { hedge, compra, tlc, logistica, mercado, previsao, recomendacaoDoDia } = snapshot
 const rec = hedge.recomendacao
@@ -53,10 +55,16 @@ const statusBanda =
       ? { rotulo: 'Atenção — perto do teto', tone: 'warning' as const }
       : { rotulo: 'Dentro do orçamento', tone: 'positive' as const }
 
-// --- Alertas de hedge (câmbio + janela) ---
-const alertasHedge = snapshot.alertas.filter((a) => a.categoria === 'cambio' || a.categoria === 'hedge')
 
 export default function Hedge() {
+  /**
+   * Banner contextual pelo STORE: é o alerta que declara em quais telas
+   * aparece (`telasRelacionadas`), não a tela que filtra por categoria. O
+   * filtro antigo (`cambio || hedge`) deixava de fora o alerta de câmbio que
+   * inverte a decisão de moagem — que é justamente um alerta de hedge.
+   */
+  const alertasHedge = useAlertas((lista) => paraTela(lista, '/hedge'))
+
   /**
    * ÂNCORA-E-DERIVA — o que é AO VIVO e o que é CENÁRIO nesta tela:
    *  · ÂNCORA (cenário, nunca muda com rede): exposição em US$ (72M/108M),
