@@ -14,7 +14,10 @@
  * inserido em três lugares.
  */
 import type { Alerta } from '../data/types'
+import { emitirToast } from '../components/feedback/toastBus'
 import { adicionar } from './alertStore'
+import { abrirCentral, centralEstaAberta } from './centralStore'
+import { SEVERIDADE_UI } from './severidade'
 
 /**
  * Roteiro da sessão: segundo em que cada alerta entra. Os tempos são folgados
@@ -88,8 +91,39 @@ export function publicarChegadasAte(segundos: number) {
   for (const c of ROTEIRO) {
     if (segundos < c.aosSegundos || publicados.has(c.alerta.id)) continue
     publicados.add(c.alerta.id)
-    adicionar(c.alerta)
+    /* `recebidoEmS` carimba o segundo da sessão: é o que faz a Central dizer
+       "há 12s" em vez de ler o timestamp do cenário, que está adiante das 07h
+       e viraria um "em 4 min". */
+    adicionar({ ...c.alerta, recebidoEmS: segundos })
+    anunciar(c.alerta)
   }
+}
+
+/**
+ * O toast é o único aviso — sem som, na cor da severidade. Ele não repete a
+ * descrição inteira: diz o que chegou, quanto vale e abre a Central, onde a
+ * decisão acontece.
+ *
+ * Com a Central aberta, o toast só é dispensável para quem ENTRA nela: a
+ * Central lista a fila de decisão, então um informativo continua precisando do
+ * toast — suprimi-lo faria o alerta chegar em silêncio absoluto, sem aparecer
+ * em lugar nenhum da tela em que a pessoa está.
+ */
+function anunciar(alerta: Alerta) {
+  if (centralEstaAberta() && alerta.exigeDecisao) return
+  const ui = SEVERIDADE_UI[alerta.severidade]
+  emitirToast({
+    tom: ui.tomToast,
+    aoVivo: true,
+    titulo: alerta.titulo,
+    descricao:
+      alerta.impactoRs != null
+        ? `${ui.rotulo} · ${alerta.tipo === 'oportunidade' ? '+' : '−'}R$ ${Math.round(
+            alerta.impactoRs / 1000,
+          ).toLocaleString('pt-BR')} mil${alerta.impactoNota ? ` — ${alerta.impactoNota}` : ''}`
+        : `${ui.rotulo} · ${alerta.fonte}`,
+    acao: { rotulo: 'Abrir Central de Alertas', executar: abrirCentral },
+  })
 }
 
 /** Reinicia o roteiro — usado junto com o reset do modo apresentação. */

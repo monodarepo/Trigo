@@ -466,6 +466,13 @@ export interface Alerta {
   /** Qualifica o impacto ("potencial, sem pedido fechado", "no lote"). */
   impactoNota?: string
   status: StatusAlerta
+  /**
+   * Segundo da SESSÃO em que o alerta chegou ao vivo. Só os que entram pelo
+   * tick têm este campo — e é por ele que a Central mostra "há 12s" em vez de
+   * ler o `timestamp`, que no cenário-âncora está no futuro em relação a
+   * "agora" (07:04 contra 07:00) e apareceria como um "em 4 min" sem sentido.
+   */
+  recebidoEmS?: number
   /** Quando adiado, até quando (ISO). */
   adiadoAte?: string
   /** Área/pessoa a quem o alerta foi atribuído. */

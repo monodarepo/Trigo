@@ -1,17 +1,21 @@
 import { useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { CheckCircle2, Info, X, XCircle, Zap } from 'lucide-react'
+import { AlertTriangle, Bell, CheckCircle2, Info, X, XCircle, Zap } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { aoReceberToast, type TomToast, type ToastPayload } from './toastBus'
 import { useLive } from '../../live/liveStore'
 
 const AUTO_DISMISS_MS = 4200
+/** Um crítico fica na tela quase o dobro: some antes de ser lido é não avisar. */
+const AUTO_DISMISS_CRITICO_MS = 8000
 const MAX_VISIVEIS = 4
 
 const TOM: Record<TomToast, { icone: LucideIcon; cor: string; borda: string }> = {
   sucesso: { icone: CheckCircle2, cor: 'text-positive', borda: 'border-positive/40' },
   erro: { icone: XCircle, cor: 'text-danger', borda: 'border-danger/40' },
+  aviso: { icone: AlertTriangle, cor: 'text-warning', borda: 'border-warning/40' },
   info: { icone: Info, cor: 'text-azure', borda: 'border-azure/40' },
+  neutro: { icone: Bell, cor: 'text-ink-subtle', borda: 'border-edge-strong' },
 }
 
 interface ToastAtivo extends Required<Pick<ToastPayload, 'titulo' | 'tom'>> {
@@ -19,11 +23,12 @@ interface ToastAtivo extends Required<Pick<ToastPayload, 'titulo' | 'tom'>> {
   descricao?: string
   /** Toast vindo da camada de tempo real (ícone de raio). */
   aoVivo?: boolean
+  acao?: ToastPayload['acao']
 }
 
 function ToastItem({ toast, aoFechar }: { toast: ToastAtivo; aoFechar: () => void }) {
   useEffect(() => {
-    const timer = setTimeout(aoFechar, AUTO_DISMISS_MS)
+    const timer = setTimeout(aoFechar, toast.tom === 'erro' ? AUTO_DISMISS_CRITICO_MS : AUTO_DISMISS_MS)
     return () => clearTimeout(timer)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -43,6 +48,18 @@ function ToastItem({ toast, aoFechar }: { toast: ToastAtivo; aoFechar: () => voi
       <div className="min-w-0 flex-1">
         <p className="text-sm font-medium leading-snug text-ink">{toast.titulo}</p>
         {toast.descricao && <p className="mt-0.5 text-xs leading-snug text-ink-subtle">{toast.descricao}</p>}
+        {toast.acao && (
+          <button
+            type="button"
+            onClick={() => {
+              toast.acao?.executar()
+              aoFechar()
+            }}
+            className="mt-1.5 text-11 font-semibold text-gold transition-colors hover:text-gold-light"
+          >
+            {toast.acao.rotulo} →
+          </button>
+        )}
       </div>
       <button
         type="button"

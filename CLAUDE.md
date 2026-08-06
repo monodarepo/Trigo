@@ -173,6 +173,11 @@ Rota default continua `/` (Visão Executiva). `/showcase` e `/exportar` seguem f
 
 **Code-split:** só a Visão Executiva entra no bundle inicial; as demais rotas são `React.lazy` com o próprio esqueleto como fallback do Suspense (`TelaComEstado`). Ao criar uma tela nova, registre-a como `lazy` em `App.tsx` — importá-la direto devolve o Recharts (~330 kB) para a rota de entrada.
 
+## Alertas: uma fonte, quatro superfícies
+`src/alerts/alertStore.ts` é o STORE ÚNICO (semeado de `src/data/alertas.ts`); `selectors.ts` deriva tudo dele, **memoizado contra a referência da lista** — seletor que devolve array novo a cada chamada põe `useSyncExternalStore` em laço infinito (React #185). Quem lê: o **sino** (`AlertBell`, badge = `filaExigeDecisao().length`, ponto rosa pulsante se houver crítico), a **Central** (`AlertCenter.tsx`, painel lateral global montado no `AppShell`, aberto pelo sino ou pela tecla **N** — a aba fica no "Ver todos"), a **faixa crítica** (`CriticalBanner.tsx`, dispensável por alerta) e a **aba** `/alertas` (mission control). Nenhuma delas mantém lista própria.
+
+Regras que não devem ser desfeitas: a Central lista **a fila de decisão**, não os ativos — por isso os chips de severidade decompõem o número do topo (somam-no) e o total de ativos vive no rodapé; o selo "novo" é só para o que chegou **durante a sessão** (`recebidoEmS`), senão os 18 alertas do primeiro acesso viram papel de parede; a chegada ao vivo (`chegadaAoVivo.ts`) publica no store e emite toast na cor da severidade, suprimido apenas quando o alerta já apareceria na Central aberta. Atalhos: **A** aprova, **G A** navega para a aba, **N** abre a Central — as três coisas são diferentes.
+
 ## Modo POC — o piloto de 90 dias
 Recorte: **1 moinho** (Fortaleza), **2 farinhas** (massas, biscoito), **2 regiões**, **3 origens**, **2 fábricas**. Não é um produto reduzido: é a **reconstrução histórica** de 6 meses fechados que mostra qual era o custo real da farinha, o que teria custado comprar, qual seria a margem de venda, qual decisão teria maximizado o resultado e quanto valor passou pela mesa.
 

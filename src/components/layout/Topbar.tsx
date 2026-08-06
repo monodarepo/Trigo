@@ -4,7 +4,7 @@ import { findNavItem } from '../../data/navigation'
 import { APP_CONTEXT } from '../../data/appContext'
 import { MarketPulse } from '../live/MarketPulse'
 import { abrirCommandPalette } from '../command/CommandLayer'
-import { NotificationCenter } from '../feedback/NotificationCenter'
+import { AlertBell } from '../../alerts/AlertBell'
 import { abrirApresentacao } from '../present/presentStore'
 import { alternarDensidade, alternarMural, useDensidade, useMural } from './layoutStore'
 
@@ -113,7 +113,7 @@ export function Topbar({ onOpenMenu }: TopbarProps) {
             Apresentar
           </button>
 
-          <NotificationCenter />
+          <AlertBell />
 
           <span
             className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gold text-xs font-bold text-navy"

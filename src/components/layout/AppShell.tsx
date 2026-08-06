@@ -7,6 +7,8 @@ import { CommandLayer } from '../command/CommandLayer'
 import { ObjectPanelLayer } from '../object/ObjectPanel'
 import { ToastLayer } from '../feedback/Toast'
 import { PresentationMode } from '../present/PresentationMode'
+import { AlertCenter } from '../../alerts/AlertCenter'
+import { CriticalBanner } from '../../alerts/CriticalBanner'
 import { useMural } from './layoutStore'
 import { iniciarLive } from '../../live/liveStore'
 
@@ -76,6 +78,9 @@ export function AppShell() {
 
       <div className={mural ? '' : 'lg:pl-[264px]'}>
         <Topbar onOpenMenu={() => setDrawerOpen(true)} />
+        {/* Faixa crítica: no topo do CONTEÚDO (abaixo da topbar), porque é a
+            tela que ela interrompe — não a navegação. */}
+        <CriticalBanner />
         <main className="px-4 py-6 lg:px-8 lg:py-8">
           <Outlet />
         </main>
@@ -83,6 +88,10 @@ export function AppShell() {
 
       <CommandLayer />
       <ObjectPanelLayer />
+      {/* A Central fica acima do painel de objeto e abaixo da apresentação:
+          dá para consultar a fila com uma ficha aberta, mas a demo em tela
+          cheia continua soberana. */}
+      <AlertCenter />
       <ToastLayer />
       <PresentationMode />
     </div>

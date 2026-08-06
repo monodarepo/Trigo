@@ -3,12 +3,16 @@
  * enquanto a apresentação roda; Topbar/palette disparam pelo bus.
  */
 import { useSyncExternalStore } from 'react'
+import { fecharCentral } from '../../alerts/centralStore'
 
 let ativo = false
 const listeners = new Set<() => void>()
 
 export function marcarApresentacao(valor: boolean) {
   ativo = valor
+  // A apresentação cobre a tela (z-85): uma Central aberta por baixo ficaria
+  // invisível durante o tour e reapareceria sozinha no fim dele.
+  if (valor) fecharCentral()
   for (const listener of listeners) listener()
 }
 

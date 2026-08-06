@@ -9,6 +9,7 @@ import { ApprovalModal } from '../approval/ApprovalModal'
 import { aoAbrirAprovacao } from '../approval/approvalBus'
 import type { ModoDecisao } from '../approval/decisionStore'
 import { abrirApresentacao, useApresentacaoAtiva } from '../present/presentStore'
+import { abrirCentral, fecharCentral } from '../../alerts/centralStore'
 import { alternarDensidade, alternarMural } from '../layout/layoutStore'
 import { alternarDataMode } from '../../live/dataMode'
 import { ALL_NAV_ITEMS } from '../../data/navigation'
@@ -29,7 +30,10 @@ export function CommandLayer() {
   const apresentando = useApresentacaoAtiva()
 
   useEffect(() => {
-    const abre = () => setPaletteAberto(true)
+    const abre = () => {
+      fecharCentral()
+      setPaletteAberto(true)
+    }
     window.addEventListener(EVENTO_PALETTE, abre)
     const desligaAprovacao = aoAbrirAprovacao((modo) => setAprovacao({ aberta: true, modo }))
     return () => {
@@ -45,11 +49,19 @@ export function CommandLayer() {
 
   useHotkeys({
     // ⌘K fica fora do "suspenso" (fecha o próprio palette) — mas não abre por cima da apresentação
-    onPalette: () => setPaletteAberto((a) => (apresentando ? a : !a)),
+    onPalette: () => {
+      // ⌘K não é suspenso por nada: se a Central estiver aberta, ela sai da
+      // frente em vez de sobrar visível ao lado da paleta.
+      fecharCentral()
+      setPaletteAberto((a) => (apresentando ? a : !a))
+    },
     onAjuda: () => setAjudaAberta(true),
     onAprovar: () => setAprovacao({ aberta: true }),
     onApresentar: abrirApresentacao,
+    onCentral: abrirCentral,
     sequencias,
+    /* A Central não entra na suspensão: ela barra as próprias teclas antes de
+       chegarem aqui (stopPropagation no painel), inclusive o "n" que a fecha. */
     suspenso: paletteAberto || ajudaAberta || aprovacao.aberta || apresentando,
   })
 
@@ -107,10 +119,19 @@ export function CommandLayer() {
       executar: () => navigate('/simulador'),
     },
     {
+      id: 'acao-central',
+      grupo: 'Ações',
+      rotulo: 'Abrir Central de Alertas (sem sair da tela)',
+      icone: BellRing,
+      atalho: 'N',
+      executar: () => abrirCentral(),
+    },
+    {
       id: 'acao-alertas',
       grupo: 'Ações',
-      rotulo: 'Ver alertas críticos',
+      rotulo: 'Ver todos os alertas do dia',
       icone: BellRing,
+      atalho: 'G A',
       executar: () => navigate('/alertas'),
     },
     {
