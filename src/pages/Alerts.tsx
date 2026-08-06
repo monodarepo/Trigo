@@ -1,25 +1,28 @@
-import { useMemo, useState } from 'react'
+import { memo, useCallback, useMemo, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { ChevronRight, Search, UserPlus, X } from 'lucide-react'
+import { ChevronRight, Layers, Search, UserPlus, X } from 'lucide-react'
 import { Badge, Card, EmptyState, KpiTile, SectionTitle } from '../components/ui'
 import { AnimatedNumber } from '../components/live/AnimatedNumber'
 import { emitirToast } from '../components/feedback/toastBus'
-import { useLive } from '../live/liveStore'
+import { getLiveState } from '../live/liveStore'
 import { atribuir, reconhecer, resolver, useListaAlertas } from '../alerts/alertStore'
 import {
-  ORDEM_SEVERIDADE,
   ativos,
+  ativosOrdenados,
   contagemNaoVistos,
   filaExigeDecisao,
   impactoTotal,
   porSeveridade,
+  porUrgencia,
 } from '../alerts/selectors'
 import { SEVERIDADE_UI, SEVERIDADES } from '../alerts/severidade'
 import { CATEGORIAS, categoriaDe, impactoFormatado } from '../alerts/detalhes'
 import { abrirDetalheAlerta } from '../alerts/AlertDetail'
 import { AREAS, AREA_SUGERIDA } from '../alerts/acoes'
 import { registrar } from '../alerts/registroVro'
-import { horaDoCenario, tempoRelativo } from '../alerts/tempo'
+import { horaDoCenario } from '../alerts/tempo'
+import { TempoRelativo } from '../alerts/TempoRelativo'
+import { agruparEmClusters, impactoDoCluster, type ClusterAlertas } from '../alerts/clusters'
 import { DEMO_AGORA } from '../data/appContext'
 import { formatBRL, formatDataPt, getAgente, getMoinho, type Alerta } from '../data'
 
@@ -68,7 +71,7 @@ function FiltroChips<T extends string>({
           }`}
         >
           {o.rotulo}
-          {o.contagem != null && <span className="tnums ml-1 font-mono text-ink-faint">{o.contagem}</span>}
+          {o.contagem != null && <span className="tnums ml-1 font-mono text-ink-subtle">{o.contagem}</span>}
         </button>
       ))}
     </div>
@@ -161,14 +164,14 @@ function HeatStrip({
                     />
                   ))}
                 </span>
-                <span className="tnums w-5 shrink-0 text-right font-mono text-11 text-ink-faint">{total}</span>
+                <span className="tnums w-5 shrink-0 text-right font-mono text-11 text-ink-subtle">{total}</span>
               </button>
             )
           })}
       </div>
 
       <div className="mt-1.5 flex items-center gap-2 pl-[5.5rem] pr-7">
-        <span className="flex flex-1 justify-between text-[10px] text-ink-faint">
+        <span className="flex flex-1 justify-between text-[10px] text-ink-subtle">
           {horas.map((t, i) => (
             <span key={t} className="tnums">
               {i % 3 === 0 ? `${rotuloHora(t)}h` : ''}
@@ -180,18 +183,20 @@ function HeatStrip({
   )
 }
 
-function LinhaAlerta({
+const LinhaAlerta = memo(function LinhaAlerta({
   alerta,
   indice,
   selecionado,
   onSelecionar,
+  recuado = false,
 }: {
   alerta: Alerta
   indice: number
   selecionado: boolean
   onSelecionar: (id: string, marcado: boolean) => void
+  /** Sinal de dentro de um cluster: recuado, porque é consequência. */
+  recuado?: boolean
 }) {
-  const segundos = useLive((s) => s.segundos)
   const cat = categoriaDe(alerta.categoria)
   const ui = SEVERIDADE_UI[alerta.severidade]
   const agente = alerta.agenteId ? getAgente(alerta.agenteId) : undefined
@@ -206,7 +211,7 @@ function LinhaAlerta({
       transition={{ type: 'tween', duration: 0.22, ease: [0.2, 0.8, 0.2, 1] }}
       className={`flex items-center gap-3 rounded-card border border-l-2 bg-card p-3 transition-colors hover:border-gold/40 ${
         selecionado ? 'border-gold/50 bg-gold/[0.06]' : 'border-edge/60'
-      } ${ui.fio}`}
+      } ${ui.fio} ${recuado ? 'ml-6' : ''}`}
     >
       <input
         type="checkbox"
@@ -230,9 +235,9 @@ function LinhaAlerta({
         <span className="min-w-0">
           <span className="flex flex-wrap items-center gap-2">
             <Badge kind="status" label={ui.rotulo} tone={ui.tone} />
-            <span className="text-[11px] text-ink-faint">{cat.rotulo}</span>
-            <span className="tnums text-[11px] text-ink-subtle">{tempoRelativo(alerta, segundos)}</span>
-            {agente && <span className="text-[11px] text-ink-faint">· {agente.nome}</span>}
+            <span className="text-[11px] text-ink-subtle">{cat.rotulo}</span>
+            <TempoRelativo alerta={alerta} />
+            {agente && <span className="text-[11px] text-ink-subtle">· {agente.nome}</span>}
             {/* Estado do ciclo de vida: quem pegou, até quando esperou. */}
             {alerta.atribuidoA && <Badge kind="status" label={`→ ${alerta.atribuidoA}`} tone="info" />}
             {alerta.status === 'adiado' && (
@@ -271,6 +276,67 @@ function LinhaAlerta({
       </div>
     </motion.li>
   )
+})
+
+/**
+ * Cluster na aba: o sinal principal e, atrás de um botão, os do mesmo fato.
+ * Fechado por padrão — a fila é para varrer, não para explorar. A contagem e o
+ * total do grupo ficam visíveis para que ninguém precise abrir só para saber
+ * que há mais.
+ */
+function GrupoCluster({
+  cluster,
+  indice,
+  selecao,
+  onSelecionar,
+}: {
+  cluster: ClusterAlertas
+  indice: number
+  selecao: readonly string[]
+  onSelecionar: (id: string, marcado: boolean) => void
+}) {
+  const [aberto, setAberto] = useState(false)
+  const soma = impactoDoCluster(cluster)
+  return (
+    <motion.li layout="position" className="list-none space-y-2">
+      <ul className="space-y-2">
+        <LinhaAlerta
+          alerta={cluster.principal}
+          indice={indice}
+          selecionado={selecao.includes(cluster.principal.id)}
+          onSelecionar={onSelecionar}
+        />
+        <AnimatePresence initial={false}>
+          {aberto &&
+            cluster.relacionados.map((a, i) => (
+              <LinhaAlerta
+                key={a.id}
+                alerta={a}
+                indice={i}
+                selecionado={selecao.includes(a.id)}
+                onSelecionar={onSelecionar}
+                recuado
+              />
+            ))}
+        </AnimatePresence>
+      </ul>
+      <button
+        type="button"
+        onClick={() => setAberto((v) => !v)}
+        aria-expanded={aberto}
+        className="ml-6 flex items-center gap-1.5 text-[11px] font-semibold text-ink-subtle transition-colors hover:text-gold"
+      >
+        <Layers size={11} aria-hidden="true" />
+        {aberto ? 'Ocultar' : `+${cluster.relacionados.length}`} {cluster.rotulo}
+        {soma && (
+          <span className="tnums font-mono text-ink-subtle">
+            · {cluster.principal.tipo === 'oportunidade' ? '+' : '−'}
+            {formatBRL(soma.rs, { compacto: true })} no grupo
+          </span>
+        )}
+      </button>
+    </motion.li>
+  )
 }
 
 /** Barra de ação em massa — só existe com algo selecionado. */
@@ -282,7 +348,6 @@ function BarraSelecao({
   aoLimpar: () => void
 }) {
   const [menuArea, setMenuArea] = useState(false)
-  const segundos = useLive((s) => s.segundos)
   const n = selecionados.length
 
   /** Uma linha por alerta na trilha do VRO, como no drawer. */
@@ -298,8 +363,9 @@ function BarraSelecao({
         categoria: a.categoria,
         area,
         nota: area,
-        horaRotulo: horaDoCenario(segundos),
-        emSegundos: segundos,
+        // Leitura pontual: a barra não precisa re-renderizar a cada segundo.
+        horaRotulo: horaDoCenario(getLiveState().segundos),
+        emSegundos: getLiveState().segundos,
       })
     }
   }
@@ -316,7 +382,7 @@ function BarraSelecao({
       <span className="tnums text-12 font-semibold text-ink">
         {n} selecionado{n === 1 ? '' : 's'}
       </span>
-      <span className="text-11 text-ink-faint">
+      <span className="text-11 text-ink-subtle">
         {formatBRL(
           selecionados.reduce((s, a) => s + (a.impactoBase === 'mes' ? (a.impactoRs ?? 0) : 0), 0),
           { compacto: true },
@@ -397,7 +463,7 @@ function BarraSelecao({
           type="button"
           onClick={aoLimpar}
           aria-label="Limpar seleção"
-          className="rounded-full p-1 text-ink-faint transition-colors hover:text-ink"
+          className="rounded-full p-1 text-ink-subtle transition-colors hover:text-ink"
         >
           <X size={14} aria-hidden="true" />
         </button>
@@ -429,22 +495,15 @@ export default function Alerts() {
   const naoVistos = contagemNaoVistos(lista)
 
   /**
-   * A ordem da lista é a MESMA da fila (impacto × urgência), e não uma
-   * ordenação própria: se a aba priorizasse diferente da Central, o "primeiro
-   * da fila" seria outro em cada tela.
+   * A ordem é a MESMA função de urgência que a Central, o banner e o chip
+   * usam (`porUrgencia`: exige-decisão → severidade → impacto → recência). A
+   * aba não ordena por conta própria: se priorizasse diferente, o "primeiro da
+   * fila" seria outro em cada tela.
    */
   const base = mostrarResolvidos ? resolvidos : ativos(lista)
-  const posicaoNaFila = useMemo(() => new Map(fila.map((a, i) => [a.id, i])), [fila])
   const ordenados = useMemo(
-    () =>
-      [...base].sort(
-        (a, b) =>
-          (posicaoNaFila.get(a.id) ?? 1e6) - (posicaoNaFila.get(b.id) ?? 1e6) ||
-          ORDEM_SEVERIDADE[a.severidade] - ORDEM_SEVERIDADE[b.severidade] ||
-          (b.impactoRs ?? 0) - (a.impactoRs ?? 0) ||
-          b.timestamp.localeCompare(a.timestamp),
-      ),
-    [base, posicaoNaFila],
+    () => (mostrarResolvidos ? [...resolvidos].sort(porUrgencia) : ativosOrdenados(lista)),
+    [lista, resolvidos, mostrarResolvidos],
   )
 
   const termo = busca.trim().toLowerCase()
@@ -481,7 +540,17 @@ export default function Alerts() {
     return `${a.entidade.tipo[0].toUpperCase()}${a.entidade.tipo.slice(1)} · ${nome}`
   }
 
-  const secoes: Array<{ id: string; titulo: string; itens: Alerta[] }> = useMemo(() => {
+  const nomeMoinho = useCallback((id: string) => getMoinho(id as never)?.nome ?? id, [])
+
+  const secoes: Array<{ id: string; titulo: string; itens: Alerta[]; clusters: ClusterAlertas[] }> = useMemo(() => {
+    /* Agrupar por OBJETO já é o próprio cluster: reagrupar ali criaria uma
+       moldura dentro da moldura. Nas outras visões o cluster evita ler o mesmo
+       fato três vezes. */
+    const comCluster = (itens: Alerta[]) =>
+      agrupamento === 'entidade'
+        ? itens.map((a) => ({ chave: a.id, principal: a, relacionados: [], total: 1, rotulo: '' }))
+        : agruparEmClusters(itens, nomeMoinho)
+
     if (agrupamento === 'categoria') {
       const mapa = new Map<Categoria, Alerta[]>()
       for (const a of filtrados) mapa.set(a.categoria, [...(mapa.get(a.categoria) ?? []), a])
@@ -489,6 +558,7 @@ export default function Alerts() {
         id,
         titulo: `${categoriaDe(id).rotulo} (${itens.length})`,
         itens,
+        clusters: comCluster(itens),
       }))
     }
     if (agrupamento === 'entidade') {
@@ -500,17 +570,22 @@ export default function Alerts() {
       // "Sem objeto vinculado" por último: é o balde, não um agrupamento.
       return [...mapa.entries()]
         .sort((a, b) => Number(a[0].startsWith('Sem')) - Number(b[0].startsWith('Sem')))
-        .map(([k, itens]) => ({ id: k, titulo: `${k} (${itens.length})`, itens }))
+        .map(([k, itens]) => ({ id: k, titulo: `${k} (${itens.length})`, itens, clusters: comCluster(itens) }))
     }
     /* PRIORIDADE: o split que a tela existe para mostrar — o que exige decisão
        humana hoje, separado do que é contexto. */
     const decisao = filtrados.filter((a) => a.exigeDecisao)
     const informativos = filtrados.filter((a) => !a.exigeDecisao)
     return [
-      { id: 'decisao', titulo: `Exigem decisão (${decisao.length})`, itens: decisao },
-      { id: 'informativo', titulo: `Informativos (${informativos.length})`, itens: informativos },
+      { id: 'decisao', titulo: `Exigem decisão (${decisao.length})`, itens: decisao, clusters: comCluster(decisao) },
+      {
+        id: 'informativo',
+        titulo: `Informativos (${informativos.length})`,
+        itens: informativos,
+        clusters: comCluster(informativos),
+      },
     ].filter((s) => s.itens.length > 0)
-  }, [filtrados, agrupamento])
+  }, [filtrados, agrupamento, nomeMoinho])
 
   /* A seleção vive contra a lista VISÍVEL: resolver em massa some com as
      linhas, e ids órfãos fariam a barra anunciar "3 selecionados" sobre
@@ -520,8 +595,12 @@ export default function Alerts() {
     () => filtrados.filter((a) => selecao.includes(a.id)),
     [filtrados, selecao],
   )
-  const alternarSelecao = (id: string, marcado: boolean) =>
-    setSelecao((s) => (marcado ? [...s, id] : s.filter((x) => x !== id)))
+  /* Identidade estável: com `onSelecionar` novo a cada render, o memo() das
+     linhas nunca acertaria e mudar UM alerta re-renderizaria as vinte. */
+  const alternarSelecao = useCallback(
+    (id: string, marcado: boolean) => setSelecao((s) => (marcado ? [...s, id] : s.filter((x) => x !== id))),
+    [],
+  )
   const selecionarTudo = () =>
     setSelecao(selecionados.length === filtrados.length ? [] : filtrados.map((a) => a.id))
 
@@ -620,7 +699,7 @@ export default function Alerts() {
                 onChange={(e) => setBusca(e.target.value)}
                 placeholder="Buscar por título, descrição, fonte, agente ou dono…"
                 aria-label="Buscar alertas"
-                className="w-full rounded-full border border-edge bg-card-2 py-1.5 pl-9 pr-3 text-xs text-ink placeholder:text-ink-faint focus:border-gold/40 focus:outline-none"
+                className="w-full rounded-full border border-edge bg-card-2 py-1.5 pl-9 pr-3 text-xs text-ink placeholder:text-ink-subtle focus:border-gold/40 focus:outline-none"
               />
             </label>
             <FiltroChips
@@ -745,15 +824,25 @@ export default function Alerts() {
               </p>
               <ul className="space-y-2">
                 <AnimatePresence initial={false} mode="popLayout">
-                  {secao.itens.map((alerta, i) => (
-                    <LinhaAlerta
-                      key={alerta.id}
-                      alerta={alerta}
-                      indice={i}
-                      selecionado={selecao.includes(alerta.id)}
-                      onSelecionar={alternarSelecao}
-                    />
-                  ))}
+                  {secao.clusters.map((c, i) =>
+                    c.total > 1 ? (
+                      <GrupoCluster
+                        key={c.chave}
+                        cluster={c}
+                        indice={i}
+                        selecao={selecao}
+                        onSelecionar={alternarSelecao}
+                      />
+                    ) : (
+                      <LinhaAlerta
+                        key={c.chave}
+                        alerta={c.principal}
+                        indice={i}
+                        selecionado={selecao.includes(c.principal.id)}
+                        onSelecionar={alternarSelecao}
+                      />
+                    ),
+                  )}
                 </AnimatePresence>
               </ul>
             </motion.div>

@@ -136,6 +136,9 @@ const CATALOGO: SementeAlerta[] = [
     id: 'alerta-rio-parana',
     tipo: 'risco',
     entidade: { tipo: 'navio', id: 'mv-rio-parana' },
+    /* Mesmo fato, dois objetos: o atraso do navio e a cobertura que ele
+       derruba em Natal. A fila os agrupa em vez de contar duas vezes. */
+    eventoId: 'evt-rio-parana',
     telasRelacionadas: ['/', '/tlc', '/compra'],
     fonte: 'Rastreamento AIS + agente marítimo no porto de Natal',
     severidade: 'critico',
@@ -430,6 +433,7 @@ const CATALOGO: SementeAlerta[] = [
   {
     id: 'alerta-cobertura-natal',
     entidade: { tipo: 'moinho', id: 'natal' },
+    eventoId: 'evt-rio-parana',
     telasRelacionadas: ['/compra', '/tlc'],
     fonte: 'ERP SAP — cobertura em dias por moinho',
     severidade: 'medio',

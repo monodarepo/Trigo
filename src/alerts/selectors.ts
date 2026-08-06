@@ -33,13 +33,21 @@ const PESO_SEVERIDADE: Record<SeveridadeAlerta, number> = {
 export const ORDEM_SEVERIDADE = PESO_SEVERIDADE
 
 /**
- * A ORDEM ÚNICA de urgência: severidade, depois dinheiro, depois recência. Um
- * crítico de R$ 100 mil precede um médio de R$ 1M — urgência não se compra com
- * impacto; o impacto desempata dentro do mesmo nível. A fila da Central, o
- * banner da tela e o chip do painel usam esta mesma função: com duas ordens
- * diferentes, o "alerta mais importante" da tela não seria o primeiro da fila.
+ * A ORDEM ÚNICA de urgência, usada por TODAS as filas — Central, aba, banner
+ * da tela e chip do painel. Com duas ordenações diferentes, o "alerta mais
+ * importante" seria outro em cada superfície.
+ *
+ * As chaves, em ordem:
+ *  1. EXIGE DECISÃO acima de informativo — trabalho pendente precede contexto,
+ *     por mais grave que o contexto pareça. É o único critério que não se
+ *     compra com dinheiro nem com severidade.
+ *  2. SEVERIDADE — um crítico de R$ 100 mil precede um médio de R$ 1M:
+ *     urgência não se compra com impacto.
+ *  3. IMPACTO (R$) desempata dentro do mesmo nível.
+ *  4. RECÊNCIA desempata o resto.
  */
-const porUrgencia = (a: Alerta, b: Alerta) =>
+export const porUrgencia = (a: Alerta, b: Alerta) =>
+  Number(b.exigeDecisao) - Number(a.exigeDecisao) ||
   PESO_SEVERIDADE[a.severidade] - PESO_SEVERIDADE[b.severidade] ||
   (b.impactoRs ?? 0) - (a.impactoRs ?? 0) ||
   b.timestamp.localeCompare(a.timestamp)
@@ -50,6 +58,9 @@ const porUrgencia = (a: Alerta, b: Alerta) =>
  * seria um risco esquecido.
  */
 export const ativos = memoPorLista((lista) => lista.filter((a) => a.status !== 'resolvido'))
+
+/** ATIVOS já na ordem única — a lista que a aba percorre. */
+export const ativosOrdenados = memoPorLista((lista) => [...ativos(lista)].sort(porUrgencia))
 
 /** Contagem por severidade, só entre os ativos. */
 export const porSeveridade = memoPorLista((lista) => {

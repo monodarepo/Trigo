@@ -9,6 +9,7 @@ import { ToastLayer } from '../feedback/Toast'
 import { PresentationMode } from '../present/PresentationMode'
 import { AlertCenter } from '../../alerts/AlertCenter'
 import { AlertDetailLayer } from '../../alerts/AlertDetail'
+import { AlertLiveRegion } from '../../alerts/AlertLiveRegion'
 import { CriticalBanner } from '../../alerts/CriticalBanner'
 import { useMural } from './layoutStore'
 import { iniciarLive } from '../../live/liveStore'
@@ -96,6 +97,8 @@ export function AppShell() {
       {/* Acima da Central: o detalhe é sempre o que se abriu por último. */}
       <AlertDetailLayer />
       <ToastLayer />
+      {/* Voz para o que chega: o toast é visual, esta região é para quem ouve. */}
+      <AlertLiveRegion />
       <PresentationMode />
     </div>
   )

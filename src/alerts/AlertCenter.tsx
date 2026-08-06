@@ -12,20 +12,21 @@
  * mesmo navio, o mesmo impacto e o mesmo status que a aba, o cockpit e o
  * banner contextual leem. Nenhuma lista própria.
  */
-import { useCallback, useEffect, useRef } from 'react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
-import { ArrowUpRight, ChevronRight, Inbox, X } from 'lucide-react'
+import { ArrowUpRight, ChevronRight, Inbox, Layers, X } from 'lucide-react'
 import { EmptyState } from '../components/ui/EmptyState'
 import { formatBRL } from '../data/format'
+import { getMoinho, type MoinhoId } from '../data'
 import type { Alerta } from '../data/types'
-import { useLive } from '../live/liveStore'
 import { marcarVisto, useListaAlertas } from './alertStore'
 import { fecharCentral, useCentralAberta } from './centralStore'
 import { abrirDetalheAlerta } from './AlertDetail'
+import { agruparEmClusters, impactoDoCluster, type ClusterAlertas } from './clusters'
 import { ativos, filaExigeDecisao, impactoTotal } from './selectors'
 import { SEVERIDADE_UI, SEVERIDADES } from './severidade'
-import { tempoRelativo } from './tempo'
+import { TempoRelativo } from './TempoRelativo'
 
 /** Quanto o realce "novo" fica de pé depois de o painel abrir. */
 const MS_ATE_MARCAR_VISTO = 2600
@@ -33,16 +34,21 @@ const MS_ATE_MARCAR_VISTO = 2600
 /** R$ 1,2M / R$ 180 mil — magnitude legível num item de lista. */
 const impactoCurto = (valor: number) => formatBRL(valor, { compacto: true })
 
-function ItemAlerta({
+const ItemAlerta = memo(function ItemAlerta({
   alerta,
-  segundos,
   aoAgir,
   aoAbrirDetalhe,
+  variante = 'solo',
 }: {
   alerta: Alerta
-  segundos: number
   aoAgir: (alerta: Alerta) => void
   aoAbrirDetalhe: (alerta: Alerta) => void
+  /**
+   * 'solo' desenha a própria moldura; dentro de um cluster o fio e a tinta são
+   * do grupo, e o 'relacionado' entra recuado — a hierarquia visual precisa
+   * dizer que ele é consequência, não outro fato.
+   */
+  variante?: 'solo' | 'principal' | 'relacionado'
 }) {
   const ui = SEVERIDADE_UI[alerta.severidade]
   const Icone = ui.icone
@@ -58,11 +64,23 @@ function ItemAlerta({
 
   return (
     <li
-      className={`border-b border-edge/40 border-l-2 last:border-b-0 ${chegouAgora ? ui.fundo : ''} ${
-        novo ? ui.fio : 'border-l-transparent'
-      }`}
+      className={
+        variante === 'solo'
+          ? `border-b border-edge/40 border-l-2 last:border-b-0 ${chegouAgora ? ui.fundo : ''} ${
+              novo ? ui.fio : 'border-l-transparent'
+            }`
+          : variante === 'relacionado'
+            ? 'border-t border-edge/30'
+            : chegouAgora
+              ? ui.fundo
+              : ''
+      }
     >
-      <div className="flex items-start gap-3 px-4 py-3 transition-colors hover:bg-white/[0.03]">
+      <div
+        className={`flex items-start gap-3 transition-colors hover:bg-white/[0.03] ${
+          variante === 'relacionado' ? 'py-2 pl-10 pr-4' : 'px-4 py-3'
+        }`}
+      >
         <Icone size={15} className={`mt-0.5 shrink-0 ${ui.texto}`} aria-hidden="true" />
         <div className="min-w-0 flex-1">
           <div className="flex items-baseline gap-2">
@@ -72,10 +90,8 @@ function ItemAlerta({
                 novo
               </span>
             )}
-            {alerta.atribuidoA && <span className="truncate text-11 text-ink-faint">→ {alerta.atribuidoA}</span>}
-            <span className="tnums ml-auto shrink-0 font-mono text-11 text-ink-faint">
-              {tempoRelativo(alerta, segundos)}
-            </span>
+            {alerta.atribuidoA && <span className="truncate text-11 text-ink-subtle">→ {alerta.atribuidoA}</span>}
+            <TempoRelativo alerta={alerta} className="tnums ml-auto shrink-0 font-mono text-11 text-ink-subtle" />
           </div>
           {/* O título abre o DETALHE (tratar sem sair da tela); o CTA executa a
               ação. Um botão só para as duas coisas faria o rótulo "Ver janela
@@ -111,13 +127,62 @@ function ItemAlerta({
       </div>
     </li>
   )
+})
+
+/**
+ * Um cluster na fila: a linha principal e, atrás de um botão, os sinais do
+ * mesmo fato. Fechado por padrão — quem abre a Central quer a fila, não a
+ * árvore. A contagem fica visível para que ninguém precise abrir para saber
+ * que há mais.
+ */
+function ItemCluster({
+  cluster,
+  aoAgir,
+  aoAbrirDetalhe,
+}: {
+  cluster: ClusterAlertas
+  aoAgir: (alerta: Alerta) => void
+  aoAbrirDetalhe: (alerta: Alerta) => void
+}) {
+  const [aberto, setAberto] = useState(false)
+  const soma = impactoDoCluster(cluster)
+  const ui = SEVERIDADE_UI[cluster.principal.severidade]
+
+  return (
+    <li className={`border-b border-edge/40 border-l-2 last:border-b-0 ${ui.fio}`}>
+      <ul>
+        <ItemAlerta alerta={cluster.principal} aoAgir={aoAgir} aoAbrirDetalhe={aoAbrirDetalhe} variante="principal" />
+        {aberto &&
+          cluster.relacionados.map((a) => (
+            <ItemAlerta key={a.id} alerta={a} aoAgir={aoAgir} aoAbrirDetalhe={aoAbrirDetalhe} variante="relacionado" />
+          ))}
+      </ul>
+      <button
+        type="button"
+        onClick={() => setAberto((v) => !v)}
+        aria-expanded={aberto}
+        className="flex w-full items-center gap-1.5 px-4 pb-2.5 text-11 font-semibold text-ink-subtle transition-colors hover:text-gold"
+      >
+        <Layers size={11} aria-hidden="true" />
+        {aberto ? 'Ocultar' : `+${cluster.relacionados.length}`} {cluster.rotulo}
+        {soma && (
+          <span className="tnums ml-auto font-mono text-ink-subtle">
+            {soma.rs > 0 && `${cluster.principal.tipo === 'oportunidade' ? '+' : '−'}${impactoCurto(soma.rs)} no grupo`}
+          </span>
+        )}
+      </button>
+    </li>
+  )
 }
 
 function Painel() {
   const navigate = useNavigate()
   const lista = useListaAlertas()
-  const segundos = useLive((s) => s.segundos)
   const fila = filaExigeDecisao(lista)
+  const clusters = useMemo(
+    () => agruparEmClusters(fila, (id) => getMoinho(id as MoinhoId)?.nome ?? id),
+    [fila],
+  )
   const impacto = impactoTotal(lista)
   /**
    * Os chips decompõem a FILA, não a lista de ativos. Contar ativos aqui daria
@@ -268,20 +333,20 @@ function Painel() {
             a capturar exigem times e prazos diferentes; o líquido esconderia isso. */}
         <div className="mt-3 grid grid-cols-2 gap-2">
           <div className="rounded-card border border-edge/60 bg-surface-1/60 px-3 py-2">
-            <p className="text-11 text-ink-faint">Risco a evitar / mês</p>
+            <p className="text-11 text-ink-subtle">Risco a evitar / mês</p>
             <p className="tnums mt-0.5 font-mono text-14 font-semibold text-danger">
               {impactoCurto(impacto.riscoRs)}
             </p>
           </div>
           <div className="rounded-card border border-edge/60 bg-surface-1/60 px-3 py-2">
-            <p className="text-11 text-ink-faint">Oportunidade / mês</p>
+            <p className="text-11 text-ink-subtle">Oportunidade / mês</p>
             <p className="tnums mt-0.5 font-mono text-14 font-semibold text-positive">
               {impactoCurto(impacto.oportunidadeRs)}
             </p>
           </div>
         </div>
         {impacto.foraDaBaseMensal.length > 0 && (
-          <p className="mt-2 text-11 leading-snug text-ink-faint">
+          <p className="mt-2 text-11 leading-snug text-ink-subtle">
             + {impacto.foraDaBaseMensal.length} alerta{impacto.foraDaBaseMensal.length === 1 ? '' : 's'} de base
             trimestral ou por evento, fora deste total.
           </p>
@@ -301,15 +366,13 @@ function Painel() {
           />
         ) : (
           <ul>
-            {fila.map((alerta) => (
-              <ItemAlerta
-                key={alerta.id}
-                alerta={alerta}
-                segundos={segundos}
-                aoAgir={aoAgir}
-                aoAbrirDetalhe={aoAbrirDetalhe}
-              />
-            ))}
+            {clusters.map((c) =>
+              c.total > 1 ? (
+                <ItemCluster key={c.chave} cluster={c} aoAgir={aoAgir} aoAbrirDetalhe={aoAbrirDetalhe} />
+              ) : (
+                <ItemAlerta key={c.chave} alerta={c.principal} aoAgir={aoAgir} aoAbrirDetalhe={aoAbrirDetalhe} />
+              ),
+            )}
           </ul>
         )}
       </div>
@@ -321,7 +384,7 @@ function Painel() {
         className="flex shrink-0 items-center justify-center gap-1.5 border-t border-edge/60 px-5 py-3 text-xs font-semibold text-gold transition-colors hover:bg-white/[0.03] hover:text-gold-light"
       >
         Ver todos os alertas
-        <span className="tnums font-mono text-11 text-ink-faint">· {ativosTotal} ativos</span>
+        <span className="tnums font-mono text-11 text-ink-subtle">· {ativosTotal} ativos</span>
         <ArrowUpRight size={13} aria-hidden="true" />
       </button>
     </motion.div>

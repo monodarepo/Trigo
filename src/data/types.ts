@@ -484,6 +484,14 @@ export interface Alerta {
   acaoRota: string
   /** Objeto do domínio que o alerta aponta (abre a ficha). */
   entidade?: EntidadeAlerta
+  /**
+   * FATO que originou o alerta, quando vários sinais vêm do mesmo
+   * acontecimento em objetos diferentes. O atraso do MV Río Paraná gera um
+   * alerta no navio e outro na cobertura do Moinho Natal: são duas entidades,
+   * um evento só. Sem este campo, a fila repetiria o mesmo fato duas vezes e o
+   * agrupamento por entidade não os juntaria.
+   */
+  eventoId?: string
   /** Rotas em que o alerta deve aparecer como banner contextual. */
   telasRelacionadas: string[]
   /** De onde veio o sinal, em uma linha. */

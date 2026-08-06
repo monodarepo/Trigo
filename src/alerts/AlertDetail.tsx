@@ -21,14 +21,15 @@ import { abrirObjeto } from '../components/object/objectBus'
 import { emitirToast } from '../components/feedback/toastBus'
 import { formatDataHoraPt, formatDataPt, getAgente } from '../data'
 import type { Alerta } from '../data/types'
-import { useLive } from '../live/liveStore'
+import { getLiveState } from '../live/liveStore'
 import { adiar, atribuir, reabrir, reconhecer, resolver, marcarVisto, useListaAlertas } from './alertStore'
 import { fecharCentral } from './centralStore'
 import { SEVERIDADE_UI } from './severidade'
 import { ROTULO_FICHA, categoriaDe, detalhesDoAlerta, impactoFormatado } from './detalhes'
 import { AREAS, AREA_SUGERIDA, PERIODOS_ADIAMENTO } from './acoes'
 import { registrar } from './registroVro'
-import { horaDoCenario, tempoRelativo } from './tempo'
+import { horaDoCenario } from './tempo'
+import { TempoRelativo } from './TempoRelativo'
 
 // ---------------------------------------------------------------------------
 // Bus de abertura (mesmo padrão de centralStore/objectBus)
@@ -74,7 +75,6 @@ const btnSecundario =
 
 function Conteudo({ alerta }: { alerta: Alerta }) {
   const navigate = useNavigate()
-  const segundos = useLive((s) => s.segundos)
   const ui = SEVERIDADE_UI[alerta.severidade]
   const categoria = categoriaDe(alerta.categoria)
   const IconeCategoria = categoria.icone
@@ -100,8 +100,11 @@ function Conteudo({ alerta }: { alerta: Alerta }) {
       categoria: alerta.categoria,
       area,
       nota,
-      horaRotulo: horaDoCenario(segundos),
-      emSegundos: segundos,
+      /* Leitura PONTUAL do relógio, no clique. Assinar o tick aqui
+         re-renderizaria o drawer inteiro — tabela, popover e tudo — uma vez
+         por segundo, para carimbar uma hora que só é lida quando se age. */
+      horaRotulo: horaDoCenario(getLiveState().segundos),
+      emSegundos: getLiveState().segundos,
     })
 
   const aoReconhecer = () => {
@@ -175,7 +178,7 @@ function Conteudo({ alerta }: { alerta: Alerta }) {
         <Badge kind="status" label={ui.rotulo} tone={ui.tone} />
         <Badge kind="status" label={categoria.rotulo} tone="neutral" />
         <span className="tnums text-[11px] text-ink-subtle" title={formatDataHoraPt(alerta.timestamp)}>
-          {tempoRelativo(alerta, segundos)} · {formatDataHoraPt(alerta.timestamp)}
+          <TempoRelativo alerta={alerta} className="tnums" /> · {formatDataHoraPt(alerta.timestamp)}
         </span>
       </div>
 
@@ -257,7 +260,7 @@ function Conteudo({ alerta }: { alerta: Alerta }) {
         </>
       )}
 
-      <p className="mt-4 text-[11px] leading-snug text-ink-faint">{alerta.fonte}</p>
+      <p className="mt-4 text-[11px] leading-snug text-ink-subtle">{alerta.fonte}</p>
 
       {/* Ação: o CTA leva para a tela onde a decisão acontece; a ficha abre o
           objeto do domínio (navio, moinho, lote) sem sair daqui. */}
@@ -351,7 +354,7 @@ function Conteudo({ alerta }: { alerta: Alerta }) {
                   className="flex w-full items-center justify-between gap-3 rounded px-2 py-1.5 text-left text-11 text-ink-muted transition-colors hover:bg-white/5 hover:text-ink"
                 >
                   {p.rotulo}
-                  <span className="tnums font-mono text-11 text-ink-faint">
+                  <span className="tnums font-mono text-11 text-ink-subtle">
                     {formatDataPt(new Date(Date.parse(alerta.timestamp) + p.horas * MS_POR_HORA).toISOString())}
                   </span>
                 </button>

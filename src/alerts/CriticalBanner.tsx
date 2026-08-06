@@ -59,7 +59,7 @@ export function CriticalBanner() {
                 {quantos} alerta{quantos === 1 ? '' : 's'} crítico{quantos === 1 ? '' : 's'} exige
                 {quantos === 1 ? '' : 'm'} ação
               </span>
-              <span className="text-ink-faint"> — </span>
+              <span className="text-ink-subtle"> — </span>
               {critico.titulo}
             </p>
             {/* O CTA leva para onde a ação acontece — é o que o rótulo do
@@ -78,7 +78,7 @@ export function CriticalBanner() {
               type="button"
               onClick={() => setDispensados((d) => [...d, critico.id])}
               aria-label="Dispensar faixa de alerta crítico"
-              className="shrink-0 rounded-full p-1 text-ink-faint transition-colors hover:text-ink"
+              className="shrink-0 rounded-full p-1 text-ink-subtle transition-colors hover:text-ink"
             >
               <X size={13} aria-hidden="true" />
             </button>
