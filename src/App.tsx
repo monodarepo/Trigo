@@ -91,6 +91,8 @@ export default function App() {
                 }
               />
             ))}
+            {/* Alias: a rota canônica de Estoques & Blends é /estoques. */}
+            <Route path="/estoques-blends" element={<Navigate to="/estoques" replace />} />
             {/* QA temporário dos primitivos — não listado na sidebar */}
             <Route path="/showcase" element={<Showcase />} />
             <Route path="*" element={<Navigate to="/" replace />} />

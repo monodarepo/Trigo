@@ -259,4 +259,11 @@ export {
   resumoPorRegiao,
 } from './comercial'
 export { CENARIOS_MAKE_BUY_SELL, CENARIO_MBS_ANCORA, KPIS_FARINHA } from './makeBuySell'
+export { TLC_BASELINE_RS, TLC_RECOMENDADO_RS, calcularTlcMock } from './tlc'
+export {
+  ESPECIFICACOES_BLEND,
+  LOTES_TRIGO,
+  analisarLotes,
+  otimizarBlend,
+} from './estoqueTrigo'
 export { FONTES, FONTES_LISTA, FONTE_FRANKFURTER, FONTE_OPEN_METEO, FONTE_GDELT, FONTE_WHEAT_REF, fonteDe } from './sources'
