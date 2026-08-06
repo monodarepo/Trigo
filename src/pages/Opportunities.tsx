@@ -314,7 +314,9 @@ export default function Opportunities() {
       </div>
 
       {/* Mapa + guardrail */}
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)] xl:items-start">
+      {/* O mapa ganhou linha própria: com o contorno real do Brasil, espremê-lo
+          em 1,35fr deixava os rótulos de Centro-Oeste e Sudeste encavalados. */}
+      <div className="space-y-4">
         <Card className="space-y-3">
           <div className="flex flex-wrap items-start justify-between gap-2">
             <div>
@@ -340,7 +342,7 @@ export default function Opportunities() {
             dados={regioes}
             selecionada={regiao}
             onSelecionar={setRegiao}
-            ariaLabel="Esquema das regiões comerciais com a melhor margem unitária de cada uma: Norte e Nordeste no topo, Centro-Oeste ao centro, Sudeste à direita, Sul embaixo e Exportação fora do continente. Os mesmos números estão na lista ao lado e na tabela abaixo."
+            ariaLabel="Mapa do Brasil por região comercial, com a melhor margem unitária de cada uma e o destino de exportação fora do continente. Os mesmos números estão na lista ao lado e na tabela abaixo, ambas navegáveis por teclado."
           />
         </Card>
 
@@ -365,7 +367,7 @@ export default function Opportunities() {
             — e a margem dessa parcela passa a ser medida contra o preço de reposição, não contra o
             custo marginal.
           </p>
-          <ul className="space-y-2">
+          <ul className="grid gap-2 lg:grid-cols-2">
             {comRuptura.map((o) => {
               const s = SEMAFORO[o.guardrail.semaforo]
               return (

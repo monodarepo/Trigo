@@ -120,6 +120,29 @@ export function Sidebar({ showClose = false, onClose, onNavigate }: SidebarProps
             GDELT
           </a>
         </p>
+        {/* A malha do mapa é CC BY 4.0 e exige atribuição — mesmo estando
+            versionada no bundle em vez de ser buscada em runtime. */}
+        <p className="mt-0.5 text-[10px] leading-relaxed text-ink-faint">
+          Mapa:{' '}
+          <a
+            href="https://www.ibge.gov.br/geociencias/organizacao-do-territorio/malhas-territoriais"
+            target="_blank"
+            rel="noreferrer"
+            className="underline-offset-2 hover:text-ink-subtle hover:underline"
+          >
+            malha territorial do IBGE
+          </a>{' '}
+          via{' '}
+          <a
+            href="https://github.com/VictorCazanave/svg-maps"
+            target="_blank"
+            rel="noreferrer"
+            className="underline-offset-2 hover:text-ink-subtle hover:underline"
+          >
+            @svg-maps/brazil
+          </a>{' '}
+          (CC BY 4.0)
+        </p>
         <p className="mt-0.5 text-[10px] text-ink-faint">Uso comercial exige revisão de licenciamento.</p>
       </div>
     </div>

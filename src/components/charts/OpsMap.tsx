@@ -1,16 +1,19 @@
 import { colors } from '../../theme/tokens'
 import { formatBRL, formatTon } from '../../data/format'
+import { REGIOES_MAPA } from '../../data/mapaBrasil'
 import type { RegiaoComercial } from '../../data/types'
 
 /**
- * Mapa operacional das regiões comerciais. É um ESQUEMA, não cartografia: as
- * regiões são blocos posicionados na orientação geográfica correta, o que
- * basta para ler "onde" sem fingir precisão de fronteira que o mockup não tem.
- * A exportação fica fora do continente, do lado do oceano, porque não é uma
- * região do país — é um destino.
+ * Mapa operacional das regiões comerciais sobre o CONTORNO OFICIAL do Brasil
+ * (malha do IBGE, via @svg-maps/brazil — CC BY 4.0). Cada estado é desenhado
+ * separadamente e pintado pela cor da sua região: as divisas internas aparecem
+ * e a leitura fica cartográfica de verdade, sem que a cor deixe de ser por
+ * região — que é a unidade em que a decisão comercial acontece.
  *
- * A intensidade da cor é a MARGEM TOTAL da região; o tamanho do bloco não
- * codifica nada (é geografia), então nenhuma leitura de área é sugerida.
+ * A intensidade do dourado é a MELHOR MARGEM UNITÁRIA da região; a área de cada
+ * região é geografia e não codifica nada, então nenhuma leitura de tamanho é
+ * sugerida. Exportação não é uma região do país — é um destino —, então fica
+ * fora do continente, do outro lado da linha d'água.
  */
 
 export interface RegiaoMapa {
@@ -36,137 +39,214 @@ export interface OpsMapProps {
   ariaLabel: string
 }
 
-/** Blocos em coordenadas do viewBox 0 0 320 300 — orientação geográfica. */
-const FORMAS: Record<RegiaoComercial, { d: string; cx: number; cy: number }> = {
-  norte: {
-    d: 'M28 34 h132 a10 10 0 0 1 10 10 v74 a10 10 0 0 1 -10 10 h-96 a10 10 0 0 1 -10 -10 v-30 h-26 a10 10 0 0 1 -10 -10 v-34 a10 10 0 0 1 10 -10 z',
-    cx: 92,
-    cy: 78,
-  },
-  nordeste: {
-    d: 'M182 30 h72 a10 10 0 0 1 10 10 v96 a10 10 0 0 1 -10 10 h-72 a10 10 0 0 1 -10 -10 v-96 a10 10 0 0 1 10 -10 z',
-    cx: 218,
-    cy: 88,
-  },
-  'centro-oeste': {
-    d: 'M74 140 h84 a10 10 0 0 1 10 10 v50 a10 10 0 0 1 -10 10 h-84 a10 10 0 0 1 -10 -10 v-50 a10 10 0 0 1 10 -10 z',
-    cx: 116,
-    cy: 175,
-  },
-  sudeste: {
-    d: 'M182 158 h64 a10 10 0 0 1 10 10 v48 a10 10 0 0 1 -10 10 h-64 a10 10 0 0 1 -10 -10 v-48 a10 10 0 0 1 10 -10 z',
-    cx: 214,
-    cy: 192,
-  },
-  sul: {
-    d: 'M96 224 h74 a10 10 0 0 1 10 10 v34 a10 10 0 0 1 -10 10 h-74 a10 10 0 0 1 -10 -10 v-34 a10 10 0 0 1 10 -10 z',
-    cx: 133,
-    cy: 251,
-  },
-  exportacao: {
-    d: 'M272 176 h34 a8 8 0 0 1 8 8 v52 a8 8 0 0 1 -8 8 h-34 a8 8 0 0 1 -8 -8 v-52 a8 8 0 0 1 8 -8 z',
-    cx: 289,
-    cy: 210,
-  },
-}
+/**
+ * O viewBox do Brasil é 613×639; estendemos a largura para abrir o oceano à
+ * direita, onde mora o bloco de exportação. As coordenadas do país seguem
+ * intactas — o mapa não é reescalado para caber o destino externo.
+ */
+const LARGURA_TOTAL = 790
+const ALTURA = 639
+const EXPORTACAO = { x: 646, y: 250, largura: 128, altura: 150 }
 
-const ORDEM: RegiaoComercial[] = [
-  'norte',
-  'nordeste',
-  'centro-oeste',
-  'sudeste',
-  'sul',
-  'exportacao',
-]
+/** Onde cai o rótulo de cada região — centro visual vindo do gerador. */
+const CENTROS = new Map(REGIOES_MAPA.map((r) => [r.id, r.centro]))
+
+/**
+ * Ajustes finos de rótulo, em unidades do viewBox. O centro ponderado pela área
+ * é bom para achar a região, mas em duas delas ele cai onde o texto encavala:
+ * no Nordeste, perto demais do litoral; no Sudeste, sobre a divisa com o Sul.
+ */
+const AJUSTE_ROTULO: Partial<Record<RegiaoComercial, { dx: number; dy: number }>> = {
+  nordeste: { dx: -18, dy: -6 },
+  sudeste: { dx: 4, dy: -10 },
+  sul: { dx: -6, dy: 6 },
+}
 
 export function OpsMap({ dados, selecionada, onSelecionar, ariaLabel }: OpsMapProps) {
   const porRegiao = new Map(dados.map((d) => [d.regiao, d]))
   const maiorMargem = Math.max(1, ...dados.map((d) => d.melhorMargemRsT))
+  const exportacao = porRegiao.get('exportacao')
+
+  /** Cor e opacidade de uma região — a mesma sintaxe do resto do produto. */
+  const pintura = (d: RegiaoMapa | undefined) => {
+    const semDados = !d || d.oportunidades === 0
+    // Cor como sintaxe: dourado = valor, rosa = destruição de valor. Pintar
+    // margem negativa de dourado claro sugeriria oportunidade onde há perda.
+    const negativa = !semDados && d.melhorMargemRsT < 0
+    return {
+      semDados,
+      negativa,
+      cor: semDados ? colors.surface.s3 : negativa ? colors.semantic.danger : colors.gold.primary,
+      opacidade: semDados
+        ? 0.35
+        : negativa
+          ? 0.55
+          : Math.max(0.22, Math.min(1, d.melhorMargemRsT / maiorMargem)),
+    }
+  }
 
   return (
     <div>
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
         <svg
-          viewBox="0 0 320 300"
-          className="h-auto w-full max-w-[320px] shrink-0"
+          viewBox={`0 0 ${LARGURA_TOTAL} ${ALTURA}`}
+          className="h-auto w-full shrink-0 lg:max-w-[640px]"
           role="img"
           aria-label={ariaLabel}
         >
           {/* Linha d'água: separa o continente do destino de exportação. */}
           <line
-            x1={262}
-            y1={20}
-            x2={262}
-            y2={286}
+            x1={624}
+            y1={40}
+            x2={624}
+            y2={ALTURA - 40}
             stroke={colors.navy.border}
-            strokeDasharray="3 5"
+            strokeDasharray="6 10"
           />
-          <text x={289} y={166} textAnchor="middle" fontSize={9} fill={colors.text.faint}>
-            fora do país
-          </text>
 
-          {ORDEM.map((regiao) => {
+          {REGIOES_MAPA.map((regiaoMapa) => {
+            const regiao = regiaoMapa.id as RegiaoComercial
             const d = porRegiao.get(regiao)
-            const forma = FORMAS[regiao]
             const ativa = selecionada === regiao
-            const semDados = !d || d.oportunidades === 0
-            // Cor como sintaxe: dourado = valor, rosa = destruição de valor.
-            // Pintar margem negativa de dourado claro sugeriria oportunidade.
-            const negativa = !semDados && d.melhorMargemRsT < 0
-            const intensidade = semDados
-              ? 0.06
-              : negativa
-                ? 0.3
-                : Math.max(0.12, d.melhorMargemRsT / maiorMargem)
+            const { semDados, negativa, cor, opacidade } = pintura(d)
             const clicavel = Boolean(onSelecionar) && !semDados
+            const centro = CENTROS.get(regiaoMapa.id)!
+            const ajuste = AJUSTE_ROTULO[regiao] ?? { dx: 0, dy: 0 }
+            const cx = centro.x + ajuste.dx
+            const cy = centro.y + ajuste.dy
+
             return (
               <g
                 key={regiao}
-                onClick={
-                  clicavel ? () => onSelecionar?.(ativa ? null : regiao) : undefined
-                }
+                onClick={clicavel ? () => onSelecionar?.(ativa ? null : regiao) : undefined}
                 style={{ cursor: clicavel ? 'pointer' : 'default' }}
               >
-                <path
-                  d={forma.d}
-                  fill={semDados ? colors.surface.s3 : negativa ? colors.semantic.danger : colors.gold.primary}
-                  fillOpacity={semDados ? 0.5 : intensidade}
-                  stroke={ativa ? colors.gold.light : colors.navy.border}
-                  strokeWidth={ativa ? 2 : 1}
-                />
-                {d && d.temRuptura && (
+                {/* Um path por estado: as divisas internas aparecem, mas a cor
+                    continua sendo a da região — a unidade da decisão. */}
+                {regiaoMapa.estados.map((estado) => (
+                  <path
+                    key={estado.uf}
+                    d={estado.d}
+                    fill={cor}
+                    fillOpacity={ativa ? Math.min(1, opacidade + 0.2) : opacidade}
+                    stroke={ativa ? colors.gold.light : colors.surface.base}
+                    strokeWidth={ativa ? 1.6 : 1}
+                    strokeLinejoin="round"
+                  >
+                    <title>
+                      {estado.nome} · {regiaoMapa.rotulo}
+                      {d ? ` · ${formatBRL(d.melhorMargemRsT, { casas: 0 })}/t` : ''}
+                    </title>
+                  </path>
+                ))}
+
+                {/* Acima e à direita do rótulo, longe o bastante para não
+                    encostar na primeira linha do texto em nenhuma região. */}
+                {d?.temRuptura && (
                   <circle
-                    cx={forma.cx + 30}
-                    cy={forma.cy - 22}
-                    r={5}
+                    cx={cx + 58}
+                    cy={cy - 42}
+                    r={9}
                     fill={colors.semantic.danger}
                     stroke={colors.surface.base}
-                    strokeWidth={1.5}
+                    strokeWidth={2.5}
                   />
                 )}
+
+                {/* Rótulo com contorno escuro: o mapa tem fundo claro e escuro
+                    sob o mesmo texto, e sem o traço o nome some sobre o dourado. */}
                 <text
-                  x={forma.cx}
-                  y={forma.cy - 4}
+                  x={cx}
+                  y={cy - 4}
                   textAnchor="middle"
-                  fontSize={10}
-                  fontWeight={ativa ? 700 : 500}
-                  fill={ativa ? colors.gold.light : colors.text.muted}
+                  fontSize={23}
+                  fontWeight={ativa ? 700 : 600}
+                  fill={ativa ? colors.gold.light : colors.text.strong}
+                  stroke={colors.surface.base}
+                  strokeWidth={4}
+                  paintOrder="stroke"
+                  style={{ pointerEvents: 'none' }}
                 >
-                  {d?.rotulo ?? regiao}
+                  {d?.rotulo ?? regiaoMapa.rotulo}
                 </text>
                 <text
-                  x={forma.cx}
-                  y={forma.cy + 10}
+                  x={cx}
+                  y={cy + 22}
                   textAnchor="middle"
-                  fontSize={10}
+                  fontSize={22}
                   fill={semDados ? colors.text.faint : negativa ? colors.semantic.danger : colors.text.strong}
-                  style={{ fontVariantNumeric: 'tabular-nums' }}
+                  stroke={colors.surface.base}
+                  strokeWidth={4}
+                  paintOrder="stroke"
+                  style={{ fontVariantNumeric: 'tabular-nums', pointerEvents: 'none' }}
                 >
-                  {semDados ? '—' : `${formatBRL(d.melhorMargemRsT, { casas: 0 })}/t`}
+                  {semDados || !d ? '—' : `${formatBRL(d.melhorMargemRsT, { casas: 0 })}/t`}
                 </text>
               </g>
             )
           })}
+
+          {/* Exportação: destino, não região — fica no oceano, do outro lado. */}
+          {(() => {
+            const { semDados, negativa, cor, opacidade } = pintura(exportacao)
+            const clicavel = Boolean(onSelecionar) && !semDados
+            const ativa = selecionada === 'exportacao'
+            const cx = EXPORTACAO.x + EXPORTACAO.largura / 2
+            const cy = EXPORTACAO.y + EXPORTACAO.altura / 2
+            return (
+              <g
+                onClick={clicavel ? () => onSelecionar?.(ativa ? null : 'exportacao') : undefined}
+                style={{ cursor: clicavel ? 'pointer' : 'default' }}
+              >
+                <text x={cx} y={EXPORTACAO.y - 16} textAnchor="middle" fontSize={19} fill={colors.text.faint}>
+                  fora do país
+                </text>
+                <rect
+                  x={EXPORTACAO.x}
+                  y={EXPORTACAO.y}
+                  width={EXPORTACAO.largura}
+                  height={EXPORTACAO.altura}
+                  rx={16}
+                  fill={cor}
+                  fillOpacity={ativa ? Math.min(1, opacidade + 0.2) : opacidade}
+                  stroke={ativa ? colors.gold.light : colors.navy.border}
+                  strokeWidth={ativa ? 2.5 : 1.5}
+                  strokeDasharray={ativa ? undefined : '7 5'}
+                />
+                {exportacao?.temRuptura && (
+                  <circle
+                    cx={EXPORTACAO.x + EXPORTACAO.largura - 12}
+                    cy={EXPORTACAO.y + 12}
+                    r={9}
+                    fill={colors.semantic.danger}
+                    stroke={colors.surface.base}
+                    strokeWidth={2.5}
+                  />
+                )}
+                <text
+                  x={cx}
+                  y={cy - 4}
+                  textAnchor="middle"
+                  fontSize={23}
+                  fontWeight={ativa ? 700 : 600}
+                  fill={ativa ? colors.gold.light : colors.text.strong}
+                  style={{ pointerEvents: 'none' }}
+                >
+                  {exportacao?.rotulo ?? 'Exportação'}
+                </text>
+                <text
+                  x={cx}
+                  y={cy + 22}
+                  textAnchor="middle"
+                  fontSize={22}
+                  fill={semDados ? colors.text.faint : negativa ? colors.semantic.danger : colors.text.strong}
+                  style={{ fontVariantNumeric: 'tabular-nums', pointerEvents: 'none' }}
+                >
+                  {semDados || !exportacao ? '—' : `${formatBRL(exportacao.melhorMargemRsT, { casas: 0 })}/t`}
+                </text>
+              </g>
+            )
+          })()}
         </svg>
 
         <ul className="min-w-0 flex-1 space-y-1.5">
@@ -219,10 +299,11 @@ export function OpsMap({ dados, selecionada, onSelecionar, ariaLabel }: OpsMapPr
       </div>
 
       <p className="mt-3 text-11 leading-relaxed text-ink-subtle">
-        Esquema geográfico, não mapa cartográfico: a intensidade do dourado é a melhor margem
-        unitária da região, rosa marca margem negativa, e o tamanho do bloco não significa nada. O
-        ponto rosa no canto sinaliza região com oportunidade que só é atendida rompendo o
-        abastecimento das fábricas.
+        Contorno oficial do Brasil (malha do IBGE). A intensidade do dourado é a melhor margem
+        unitária da região e rosa marca margem negativa — a área de cada região é geografia e não
+        significa nada. O ponto rosa sinaliza região com oportunidade que só é atendida rompendo o
+        abastecimento das fábricas. Exportação fica fora do continente porque é um destino, não uma
+        região do país.
       </p>
     </div>
   )

@@ -132,6 +132,13 @@ pulso oscila — o restante do app funciona exatamente igual.
   `PWHEAMTUSDM` (Global price of Wheat, FMI), servida via [Alpha Vantage](https://www.alphavantage.co/)
   pelo proxy `api/wheat.ts`.
 - **Notícias**: [GDELT Project](https://www.gdeltproject.org/) — DOC 2.0 API (monitoramento global de notícias, gratuito).
+- **Mapa do Brasil**: malha territorial oficial do [IBGE](https://www.ibge.gov.br/geociencias/organizacao-do-territorio/malhas-territoriais),
+  via o pacote [`@svg-maps/brazil`](https://github.com/VictorCazanave/svg-maps) (**CC BY 4.0**, Victor Cazanave).
+  A geometria é **versionada** em `src/data/mapaBrasil.ts` — gerada por
+  [`scripts/gerar-mapa-brasil.mjs`](scripts/gerar-mapa-brasil.mjs), que converte os paths para
+  coordenadas absolutas, simplifica com Douglas-Peucker e agrupa os 27 estados nas 5 regiões do IBGE.
+  Rode `node scripts/gerar-mapa-brasil.mjs` para regenerar. Não há fetch em runtime: o modo Cenário
+  não depende de rede, e um mapa que falha ao carregar quebraria a demo.
 
 > **Licenciamento**: os planos gratuitos acima cobrem este protótipo de demonstração. **Uso
 > comercial/produtivo exige revisão de licenciamento** de cada fonte (termos da Alpha Vantage,
