@@ -6,6 +6,15 @@ import { TLC_BASELINE_RS, TLC_RECOMENDADO_RS } from './tlc'
 export const VOLUME_TRIMESTRE_T = 178_000
 
 /**
+ * Custo landed orçado para o trimestre (R$/t de trigo). É a referência contra
+ * a qual o CFO mede o desvio — diferente do baseline de R$ 1.520/t, que é o
+ * cenário de NÃO agir. Confundir os dois faz o mesmo lote parecer economia
+ * (vs baseline) e estouro (vs orçamento) sem que ninguém note que são réguas
+ * distintas: o baseline é uma previsão, o orçamento é um compromisso.
+ */
+export const ORCAMENTO_TRIGO_RS_T = 1_450
+
+/**
  * Posição de estoque por moinho (dias de cobertura vs política mínima).
  * Natal já reflete o atraso de +6 dias do MV Río Paraná (19 dias);
  * Fortaleza está abaixo da política (21 < 30) — ambos geram alertas.

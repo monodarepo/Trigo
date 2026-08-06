@@ -23,6 +23,8 @@ import {
   formatBRL,
   formatDataPt,
   formatPct,
+  getAgente,
+  type AlternativaMbs,
   type ComponenteTLC,
   type RecomendacaoVRO,
   type StatusRegraDado,
@@ -56,9 +58,22 @@ const ALAVANCA_ROTULO: Record<RecomendacaoVRO['alavanca'], string> = {
   'qualidade-blend': 'Blend',
   integracao: 'Integração',
   hedge: 'Hedge',
+  'margem-farinha': 'Margem/farinha',
 }
 
-const maiorValor = Math.max(...vro.recomendacoes.map((r) => Math.abs(r.valorCpvRs + r.valorHedgeRs)))
+/** Rótulo curto da decisão Make/Buy/Sell na trilha. */
+const ROTULO_MBS: Record<AlternativaMbs, string> = {
+  'produzir-consumir': 'Produzir',
+  comprar: 'Comprar',
+  'produzir-vender': 'Vender',
+  estoque: 'Estocar',
+  'parar-moagem': 'Parar',
+}
+
+/** Valor total de uma linha: CPV + hedge + margem da cadeia. */
+const totalDe = (r: RecomendacaoVRO) => r.valorCpvRs + r.valorHedgeRs + (r.valorMargemRs ?? 0)
+
+const maiorValor = Math.max(...vro.recomendacoes.map((r) => Math.abs(totalDe(r))))
 
 const colunas: DataTableColumn<RecomendacaoVRO>[] = [
   {
@@ -82,7 +97,11 @@ const colunas: DataTableColumn<RecomendacaoVRO>[] = [
         </button>
         <div className="mt-1 flex flex-wrap items-center gap-1.5">
           <Pill tone="neutral">{ALAVANCA_ROTULO[r.alavanca]}</Pill>
+          {r.decisaoMbs && <Pill tone="positive">{ROTULO_MBS[r.decisaoMbs]}</Pill>}
           <span className="tnums text-[11px] text-ink-faint">confiança {formatPct(r.confiancaPct)}</span>
+          {r.agenteId && (
+            <span className="text-[11px] text-ink-faint">· {getAgente(r.agenteId)?.nome}</span>
+          )}
         </div>
       </div>
     ),
@@ -107,9 +126,9 @@ const colunas: DataTableColumn<RecomendacaoVRO>[] = [
     key: 'valor',
     header: 'Valor capturado',
     align: 'right',
-    sortValue: (r) => r.valorCpvRs + r.valorHedgeRs,
+    sortValue: totalDe,
     render: (r) => {
-      const total = r.valorCpvRs + r.valorHedgeRs
+      const total = totalDe(r)
       const largura = Math.round((Math.abs(total) / maiorValor) * 100)
       return (
         <div className="min-w-[120px]">
@@ -146,6 +165,9 @@ const componentesWaterfall: ComponenteTLC[] = vro.alavancas.map((a) => ({
   tipo: a.alavanca === 'integracao' ? 'imposto' : 'fob',
 }))
 const totalWaterfallM = Math.round((m.cpvCapturadoYtdRs / 1e6) * 10) / 10
+
+/** Escala das barras de margem por decisão. */
+const maiorMargem = Math.max(1, ...vro.margemPorDecisao.map((d) => d.valorRs))
 
 // --- Curva acumulada ---
 const dadosCurva = vro.curva.map((p) => ({
@@ -195,8 +217,8 @@ export default function Vro() {
         actions={<Badge kind="status" label={`Run-rate ${formatBRL(m.runRateAnualRs, { compacto: true })}/ano · case R$ 38–80M`} tone="gold" />}
       />
 
-      {/* 1 · KPIs animados */}
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-5">
+      {/* 1 · KPIs animados — três fontes de valor, cada uma no seu campo */}
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-6">
         <KpiTile
           label="Valor capturado YTD (CPV)"
           value={<AnimatedNumber deZero valor={m.cpvCapturadoYtdRs} duracaoMs={900} formatar={(v) => formatBRL(v, { compacto: true })} />}
@@ -210,10 +232,16 @@ export default function Vro() {
           fonte={<SourceBadge familia="cambio" />}
         />
         <KpiTile
+          label="Margem capturada (Make/Buy/Sell)"
+          value={<AnimatedNumber deZero valor={m.margemCapturadaYtdRs} duracaoMs={900} formatar={(v) => formatBRL(v, { compacto: true })} />}
+          hint="Decisões de destino da farinha"
+          fonte={<SourceBadge familia="estoque" />}
+        />
+        <KpiTile
           label="Impacto EBITDA YTD"
           value={<AnimatedNumber deZero valor={m.ebitdaIncrementalYtdRs} duracaoMs={900} formatar={(v) => formatBRL(v, { compacto: true })} />}
           delta={{ label: fmtPp(m.ebitdaIncrementalPp), direction: 'up', tone: 'positive' }}
-          hint="CPV + hedge, sem dupla contagem"
+          hint="CPV + hedge + margem, sem dupla contagem"
         />
         <KpiTile
           label="Acurácia do modelo"
@@ -273,6 +301,44 @@ export default function Vro() {
               ariaLabel={`Waterfall do valor capturado no CPV por alavanca: total de ${formatBRL(m.cpvCapturadoYtdRs, { compacto: true })}`}
             />
           </div>
+        </Card>
+
+        {/* 3b · De onde veio a MARGEM (produzir / comprar / vender) */}
+        <Card>
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <h3 className="font-display text-base font-semibold text-ink">De onde veio a margem</h3>
+              <p className="mt-0.5 text-xs text-ink-subtle">
+                Decisões Make/Buy/Sell, YTD — separadas do CPV para não misturar os elos
+              </p>
+            </div>
+            <p className="tnums font-display text-2xl font-semibold text-positive">
+              {formatBRL(m.margemCapturadaYtdRs, { compacto: true })}
+            </p>
+          </div>
+          <ul className="mt-4 space-y-2.5">
+            {vro.margemPorDecisao.map((d) => {
+              const largura = Math.round((d.valorRs / maiorMargem) * 100)
+              return (
+                <li key={d.decisao}>
+                  <div className="flex items-center justify-between gap-3 text-xs">
+                    <span className="font-medium text-ink">{d.rotulo}</span>
+                    <span className="tnums font-mono font-semibold text-positive">
+                      {formatBRL(d.valorRs, { compacto: true })}
+                    </span>
+                  </div>
+                  <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-edge/40">
+                    <div className="h-full rounded-full bg-positive/80" style={{ width: `${largura}%` }} />
+                  </div>
+                </li>
+              )
+            })}
+          </ul>
+          <p className="mt-3 border-t border-edge/60 pt-3 text-[11px] leading-relaxed text-ink-subtle">
+            <span className="font-semibold text-ink">Comprar e recusar venda também geram valor.</span> O que se mede
+            é a diferença contra a segunda melhor decisão — perda evitada conta tanto quanto ganho capturado. Se só
+            contássemos o resultado de produzir, o hub pareceria inútil justamente quando evita o erro mais caro.
+          </p>
         </Card>
 
         {/* 6 · Data quality — a qualidade do dado é gerida, não presumida */}
@@ -357,7 +423,7 @@ export default function Vro() {
               </ResponsiveContainer>
             </div>
             <p className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-ink-subtle">
-              <span className="flex items-center gap-1.5"><span className="h-0.5 w-4 rounded bg-gold" aria-hidden="true" />Capturado (CPV + hedge)</span>
+              <span className="flex items-center gap-1.5"><span className="h-0.5 w-4 rounded bg-gold" aria-hidden="true" />Capturado (CPV + hedge + margem)</span>
               <span className="flex items-center gap-1.5"><span className="h-0.5 w-4 rounded bg-ink-faint" aria-hidden="true" />Meta</span>
               <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-azure" aria-hidden="true" />+ recomendação do dia</span>
             </p>
@@ -405,7 +471,9 @@ export default function Vro() {
       <Card padding="sm">
         <p className="text-xs italic text-ink-subtle">
           IA recomenda, humano decide, resultado é medido — sem dupla contagem (haircut de 15–20% aplicado ao valor
-          atribuído). Misses contam contra o placar: transparência é o que sustenta a confiança no modelo.
+          atribuído). As três fontes de valor andam em campos separados: CPV é o que se economizou comprando trigo,
+          hedge é o que se protegeu no câmbio e margem é o que se ganhou decidindo o destino da farinha depois do
+          moinho. Misses contam contra o placar: transparência é o que sustenta a confiança no modelo.
         </p>
       </Card>
     </div>

@@ -389,16 +389,49 @@ export interface CenarioSimulador {
 // Alertas e copiloto
 // ---------------------------------------------------------------------------
 
+/**
+ * Categorias de alerta. As quatro últimas nasceram com o elo da farinha:
+ * `farinha` (custo/preço da farinha), `moinho` (eficiência e capacidade),
+ * `margem` (a decisão Make/Buy/Sell muda) e `comercial` (venda a terceiros).
+ */
+export type CategoriaAlerta =
+  | 'mercado'
+  | 'cambio'
+  | 'logistica'
+  | 'estoque'
+  | 'hedge'
+  | 'qualidade'
+  | 'farinha'
+  | 'moinho'
+  | 'margem'
+  | 'comercial'
+
 export interface Alerta {
   id: string
   severidade: 'critico' | 'alto' | 'medio' | 'info'
-  categoria: 'mercado' | 'cambio' | 'logistica' | 'estoque' | 'hedge' | 'qualidade'
+  categoria: CategoriaAlerta
   timestamp: string
   titulo: string
   descricao: string
   /** Rota da tela onde a ação sugerida acontece. */
   acaoRota: string
   acaoRotulo: string
+  /**
+   * Impacto financeiro do alerta. POSITIVO = valor a capturar se agir;
+   * NEGATIVO = perda em curso ou risco a evitar. Ausente quando o alerta é
+   * informativo e não tem número atribuível — preferir omitir a inventar.
+   */
+  impactoRs?: number
+  /**
+   * A BASE do impacto. Sem isto, um desvio trimestral de orçamento entraria no
+   * mesmo somatório de um custo mensal de armazenagem e o total do topo seria
+   * uma soma de coisas diferentes. Só a base 'mes' é agregada.
+   */
+  impactoBase?: 'mes' | 'trimestre' | 'evento'
+  /** Qualifica o impacto ("potencial, sem pedido fechado", "no lote"). */
+  impactoNota?: string
+  /** Agente que levantou o alerta (src/data/agentes.ts). */
+  agenteId?: AgenteId
 }
 
 export interface ReferenciaCopiloto {
@@ -437,6 +470,8 @@ export interface RespostaRicaCopiloto {
   id: string
   pergunta: string
   texto: string
+  /** Agentes que compuseram a resposta — o orquestrador vem sempre por último. */
+  agentes?: AgenteId[]
   bullets?: string[]
   tabela?: TabelaCopiloto
   recomendacao?: MiniRecomendacaoCopiloto
@@ -460,7 +495,18 @@ export interface KpiExposicao {
   margemEbitdaPct: number
 }
 
-export type AlavancaVRO = 'mercado-compra' | 'logistica-estoques' | 'qualidade-blend' | 'integracao' | 'hedge'
+/**
+ * Alavancas de valor do hub. `margem-farinha` é a alavanca do elo 2→5: o valor
+ * que nasce de decidir produzir, comprar ou vender farinha — separada de
+ * `mercado-compra` porque não vive no CPV do trigo, e sim na margem da cadeia.
+ */
+export type AlavancaVRO =
+  | 'mercado-compra'
+  | 'logistica-estoques'
+  | 'qualidade-blend'
+  | 'integracao'
+  | 'hedge'
+  | 'margem-farinha'
 
 /** Uma recomendação do hub: o que a IA sugeriu, o que o humano decidiu, o que o resultado mediu. */
 export interface RecomendacaoVRO {
@@ -476,8 +522,19 @@ export interface RecomendacaoVRO {
   valorCpvRs: number
   /** Valor protegido por hedge (R$). */
   valorHedgeRs: number
+  /**
+   * Valor capturado na MARGEM da cadeia (R$): decisões de produzir, comprar ou
+   * vender farinha. Fica em campo próprio — somá-lo ao CPV misturaria economia
+   * na compra do trigo com margem gerada depois do moinho, e o waterfall por
+   * alavanca deixaria de fechar com o KPI de CPV.
+   */
+  valorMargemRs?: number
+  /** Qual das 5 alternativas foi recomendada (só nas decisões de margem). */
+  decisaoMbs?: AlternativaMbs
   status: 'realizado' | 'projetado'
   confiancaPct: number
+  /** Agente que gerou a recomendação (src/data/agentes.ts). */
+  agenteId?: AgenteId
 }
 
 export interface PontoCurvaVRO {
@@ -491,6 +548,8 @@ export interface PontoCurvaVRO {
 export interface MetricasVRO {
   cpvCapturadoYtdRs: number
   hedgeProtegidoYtdRs: number
+  /** Margem capturada YTD nas decisões Make/Buy/Sell (R$). */
+  margemCapturadaYtdRs: number
   ebitdaIncrementalYtdRs: number
   ebitdaIncrementalPp: number
   runRateAnualRs: number
@@ -507,7 +566,7 @@ export interface MetricasVRO {
 export interface RegistroVRO {
   id: string
   data: string
-  categoria: 'compra' | 'hedge' | 'logistica' | 'blend'
+  categoria: 'compra' | 'hedge' | 'logistica' | 'blend' | 'margem'
   decisao: string
   valorCapturadoRs: number
   status: 'realizado' | 'projetado'
@@ -516,6 +575,12 @@ export interface RegistroVRO {
 export interface RecomendacaoDoDia {
   resumo: string
   probAlta15dPct: number
+  /**
+   * Impacto PROTEGIDO (R$ 4,8M): compra antecipada + hedge cambial. É a âncora
+   * do cenário e NÃO absorve a margem do Make/Buy/Sell — uma é proteção contra
+   * um preço que ainda não aconteceu, a outra é margem recorrente por mês.
+   * Somá-las num único "impacto" misturaria evento com regime.
+   */
   impactoProtegidoRs: number
   memoriaCalculo: {
     compraAntecipadaRs: number
@@ -523,6 +588,17 @@ export interface RecomendacaoDoDia {
   }
   compra: RecomendacaoCompra
   hedge: RecomendacaoHedge
+  /** A terceira perna da decisão do dia: o destino da farinha. */
+  makeBuySell: {
+    /** Frase da decisão ("produzir e consumir; vender X t de excedente"). */
+    resumo: string
+    /** Valor da decisão (R$/mês) — recomendada menos a segunda melhor. */
+    beneficioRs: number
+    /** Excedente destinado ao mercado externo (t de farinha/mês). */
+    excedenteVendidoT: number
+    /** Margem da venda externa no cenário-âncora (R$/t). */
+    margemVendaRsT: number
+  }
 }
 
 /** Clima encenado (estruturalmente compatível com o Clima do provider Open-Meteo). */
@@ -1020,4 +1096,107 @@ export interface KpiFarinha {
   gapInternoMercadoPct: number
   /** 10. Benefício Make/Buy/Sell consolidado (R$/mês). */
   beneficioMakeBuySellRs: number
+}
+
+// ---------------------------------------------------------------------------
+// Os 10 agentes do hub
+// ---------------------------------------------------------------------------
+
+/**
+ * Um agente por PERGUNTA da cadeia, não por fonte de dado. O orquestrador não
+ * calcula nada: ele resolve conflito entre agentes (o de Compra querendo travar
+ * volume e o de Make/Buy/Sell querendo capacidade livre são o caso típico) e é
+ * quem assina a recomendação consolidada do dia.
+ */
+export type AgenteId =
+  | 'mercado'
+  | 'originacao'
+  | 'tlc'
+  | 'moinhos'
+  | 'blend'
+  | 'verticalizacao'
+  | 'make-buy-sell'
+  | 'comercial-farinha'
+  | 'alertas-financeiros'
+  | 'orquestrador'
+
+export interface Agente {
+  id: AgenteId
+  nome: string
+  /** Elo da cadeia em que o agente atua — ordena a leitura do sinal à decisão. */
+  elo: 'sinal' | 'trigo' | 'farinha' | 'margem' | 'governanca'
+  /** A pergunta que o agente responde, em uma linha. */
+  pergunta: string
+  /** O que ele decide/entrega (verbo no infinitivo). */
+  entrega: string
+  /** Telas em que a saída do agente aparece. */
+  rotas: string[]
+  /** Insumos principais — o "de onde vem o número". */
+  fontes: string[]
+  /** Número-síntese que o agente publica hoje (já formatado). */
+  saidaAtual: string
+}
+
+// ---------------------------------------------------------------------------
+// Mercado de FARINHA — preços comparáveis, tendência e concorrência
+// ---------------------------------------------------------------------------
+
+/** Direção do preço da farinha no horizonte de 30 dias. */
+export type TendenciaFarinha = 'subindo' | 'estavel' | 'caindo'
+
+/**
+ * Série de preço de uma farinha COMPARÁVEL (industrial · granel · posto
+ * fábrica) numa região. Só entram cotações apples-to-apples: uma curva que
+ * misturasse canais mostraria "tendência" que é só mudança de mix.
+ */
+export interface SerieFarinhaMercado {
+  id: string
+  farinhaId: FarinhaId
+  regiao: RegiaoComercial
+  /** Preço de hoje (R$/t de farinha) — casa com PRECOS_FARINHA_EXTERNOS. */
+  precoAtualRsT: number
+  /** Últimos 6 meses (R$/t), do mais antigo ao mais recente. */
+  historicoRsT: number[]
+  /** Projeção de 30 dias (R$/t). */
+  projecaoD30RsT: number
+  tendencia: TendenciaFarinha
+  /** O que explica o movimento, em uma linha. */
+  driver: string
+}
+
+/** Um moageiro concorrente na região — quem faz o preço que enfrentamos. */
+export interface ConcorrenteFarinha {
+  id: string
+  nome: string
+  regioes: RegiaoComercial[]
+  /** Capacidade estimada de moagem (t de trigo/mês). */
+  capacidadeMensalT: number
+  /** Farinhas em que compete diretamente conosco. */
+  farinhas: FarinhaId[]
+  /** Posição de preço vs nossa cotação comparável (R$/t; negativo = mais barato). */
+  posicaoPrecoRsT: number
+  perfil: string
+}
+
+/**
+ * Oportunidade regional de preço: onde o mercado paga acima do nosso custo
+ * interno com folga suficiente para valer o frete e o custo de servir.
+ */
+export interface OportunidadeRegionalFarinha {
+  regiao: RegiaoComercial
+  farinhaId: FarinhaId
+  /** Preço comparável na região (R$/t). */
+  precoRsT: number
+  /** Custo interno do moinho que atenderia (R$/t). */
+  custoInternoRsT: number
+  moinhoId: MoinhoId
+  /**
+   * Margem por tonelada à COTAÇÃO GENÉRICA de mercado, já líquida do custo de
+   * servir (R$/t). É o PISO da região, não a margem de um contrato: a cotação
+   * comparável é a mesma que serve de preço de compra equivalente, então
+   * vender a ela é vender no lado errado do spread. Contratos negociados (tela
+   * de Oportunidades Comerciais) ficam acima porque têm cliente, volume e prazo.
+   */
+  margemRsT: number
+  tendencia: TendenciaFarinha
 }

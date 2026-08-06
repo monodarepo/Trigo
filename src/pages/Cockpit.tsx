@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { ArrowRight, ChevronRight, Ship } from 'lucide-react'
+import { ArrowRight, ChevronRight, Factory, Scale, Ship, Store, Wheat } from 'lucide-react'
 import {
   Badge,
   Card,
@@ -40,8 +40,27 @@ import {
 import { avaliarRiscoGeopolitico } from '../live/providers/news'
 import { FONTE_FRANKFURTER, FONTE_WHEAT_REF } from '../data'
 
-const { recomendacaoDoDia, kpis, tlc, compra, hedge, previsao, logistica, alertas, simulador, vro, mercado } =
-  snapshot
+const {
+  recomendacaoDoDia,
+  kpis,
+  tlc,
+  compra,
+  hedge,
+  previsao,
+  logistica,
+  alertas,
+  simulador,
+  vro,
+  mercado,
+  farinha,
+  makeBuySell,
+  comercial,
+  agentes,
+} = snapshot
+
+/** Os 10 KPIs do elo farinha, já derivados do motor econômico. */
+const kf = farinha.kpis
+const orquestrador = agentes.get('orquestrador')!
 
 // --- helpers de apresentação (números continuam vindo do snapshot) ---
 const fmtCambio = (v: number) => `R$ ${v.toFixed(2).replace('.', ',')}`
@@ -183,6 +202,64 @@ const excecoes = [...alertas]
 // --- Faixa de impacto projetado ---
 const perfisOrdem = ['conservador', 'recomendado', 'oportunistico'] as const
 
+// --- Elo farinha → margem: os atalhos para as telas novas da cadeia ---
+const ELOS_DA_CADEIA: Array<{ rota: string; rotulo: string; valor: string; icone: typeof Wheat }> = [
+  {
+    rota: '/moinhos',
+    rotulo: 'Performance dos Moinhos',
+    valor: `${agentes.moinhoMaisCompetitivo.nome} lidera a ${formatBRL(agentes.moinhoMaisCompetitivo.custoInternoRsT)}/t`,
+    icone: Factory,
+  },
+  {
+    rota: '/verticalizacao',
+    rotulo: 'Verticalização',
+    valor: `${formatBRL(kf.ganhoVerticalizacaoRsT)}/t de ganho`,
+    icone: Wheat,
+  },
+  {
+    rota: '/make-buy-sell',
+    rotulo: 'Make/Buy/Sell',
+    valor: `${formatBRL(makeBuySell.beneficioRs, { compacto: true })}/mês de benefício`,
+    icone: Scale,
+  },
+  {
+    rota: '/oportunidades',
+    rotulo: 'Oportunidades Comerciais',
+    valor: `${formatBRL(comercial.margemRecomendadasRs, { compacto: true })}/mês na carteira`,
+    icone: Store,
+  },
+]
+
+/**
+ * A cadeia em três números, na ordem em que o valor se forma. Não é um KPI
+ * solto: o custo da farinha é o que separa o ganho de verticalizar do resultado
+ * de vender — mostrar os três lado a lado é o que impede a leitura de que
+ * "vender rende mais" sem notar de qual custo os dois partem.
+ */
+const CADEIA_MARGEM = [
+  {
+    rotulo: 'Custo interno da farinha',
+    valor: `${formatBRL(kf.custoFarinhaRsT)}/t`,
+    nota: `trigo a ${formatBRL(kf.custoTrigoPostoRsT)}/t · rendimento ${formatPct(kf.rendimentoPct)} · crédito do farelo −${formatBRL(kf.creditoFareloRsT)}/t`,
+    rota: '/moinhos',
+    dominante: true,
+  },
+  {
+    rotulo: 'Ganho da verticalização',
+    valor: `${formatBRL(kf.ganhoVerticalizacaoRsT)}/t`,
+    nota: `vs ${formatBRL(kf.precoExternoEquivalenteRsT)}/t de compra externa na mesma spec`,
+    rota: '/verticalizacao',
+    dominante: false,
+  },
+  {
+    rotulo: 'Margem de venda externa',
+    valor: `${formatBRL(kf.margemVendaExternaRsT)}/t`,
+    nota: `venda líquida de ${formatBRL(makeBuySell.ancora.precoVendaLiquidoRsT)}/t menos custo interno e ${formatBRL(makeBuySell.ancora.custoServirRsT)}/t de custo de servir`,
+    rota: '/oportunidades',
+    dominante: false,
+  },
+]
+
 /** Reflexo do estado de decisão no hero. */
 const BADGE_DECISAO: Record<ModoDecisao, { rotulo: (hora: string) => string; tone: Tone }> = {
   aprovada: { rotulo: (h) => `Aprovada às ${h}`, tone: 'positive' },
@@ -299,6 +376,11 @@ export default function Cockpit() {
             <Pill tone="positive">
               Impacto protegido: {formatBRL(rec.impactoProtegidoRs, { compacto: true })}
             </Pill>
+            {/* A margem anda em pill própria: é R$/mês recorrente, enquanto o
+                impacto protegido é evento. Uma soma esconderia a diferença. */}
+            <Pill tone="gold">
+              Margem Make/Buy/Sell: {formatBRL(rec.makeBuySell.beneficioRs, { compacto: true })}/mês
+            </Pill>
             <Badge kind="confianca" value={rec.compra.confiancaPct} />
           </>
         }
@@ -318,6 +400,11 @@ export default function Cockpit() {
             label: 'Hedge',
             value: formatPct(rec.hedge.coberturaAlvoPct),
             hint: `NDF ${formatUSD(rec.hedge.notionalNovoUsd, { compacto: true })} a ${fmtCambio(rec.hedge.taxaForwardMedia)}`,
+          },
+          {
+            label: 'Destino da farinha',
+            value: 'Produzir e consumir',
+            hint: `vender ${formatTon(rec.makeBuySell.excedenteVendidoT)} de excedente a ${formatBRL(rec.makeBuySell.margemVendaRsT)}/t`,
           },
         ]}
         actions={
@@ -390,6 +477,135 @@ export default function Cockpit() {
         />
       </div>
       </div>
+
+      {/* 2b · A MARGEM DA CADEIA — o elo trigo → farinha → margem em três números */}
+      <Card variant="gold">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <p className="eyebrow">A margem da cadeia</p>
+            <h3 className="mt-1 font-display text-base font-semibold text-ink">
+              Do trigo posto no moinho ao resultado de cada tonelada de farinha
+            </h3>
+          </div>
+          <span className="flex items-center gap-1.5 rounded-full border border-edge px-3 py-1.5 text-[11px] text-ink-subtle">
+            <Scale size={13} className="text-gold" aria-hidden="true" />
+            Par-âncora: Fortaleza × farinha de massas
+          </span>
+        </div>
+
+        <div className="mt-4 grid gap-3 md:grid-cols-3">
+          {CADEIA_MARGEM.map((item, i) => (
+            <Link
+              key={item.rotulo}
+              to={item.rota}
+              className={`group relative block rounded-card border px-4 py-3.5 transition-colors ${
+                item.dominante
+                  ? 'border-gold/50 bg-gold/10 hover:border-gold/70'
+                  : 'border-edge/60 bg-navy/30 hover:border-gold/40'
+              }`}
+            >
+              <p className="eyebrow">{item.rotulo}</p>
+              <p
+                className={`tnums mt-1.5 font-display font-semibold leading-none ${
+                  item.dominante ? 'text-40 text-gold-light' : 'text-28 text-ink'
+                }`}
+              >
+                {item.valor}
+              </p>
+              <p className="mt-2 text-[11px] leading-snug text-ink-subtle">{item.nota}</p>
+              {/* Seta entre os cards: a ordem é a da formação do valor */}
+              {i < CADEIA_MARGEM.length - 1 && (
+                <ArrowRight
+                  size={16}
+                  aria-hidden="true"
+                  className="absolute -right-2.5 top-1/2 hidden -translate-y-1/2 text-ink-faint md:block"
+                />
+              )}
+            </Link>
+          ))}
+        </div>
+
+        {/* Os 5 KPIs novos do elo farinha */}
+        <div className="mt-4 grid grid-cols-2 gap-3 border-t border-edge/60 pt-4 sm:grid-cols-3 xl:grid-cols-5">
+          {/* Sem AnimatedNumber deZero aqui: estes são os números-âncora da tese
+              (R$ 250/t, R$ 280/t). Uma contagem a partir de zero não revela
+              relação nenhuma e, se o rAF não correr, o card exibe "R$ 0" no
+              lugar da âncora — risco que o efeito não paga. */}
+          <KpiTile
+            label="Ganho de verticalização"
+            value={formatBRL(kf.ganhoVerticalizacaoRsT)}
+            unit="/t"
+            hint={`${formatBRL(kf.ganhoVerticalizacaoRsT * snapshot.demanda.necessidadeFarinhaMesT, { compacto: true })}/mês nas ${formatTon(snapshot.demanda.necessidadeFarinhaMesT)} das fábricas`}
+          />
+          <KpiTile
+            label="Margem de venda externa"
+            value={formatBRL(kf.margemVendaExternaRsT)}
+            unit="/t"
+            hint={`carteira recomendada: ${formatBRL(comercial.margemRecomendadasRs, { compacto: true })}/mês`}
+          />
+          <KpiTile
+            label="Utilização da capacidade"
+            value={formatPct(kf.utilizacaoCapacidadePct, 1)}
+            delta={{
+              // O MESMO excedente do hero (plano de demanda). A folga física por
+              // moinho (tela de Moinhos) chega a 12.259 t por outro caminho —
+              // exibir as duas aqui leria como divergência.
+              label: `${formatTon(snapshot.demanda.farinhaDisponivelMercadoT)} de excedente após a demanda das fábricas`,
+              direction: 'flat',
+              tone: 'info',
+            }}
+          />
+          <KpiTile
+            label="Gap interno vs mercado"
+            value={formatPct(kf.gapInternoMercadoPct, 1)}
+            hint={`custo interno ${formatPct(kf.gapInternoMercadoPct, 1)} abaixo do preço externo comparável`}
+          />
+          <KpiTile
+            label="Benefício Make/Buy/Sell"
+            value={formatBRL(makeBuySell.beneficioRs, { compacto: true })}
+            delta={{ label: 'vs a 2ª melhor decisão', direction: 'up', tone: 'positive' }}
+            hint="por mês, nos 6 pares moinho × farinha"
+          />
+        </div>
+
+        {/* Atalhos para as telas novas da cadeia */}
+        <div className="mt-4 grid gap-2 border-t border-edge/60 pt-4 sm:grid-cols-2 xl:grid-cols-4">
+          {ELOS_DA_CADEIA.map((elo) => (
+            <Link
+              key={elo.rota}
+              to={elo.rota}
+              className="group flex items-center gap-3 rounded-card border border-edge/60 bg-navy/30 px-3 py-2.5 transition-colors hover:border-gold/40 hover:bg-white/5"
+            >
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-card-2 text-gold">
+                <elo.icone size={15} aria-hidden="true" />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-xs font-semibold text-ink">{elo.rotulo}</span>
+                <span className="tnums block truncate text-[11px] text-ink-subtle">{elo.valor}</span>
+              </span>
+              <ChevronRight
+                size={14}
+                aria-hidden="true"
+                className="shrink-0 text-ink-faint transition-transform group-hover:translate-x-0.5 group-hover:text-gold"
+              />
+            </Link>
+          ))}
+        </div>
+
+        {/* Quem assina — e o conflito que o orquestrador resolveu hoje */}
+        <div className="mt-4 border-t border-edge/60 pt-3">
+          <p className="text-[11px] leading-relaxed text-ink-subtle">
+            <span className="font-semibold text-ink">{orquestrador.nome}:</span> {agentes.conflito.tensao}{' '}
+            <span className="text-ink-muted">{agentes.conflito.arbitragem}</span>
+          </p>
+          <Link
+            to="/copiloto"
+            className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-semibold text-gold transition-colors hover:text-gold-light"
+          >
+            Ver os {agentes.lista.length} agentes <ChevronRight size={12} aria-hidden="true" />
+          </Link>
+        </div>
+      </Card>
 
       {/* 3+4 · Risco + listas — tablet: 2 colunas · ultrawide: 4 painéis lado a lado */}
       <div className="grid items-start gap-4 md:grid-cols-2 wide:grid-cols-4">

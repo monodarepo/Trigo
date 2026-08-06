@@ -1,17 +1,35 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Newspaper, SendHorizontal, Sparkles } from 'lucide-react'
+import { ChevronDown, Newspaper, SendHorizontal, Sparkles } from 'lucide-react'
 import { Badge, Card, DataTable, Pill, RecommendationCard, SectionTitle, type DataTableColumn } from '../components/ui'
 import { useNoticiasAoVivo } from '../live/useLiveData'
 import {
   snapshot,
+  getAgente,
+  type Agente,
   type PerguntaResposta,
   type ReferenciaCopiloto,
   type RespostaRicaCopiloto,
 } from '../data'
 
-const { copiloto } = snapshot
+const { copiloto, agentes } = snapshot
+
+/** Ordem de leitura dos agentes: do sinal à decisão, como na sidebar. */
+const ELO_ROTULO: Record<Agente['elo'], string> = {
+  sinal: 'Sinal',
+  trigo: 'Trigo',
+  farinha: 'Farinha',
+  margem: 'Margem',
+  governanca: 'Governança',
+}
+const ELO_TOM: Record<Agente['elo'], string> = {
+  sinal: 'border-azure/40 text-azure',
+  trigo: 'border-gold/40 text-gold-light',
+  farinha: 'border-violet/40 text-violet',
+  margem: 'border-positive/40 text-positive',
+  governanca: 'border-edge-strong text-ink-subtle',
+}
 
 interface ItemChat {
   id: string
@@ -91,8 +109,91 @@ function TabelaResposta({ tabela }: { tabela: NonNullable<RespostaRicaCopiloto['
   )
 }
 
+/**
+ * Os 10 agentes, agrupados pelo elo da cadeia. Fica recolhido por padrão: a
+ * tela é do chat, e a lista serve para responder "quem calculou isto" — não
+ * para competir com a conversa.
+ */
+function PainelAgentes() {
+  const [aberto, setAberto] = useState(false)
+  const porElo = (['sinal', 'trigo', 'farinha', 'margem', 'governanca'] as Agente['elo'][])
+    .map((elo) => ({ elo, itens: agentes.lista.filter((a) => a.elo === elo) }))
+    .filter((g) => g.itens.length > 0)
+
+  return (
+    <Card padding="sm">
+      <button
+        type="button"
+        onClick={() => setAberto((v) => !v)}
+        aria-expanded={aberto}
+        className="flex w-full items-center justify-between gap-3 text-left"
+      >
+        <span className="min-w-0">
+          <span className="eyebrow block">Quem responde por trás</span>
+          <span className="mt-0.5 block text-sm font-semibold text-ink">
+            {agentes.lista.length} agentes, um por pergunta da cadeia
+          </span>
+        </span>
+        <span className="flex shrink-0 items-center gap-2 text-[11px] font-semibold text-gold">
+          {aberto ? 'Recolher' : 'Ver todos'}
+          <ChevronDown
+            size={14}
+            aria-hidden="true"
+            className={`transition-transform ${aberto ? 'rotate-180' : ''}`}
+          />
+        </span>
+      </button>
+
+      {aberto && (
+        <div className="mt-3 space-y-3 border-t border-edge/60 pt-3">
+          {porElo.map((grupo) => (
+            <div key={grupo.elo}>
+              <p className="eyebrow">{ELO_ROTULO[grupo.elo]}</p>
+              <ul className="mt-1.5 grid gap-2 md:grid-cols-2">
+                {grupo.itens.map((a) => (
+                  <li
+                    key={a.id}
+                    className="rounded-card border border-edge/60 bg-navy/30 px-3 py-2.5 transition-colors hover:border-gold/40"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="text-xs font-semibold text-ink">{a.nome}</p>
+                      <span
+                        className={`shrink-0 rounded-full border px-2 py-px text-[10px] font-semibold uppercase tracking-wide ${ELO_TOM[a.elo]}`}
+                      >
+                        {ELO_ROTULO[a.elo]}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-[11px] italic leading-snug text-ink-subtle">“{a.pergunta}”</p>
+                    <p className="tnums mt-1.5 text-[11px] font-medium text-gold-light">{a.saidaAtual}</p>
+                    <div className="mt-1.5 flex flex-wrap gap-1">
+                      {a.rotas.map((rota) => (
+                        <Link
+                          key={rota}
+                          to={rota}
+                          className="rounded-full border border-edge px-2 py-px font-mono text-[10px] text-ink-faint transition-colors hover:border-gold/40 hover:text-gold"
+                        >
+                          {rota}
+                        </Link>
+                      ))}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+          <p className="border-t border-edge/60 pt-3 text-[11px] leading-relaxed text-ink-subtle">
+            <span className="font-semibold text-ink">Conflito resolvido hoje:</span> {agentes.conflito.tensao}{' '}
+            {agentes.conflito.arbitragem}
+          </p>
+        </div>
+      )}
+    </Card>
+  )
+}
+
 function BolhaCopiloto({ item }: { item: ItemChat }) {
   const rica = item.rica
+  const assinantes = rica?.agentes?.map(getAgente).filter((a): a is Agente => a != null) ?? []
   return (
     <div className="flex items-start gap-2">
       <SeloGemini />
@@ -172,6 +273,22 @@ function BolhaCopiloto({ item }: { item: ItemChat }) {
               >
                 {rica.destaque}
               </motion.p>
+            )}
+            {assinantes.length > 0 && (
+              <motion.div variants={blocos} className="flex flex-wrap items-center gap-1.5 border-t border-edge/60 pt-3">
+                <span className="text-[11px] font-semibold uppercase tracking-wide text-ink-subtle">
+                  Agentes
+                </span>
+                {assinantes.map((a) => (
+                  <span
+                    key={a.id}
+                    title={a.pergunta}
+                    className={`rounded-full border px-2 py-px text-[11px] font-medium ${ELO_TOM[a.elo]}`}
+                  >
+                    {a.nome}
+                  </span>
+                ))}
+              </motion.div>
             )}
             <motion.div variants={blocos} className="flex flex-wrap items-center gap-1.5 border-t border-edge/60 pt-3">
               <span className="text-[11px] font-semibold uppercase tracking-wide text-ink-subtle">
@@ -257,6 +374,7 @@ export default function Copilot() {
       />
 
       <ContextoNoticiasAoVivo />
+      <PainelAgentes />
 
       <Card padding="none" className="flex min-h-0 flex-1 flex-col">
         {/* Histórico */}

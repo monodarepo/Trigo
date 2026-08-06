@@ -3,7 +3,14 @@
  * Nenhum componente deve inventar número — tudo nasce em src/data.
  */
 import type { KpiExposicao, RecomendacaoDoDia } from './types'
-import { ALERTAS, CONTAGEM_ALERTAS_SINO } from './alertas'
+import { AGENTES, CONFLITO_ORQUESTRADO, MOINHO_MAIS_COMPETITIVO, getAgente } from './agentes'
+import {
+  ALERTAS,
+  CONTAGEM_ALERTAS_SINO,
+  IMPACTO_ALERTAS_RS,
+  OPORTUNIDADE_ALERTAS_RS,
+  RISCO_ALERTAS_RS,
+} from './alertas'
 import {
   COBERTURA_MEDIA_DIAS,
   ESTOQUE_MOINHOS,
@@ -20,6 +27,15 @@ import {
 import { ECONOMIA_MOAGEM, FINANCEIRO, FORNECEDORES, MOINHOS, ORIGENS, PORTOS } from './dominio'
 import { FARINHAS, PRECOS_FARINHA_EXTERNOS, precoExternoComparavel } from './farinha'
 import {
+  CONCORRENTES_FARINHA,
+  COTACOES_NAO_COMPARAVEIS,
+  MESES_SERIE_FARINHA,
+  NOTA_MARGEM_REFERENCIA,
+  SERIES_FARINHA_MERCADO,
+  TENDENCIA_FARINHA_CONSOLIDADA,
+  oportunidadesRegionais,
+} from './mercadoFarinha'
+import {
   capacidadeFarinhaT,
   capacidadeOciosaFarinhaT,
   custoInternoFarinha,
@@ -33,10 +49,13 @@ import {
 import {
   CALENDARIO_DEMANDA,
   DEMANDA_FARINHA,
+  FARINHA_DISPONIVEL_MERCADO_T,
   NECESSIDADE_FARINHA_MES_T,
   NECESSIDADE_TRIGO_ANO_T,
   NECESSIDADE_TRIGO_MES_T,
+  planoPorMoinho,
 } from './demanda'
+import { LOTES_TRIGO } from './estoqueTrigo'
 import {
   CLIENTES_EXTERNOS,
   MARGEM_OPORTUNIDADES_RECOMENDADAS_RS,
@@ -80,6 +99,8 @@ import {
 import {
   ALAVANCAS_VRO,
   CURVA_VRO,
+  MARGEM_CAPTURADA_YTD_RS,
+  MARGEM_POR_DECISAO_VRO,
   METRICAS_VRO,
   RECOMENDACOES_VRO,
   REGISTROS_VRO,
@@ -99,12 +120,23 @@ export const KPIS_COCKPIT: KpiExposicao = {
 }
 
 /**
- * A recomendação do dia — IDÊNTICA no Cockpit, na Compra e no Hedge.
+ * O excedente de farinha que a decisão do dia manda ao mercado: a folga do
+ * parque depois de atendida a demanda das fábricas. Sai do plano de demanda —
+ * o MESMO número que a tela de Demanda e o Make/Buy/Sell usam como capacidade
+ * ociosa, para que "vender o excedente" signifique a mesma coisa nas três.
+ */
+const EXCEDENTE_FARINHA_T = FARINHA_DISPONIVEL_MERCADO_T
+
+/**
+ * A recomendação do dia — IDÊNTICA no Cockpit, na Compra e no Hedge, agora com
+ * a terceira perna: o destino da farinha.
  * Impacto protegido: R$ 1,28M (compra antecipada) + R$ 3,52M (hedge) = R$ 4,8M.
+ * A margem do Make/Buy/Sell anda em campo próprio (é R$/mês, não evento).
  */
 export const RECOMENDACAO_DO_DIA: RecomendacaoDoDia = {
   resumo:
-    'Antecipar 18% do volume do trimestre (32.000 t · Argentina · Pecém) e proteger 60% da exposição cambial de 90 dias.',
+    'Antecipar 18% do volume do trimestre (32.000 t · Argentina · Pecém), proteger 60% da exposição cambial de 90 dias e ' +
+    `produzir para consumo próprio, vendendo ${Math.round(EXCEDENTE_FARINHA_T).toLocaleString('pt-BR')} t de excedente de farinha.`,
   probAlta15dPct: PRECOS_ATUAIS.probAltaTrigo15dPct,
   impactoProtegidoRs: RECOMENDACAO_COMPRA.economiaTotalRs + RECOMENDACAO_HEDGE.protecaoEstimadaRs,
   memoriaCalculo: {
@@ -113,6 +145,12 @@ export const RECOMENDACAO_DO_DIA: RecomendacaoDoDia = {
   },
   compra: RECOMENDACAO_COMPRA,
   hedge: RECOMENDACAO_HEDGE,
+  makeBuySell: {
+    resumo: `Produzir e consumir nas fábricas; vender ${Math.round(EXCEDENTE_FARINHA_T).toLocaleString('pt-BR')} t de excedente a ${KPIS_FARINHA.margemVendaExternaRsT.toLocaleString('pt-BR')} R$/t de margem`,
+    beneficioRs: BENEFICIO_MAKE_BUY_SELL_RS,
+    excedenteVendidoT: EXCEDENTE_FARINHA_T,
+    margemVendaRsT: KPIS_FARINHA.margemVendaExternaRsT,
+  },
 }
 
 export const snapshot = {
@@ -166,6 +204,17 @@ export const snapshot = {
   alertas: ALERTAS,
   /** Contagem exibida no sino da Topbar (críticos + altos). */
   contagemAlertas: CONTAGEM_ALERTAS_SINO,
+  /** O que está em jogo nos alertas mensais com ação pendente (R$/mês). */
+  impactoAlertasRs: IMPACTO_ALERTAS_RS,
+  oportunidadeAlertasRs: OPORTUNIDADE_ALERTAS_RS,
+  riscoAlertasRs: RISCO_ALERTAS_RS,
+  /** Os 10 agentes do hub — quem responde por cada elo da cadeia. */
+  agentes: {
+    lista: AGENTES,
+    get: getAgente,
+    conflito: CONFLITO_ORQUESTRADO,
+    moinhoMaisCompetitivo: MOINHO_MAIS_COMPETITIVO,
+  },
   copiloto: {
     perguntasSugeridas: PERGUNTAS_SUGERIDAS,
     chips: PERGUNTAS_CHIPS,
@@ -176,6 +225,8 @@ export const snapshot = {
   vro: {
     registros: REGISTROS_VRO,
     valorCapturadoYtdRs: VALOR_CAPTURADO_YTD_RS,
+    margemCapturadaYtdRs: MARGEM_CAPTURADA_YTD_RS,
+    margemPorDecisao: MARGEM_POR_DECISAO_VRO,
     recomendacoes: RECOMENDACOES_VRO,
     metricas: METRICAS_VRO,
     alavancas: ALAVANCAS_VRO,
@@ -191,6 +242,16 @@ export const snapshot = {
     economiaMoagem: ECONOMIA_MOAGEM,
     precosExternos: PRECOS_FARINHA_EXTERNOS,
     precoExternoComparavel,
+    /** Mercado de farinha: só séries apples-to-apples entram na tendência. */
+    mercado: {
+      series: SERIES_FARINHA_MERCADO,
+      meses: MESES_SERIE_FARINHA,
+      tendencia: TENDENCIA_FARINHA_CONSOLIDADA,
+      concorrentes: CONCORRENTES_FARINHA,
+      oportunidadesRegionais,
+      naoComparaveis: COTACOES_NAO_COMPARAVEIS,
+      notaMargemReferencia: NOTA_MARGEM_REFERENCIA,
+    },
     kpis: KPIS_FARINHA,
     capacidadeOciosaTotalT: CAPACIDADE_OCIOSA_TOTAL_T,
     /** Motor econômico — as funções que as telas chamam. */
@@ -213,7 +274,12 @@ export const snapshot = {
     necessidadeFarinhaMesT: NECESSIDADE_FARINHA_MES_T,
     necessidadeTrigoMesT: NECESSIDADE_TRIGO_MES_T,
     necessidadeTrigoAnoT: NECESSIDADE_TRIGO_ANO_T,
+    /** Alocação por moinho: quanto fica dentro e quanto pode ir ao mercado. */
+    planoMoinhos: planoPorMoinho(),
+    farinhaDisponivelMercadoT: FARINHA_DISPONIVEL_MERCADO_T,
   },
+  /** Lotes em silo — a matéria-prima que o agente de Blend combina. */
+  estoqueTrigo: { lotes: LOTES_TRIGO },
   comercial: {
     clientes: CLIENTES_EXTERNOS,
     oportunidades: OPORTUNIDADES_COMERCIAIS,
@@ -259,6 +325,13 @@ export {
   resumoPorRegiao,
 } from './comercial'
 export { CENARIOS_MAKE_BUY_SELL, CENARIO_MBS_ANCORA, KPIS_FARINHA } from './makeBuySell'
+export { AGENTES, CONFLITO_ORQUESTRADO, getAgente, nomeCurtoAgente } from './agentes'
+export {
+  CONCORRENTES_FARINHA,
+  SERIES_FARINHA_MERCADO,
+  TENDENCIA_FARINHA_CONSOLIDADA,
+  oportunidadesRegionais,
+} from './mercadoFarinha'
 export { TLC_BASELINE_RS, TLC_RECOMENDADO_RS, calcularTlcMock } from './tlc'
 export {
   ESPECIFICACOES_BLEND,

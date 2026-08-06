@@ -1,6 +1,17 @@
 import { useCallback, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Badge, Card, ConfidenceMeter, SectionTitle, TrendArrow } from '../components/ui'
+import { AlertTriangle } from 'lucide-react'
+import {
+  Badge,
+  Card,
+  ConfidenceMeter,
+  DataTable,
+  Pill,
+  SectionTitle,
+  Sparkline,
+  TrendArrow,
+  type DataTableColumn,
+} from '../components/ui'
 import { ForecastChart } from '../components/charts/ForecastChart'
 import { SourceBadge } from '../components/trust/SourceBadge'
 import { SinaisExternos } from '../components/live/ExternalSignals'
@@ -14,12 +25,19 @@ import {
   formatBRL,
   formatPct,
   formatTon,
+  getFarinha,
+  getMoinho,
   type FatorPrevisao,
+  type OportunidadeRegionalFarinha,
   type OrigemId,
   type PontoPrevisao,
+  type PrecoFarinhaExterno,
+  type SerieFarinhaMercado,
+  type TendenciaFarinha,
 } from '../data'
 
-const { previsao, mercado, tlc, compra, hedge } = snapshot
+const { previsao, mercado, tlc, compra, hedge, farinha } = snapshot
+const mf = farinha.mercado
 const cambioAtual = mercado.precos.cambioBrlUsd
 
 const fmtCambio = (v: number) => `R$ ${v.toFixed(2).replace('.', ',')}`
@@ -86,6 +104,216 @@ const corDirecao: Record<FatorPrevisao['direcao'], { barra: string; texto: strin
   baixa: { barra: 'bg-positive', texto: 'text-positive', sinal: '−' },
   neutra: { barra: 'bg-edge', texto: 'text-ink-subtle', sinal: '' },
 }
+
+// ---------------------------------------------------------------------------
+// Mercado de FARINHA — comparável por construção
+// ---------------------------------------------------------------------------
+
+const REGIAO_ROTULO: Record<string, string> = {
+  nordeste: 'Nordeste',
+  norte: 'Norte',
+  sudeste: 'Sudeste',
+  sul: 'Sul',
+  'centro-oeste': 'Centro-Oeste',
+  exportacao: 'Exportação',
+}
+const CANAL_ROTULO: Record<string, string> = {
+  industrial: 'Industrial',
+  panificacao: 'Panificação',
+  distribuidor: 'Distribuidor',
+  varejo: 'Varejo',
+}
+const APRESENTACAO_ROTULO: Record<string, string> = {
+  granel: 'Granel',
+  'big-bag': 'Big-bag',
+  'saco-25kg': 'Saco 25 kg',
+  'saco-1kg': 'Saco 1 kg',
+}
+const BASE_ROTULO: Record<string, string> = {
+  'posto-fabrica': 'Posto fábrica',
+  'posto-cliente': 'Posto cliente',
+}
+
+const TENDENCIA_UI: Record<TendenciaFarinha, { rotulo: string; classe: string; direcao: 'up' | 'down' | 'flat' }> = {
+  subindo: { rotulo: 'Subindo', classe: 'text-danger', direcao: 'up' },
+  estavel: { rotulo: 'Estável', classe: 'text-ink-subtle', direcao: 'flat' },
+  caindo: { rotulo: 'Caindo', classe: 'text-positive', direcao: 'down' },
+}
+
+const specNome = (id: string) =>
+  getFarinha(id as never)?.nome.replace('Farinha para ', '').replace('Farinha ', '') ?? id
+const rsT = (v: number) => `${formatBRL(v)}/t`
+const variacaoPct = (s: SerieFarinhaMercado) => (s.projecaoD30RsT / s.precoAtualRsT - 1) * 100
+
+/** Ranking regional — calculado uma vez, fora do render. */
+const oportunidades = mf.oportunidadesRegionais()
+
+const colunasSeries: DataTableColumn<SerieFarinhaMercado>[] = [
+  {
+    key: 'spec',
+    header: 'Especificação',
+    sortValue: (s) => specNome(s.farinhaId),
+    render: (s) => (
+      <div>
+        <p className="font-medium capitalize text-ink">{specNome(s.farinhaId)}</p>
+        <p className="text-[11px] text-ink-subtle">{REGIAO_ROTULO[s.regiao]}</p>
+      </div>
+    ),
+  },
+  {
+    key: 'preco',
+    header: 'Preço hoje',
+    align: 'right',
+    sortValue: (s) => s.precoAtualRsT,
+    render: (s) => <span className="font-mono text-sm font-semibold text-ink">{rsT(s.precoAtualRsT)}</span>,
+  },
+  {
+    key: 'serie',
+    header: '6 meses',
+    align: 'center',
+    render: (s) => (
+      <Sparkline
+        data={s.historicoRsT}
+        tone={s.tendencia === 'caindo' ? 'positive' : 'danger'}
+        width={80}
+        height={22}
+      />
+    ),
+  },
+  {
+    key: 'd30',
+    header: 'Projeção 30d',
+    align: 'right',
+    sortValue: (s) => variacaoPct(s),
+    render: (s) => {
+      const ui = TENDENCIA_UI[s.tendencia]
+      const v = variacaoPct(s)
+      return (
+        <div>
+          <p className="font-mono text-sm text-ink">{rsT(s.projecaoD30RsT)}</p>
+          <p className={`font-mono text-[11px] font-semibold ${ui.classe}`}>
+            {v > 0 ? '+' : v < 0 ? '−' : ''}
+            {formatPct(Math.abs(v), 1)}
+          </p>
+        </div>
+      )
+    },
+  },
+  {
+    key: 'tendencia',
+    header: 'Tendência',
+    align: 'right',
+    sortValue: (s) => s.tendencia,
+    render: (s) => {
+      const ui = TENDENCIA_UI[s.tendencia]
+      return (
+        <span className={`inline-flex items-center gap-1 text-xs font-semibold ${ui.classe}`}>
+          <TrendArrow
+            direction={ui.direcao}
+            tone={s.tendencia === 'subindo' ? 'danger' : s.tendencia === 'caindo' ? 'positive' : 'neutral'}
+            size={13}
+          />
+          {ui.rotulo}
+        </span>
+      )
+    },
+  },
+  {
+    key: 'driver',
+    header: 'O que move',
+    render: (s) => <span className="text-[11px] leading-snug text-ink-subtle">{s.driver}</span>,
+  },
+]
+
+const colunasOportunidades: DataTableColumn<OportunidadeRegionalFarinha>[] = [
+  {
+    key: 'regiao',
+    header: 'Região · spec',
+    sortValue: (o) => REGIAO_ROTULO[o.regiao],
+    render: (o) => (
+      <div>
+        <p className="font-medium text-ink">{REGIAO_ROTULO[o.regiao]}</p>
+        <p className="text-[11px] capitalize text-ink-subtle">{specNome(o.farinhaId)}</p>
+      </div>
+    ),
+  },
+  {
+    key: 'preco',
+    header: 'Preço',
+    align: 'right',
+    sortValue: (o) => o.precoRsT,
+    render: (o) => <span className="font-mono text-xs text-ink-muted">{rsT(o.precoRsT)}</span>,
+  },
+  {
+    key: 'moinho',
+    header: 'Melhor moinho',
+    sortValue: (o) => o.moinhoId,
+    render: (o) => (
+      <div>
+        <p className="text-xs font-medium text-ink">{getMoinho(o.moinhoId)?.nome ?? o.moinhoId}</p>
+        <p className="font-mono text-[11px] text-ink-subtle">{rsT(o.custoInternoRsT)}</p>
+      </div>
+    ),
+  },
+  {
+    key: 'margem',
+    header: 'Margem-piso',
+    align: 'right',
+    sortValue: (o) => o.margemRsT,
+    render: (o) => (
+      <span
+        className={`font-mono text-sm font-semibold ${o.margemRsT > 0 ? 'text-positive' : 'text-danger'}`}
+      >
+        {o.margemRsT < 0 ? '−' : ''}
+        {formatBRL(Math.abs(o.margemRsT))}/t
+      </span>
+    ),
+  },
+  {
+    key: 'tendencia',
+    header: 'Tendência',
+    align: 'right',
+    render: (o) => {
+      const ui = TENDENCIA_UI[o.tendencia]
+      return <span className={`text-xs font-semibold ${ui.classe}`}>{ui.rotulo}</span>
+    },
+  },
+]
+
+const colunasNaoComparaveis: DataTableColumn<PrecoFarinhaExterno>[] = [
+  {
+    key: 'cotacao',
+    header: 'Cotação',
+    render: (p) => (
+      <div>
+        <p className="font-medium capitalize text-ink">
+          {specNome(p.farinhaId)} · {REGIAO_ROTULO[p.regiao]}
+        </p>
+        <p className="mt-0.5 flex flex-wrap gap-1 text-[11px] text-ink-subtle">
+          <span>{CANAL_ROTULO[p.canal]}</span>
+          <span>·</span>
+          <span>{APRESENTACAO_ROTULO[p.apresentacao]}</span>
+          <span>·</span>
+          <span>{BASE_ROTULO[p.base]}</span>
+          <span>·</span>
+          <span>{p.prazoDias} dias</span>
+        </p>
+      </div>
+    ),
+  },
+  {
+    key: 'preco',
+    header: 'Preço',
+    align: 'right',
+    sortValue: (p) => p.precoRsT,
+    render: (p) => <span className="font-mono text-sm font-semibold text-ink-muted">{rsT(p.precoRsT)}</span>,
+  },
+  {
+    key: 'ressalva',
+    header: 'Por que não compara',
+    render: (p) => <span className="text-[11px] leading-snug text-ink-subtle">{p.ressalva}</span>,
+  },
+]
 
 export default function Forecast() {
   const [unidade, setUnidade] = useState<Unidade>('usd')
@@ -403,6 +631,214 @@ export default function Forecast() {
 
         {/* 6 · Clima real nas regiões de trigo (anomalia → risco de safra) */}
         <WeatherPanel className="lg:col-span-3" />
+      </div>
+
+      {/* 7 · MERCADO DE FARINHA — o outro lado do preço do trigo */}
+      <SectionTitle
+        eyebrow="Mercado & Sinais"
+        title="Mercado de farinha"
+        subtitle="Preços comparáveis por especificação, região, canal e embalagem — a base em que o Make/Buy/Sell decide."
+      />
+
+      <div className="grid items-start gap-4 lg:grid-cols-3">
+        {/* Leitura consolidada */}
+        <Card variant="gold" className="lg:col-span-1">
+          <p className="eyebrow">Tendência da farinha</p>
+          <div className="mt-3 flex items-end justify-between gap-3">
+            <div>
+              <p className="tnums font-display text-40 font-semibold leading-none text-ink">
+                {mf.tendencia.variacaoD30Pct > 0 ? '+' : ''}
+                {formatPct(mf.tendencia.variacaoD30Pct, 2)}
+              </p>
+              <p className="mt-1 text-xs text-ink-muted">Projeção de 30 dias, ponderada por volume</p>
+            </div>
+            <Badge
+              kind="status"
+              label={TENDENCIA_UI[mf.tendencia.tendencia].rotulo}
+              tone={
+                mf.tendencia.tendencia === 'subindo'
+                  ? 'danger'
+                  : mf.tendencia.tendencia === 'caindo'
+                    ? 'positive'
+                    : 'neutral'
+              }
+            />
+          </div>
+          <div className="mt-4 grid grid-cols-3 gap-2 border-t border-edge/60 pt-3 text-center">
+            <div className="rounded-card border border-danger/30 bg-danger/10 px-2 py-2">
+              <p className="tnums font-display text-lg font-semibold text-danger">{mf.tendencia.contagem.subindo}</p>
+              <p className="text-[11px] text-ink-subtle">subindo</p>
+            </div>
+            <div className="rounded-card border border-edge/60 bg-navy/40 px-2 py-2">
+              <p className="tnums font-display text-lg font-semibold text-ink-muted">{mf.tendencia.contagem.estavel}</p>
+              <p className="text-[11px] text-ink-subtle">estáveis</p>
+            </div>
+            <div className="rounded-card border border-positive/30 bg-positive/10 px-2 py-2">
+              <p className="tnums font-display text-lg font-semibold text-positive">{mf.tendencia.contagem.caindo}</p>
+              <p className="text-[11px] text-ink-subtle">caindo</p>
+            </div>
+          </div>
+          <p className="mt-4 rounded-card border border-gold/30 bg-navy/40 px-3 py-2.5 text-xs leading-relaxed text-ink-muted">
+            <span className="font-semibold text-ink">E daí?</span> {mf.tendencia.leitura}
+          </p>
+          <dl className="mt-3 space-y-2 border-t border-edge/60 pt-3 text-xs">
+            <div className="flex items-center justify-between gap-2">
+              <dt className="text-ink-subtle">Custo interno (par-âncora)</dt>
+              <dd className="tnums font-semibold text-ink">{rsT(farinha.kpis.custoFarinhaRsT)}</dd>
+            </div>
+            <div className="flex items-center justify-between gap-2">
+              <dt className="text-ink-subtle">Preço externo equivalente</dt>
+              <dd className="tnums font-semibold text-ink">{rsT(farinha.kpis.precoExternoEquivalenteRsT)}</dd>
+            </div>
+            <div className="flex items-center justify-between gap-2">
+              <dt className="text-ink-subtle">Ganho da verticalização</dt>
+              <dd className="tnums font-semibold text-gold-light">{rsT(farinha.kpis.ganhoVerticalizacaoRsT)}</dd>
+            </div>
+          </dl>
+        </Card>
+
+        {/* Séries comparáveis */}
+        <Card className="lg:col-span-2">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h3 className="font-display text-base font-semibold text-ink">
+                Preço da farinha por especificação e região
+              </h3>
+              <p className="mt-0.5 text-xs text-ink-subtle">
+                Histórico de 6 meses ({mf.meses.join(' · ')}) e projeção de 30 dias
+              </p>
+            </div>
+            <Pill tone="info">Industrial · granel · posto fábrica</Pill>
+          </div>
+          <div className="mt-3">
+            <DataTable
+              className="shadow-none"
+              caption="Preços comparáveis de farinha por especificação e região, com tendência de 30 dias"
+              columns={colunasSeries}
+              rows={mf.series}
+              rowKey={(s) => s.id}
+              minWidth={820}
+            />
+          </div>
+          <p className="mt-3 border-t border-edge/60 pt-3 text-[11px] leading-relaxed text-ink-subtle">
+            Todas as séries estão fixadas nos mesmos eixos: canal industrial, granel e posto fábrica — a base em que o
+            custo interno é apurado. Uma curva que misturasse saco de 25 kg com granel mostraria “alta de preço” que é
+            só mudança de mix de embalagem.
+          </p>
+        </Card>
+
+        {/* Oportunidades regionais */}
+        <Card className="lg:col-span-2">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h3 className="font-display text-base font-semibold text-ink">Onde o mercado paga acima do nosso custo</h3>
+              <p className="mt-0.5 text-xs text-ink-subtle">
+                Melhor moinho para atender cada região, já com o custo de servir estimado por distância
+              </p>
+            </div>
+          </div>
+          <div className="mt-3">
+            <DataTable
+              className="shadow-none"
+              caption="Oportunidades regionais de farinha: preço, custo interno do melhor moinho e margem-piso"
+              columns={colunasOportunidades}
+              rows={oportunidades}
+              rowKey={(o) => `${o.regiao}-${o.farinhaId}`}
+              minWidth={620}
+              rowClassName={(o) => (o.margemRsT < 0 ? '[&>td]:bg-danger/5' : '')}
+            />
+          </div>
+          <p className="mt-3 border-t border-edge/60 pt-3 text-[11px] leading-relaxed text-ink-subtle">
+            <span className="font-semibold text-ink">Margem-piso, não margem de contrato.</span>{' '}
+            {mf.notaMargemReferencia}
+          </p>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <Link to="/oportunidades" className={btnPrimary}>
+              Ver oportunidades comerciais
+            </Link>
+            <Link to="/make-buy-sell" className={btnGhost}>
+              Simular no Make/Buy/Sell
+            </Link>
+          </div>
+        </Card>
+
+        {/* Concorrência */}
+        <Card>
+          <h3 className="font-display text-base font-semibold text-ink">Quem faz o preço</h3>
+          <p className="mt-0.5 text-xs text-ink-subtle">
+            Moageiros que competem nas mesmas specs — posição vs a nossa cotação comparável
+          </p>
+          <ul className="mt-4 space-y-2.5">
+            {mf.concorrentes.map((c) => (
+              <li key={c.id} className="rounded-card border border-edge/60 bg-navy/30 px-3 py-2.5">
+                <div className="flex items-start justify-between gap-2">
+                  <p className="text-xs font-semibold text-ink">{c.nome}</p>
+                  <span
+                    className={`shrink-0 font-mono text-xs font-semibold ${
+                      c.posicaoPrecoRsT < 0
+                        ? 'text-danger'
+                        : c.posicaoPrecoRsT > 0
+                          ? 'text-positive'
+                          : 'text-ink-subtle'
+                    }`}
+                  >
+                    {c.posicaoPrecoRsT === 0
+                      ? 'referência'
+                      : `${c.posicaoPrecoRsT < 0 ? '−' : '+'}${formatBRL(Math.abs(c.posicaoPrecoRsT))}/t`}
+                  </span>
+                </div>
+                <p className="mt-1 text-[11px] leading-snug text-ink-subtle">{c.perfil}</p>
+                <p className="tnums mt-1 text-[11px] text-ink-faint">
+                  {formatTon(c.capacidadeMensalT)}/mês · {c.regioes.map((r) => REGIAO_ROTULO[r]).join(', ')}
+                </p>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-3 border-t border-edge/60 pt-3 text-[11px] leading-relaxed text-ink-subtle">
+            Negativo = o concorrente entrega a mesma spec mais barato que nós. É onde a decisão de comprar farinha em
+            vez de moer começa a fazer sentido.
+          </p>
+        </Card>
+
+        {/* Cotações NÃO comparáveis — a armadilha, exposta */}
+        <Card className="lg:col-span-3">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="flex items-start gap-2.5">
+              <span
+                className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-danger/15 text-danger"
+                aria-hidden="true"
+              >
+                <AlertTriangle size={15} />
+              </span>
+              <div>
+                <h3 className="font-display text-base font-semibold text-ink">
+                  Cotações que NÃO servem para comparar
+                </h3>
+                <p className="mt-0.5 text-xs text-ink-subtle">
+                  Existem, são reais e aparecem no mercado — mas confrontá-las com o custo interno inventa vantagem
+                  onde não há
+                </p>
+              </div>
+            </div>
+            <Badge kind="status" label={`${mf.naoComparaveis.length} cotações`} tone="danger" />
+          </div>
+          <div className="mt-3">
+            <DataTable
+              className="shadow-none"
+              caption="Cotações de farinha fora da base comparável, com o ajuste necessário em cada caso"
+              columns={colunasNaoComparaveis}
+              rows={mf.naoComparaveis}
+              rowKey={(p) => p.id}
+              minWidth={760}
+            />
+          </div>
+          <p className="mt-3 border-t border-edge/60 pt-3 text-[11px] leading-relaxed text-ink-subtle">
+            A comparação só vale quando coincidem os 8 eixos: especificação, aplicação, apresentação, canal, região,
+            base logística, condição comercial e nível de serviço. O preço de gôndola de {rsT(3480)} embute embalagem
+            de 1 kg, distribuição capilar e margem do varejo — usá-lo contra um custo interno de granel é o erro
+            clássico do “preço médio de farinha”.
+          </p>
+        </Card>
       </div>
 
       {/* 6 · Rodapé com CTAs */}

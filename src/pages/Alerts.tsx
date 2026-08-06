@@ -4,11 +4,15 @@ import { AnimatePresence, motion } from 'framer-motion'
 import {
   ChevronRight,
   DollarSign,
+  Factory,
   FlaskConical,
   Package,
+  Scale,
   ShieldCheck,
   Ship,
+  Store,
   TrendingUp,
+  Wheat,
   X,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
@@ -23,8 +27,13 @@ import {
   formatPct,
   formatTon,
   formatUSD,
+  getAgente,
+  sensibilidadeRendimentoRsT,
   type Alerta,
+  type FarinhaId,
+  type MoinhoId,
 } from '../data'
+import { ORCAMENTO_TRIGO_RS_T } from '../data/compra'
 
 const { alertas } = snapshot
 
@@ -41,8 +50,33 @@ const CATEGORIAS: Array<{ id: Categoria; rotulo: string; icone: LucideIcon; cor:
   { id: 'estoque', rotulo: 'Estoque', icone: Package, cor: colors.iconBadge.weather },
   { id: 'hedge', rotulo: 'Hedge', icone: ShieldCheck, cor: colors.semantic.positive },
   { id: 'qualidade', rotulo: 'Qualidade', icone: FlaskConical, cor: colors.iconBadge.internal },
+  // --- Elo farinha → margem ---
+  { id: 'farinha', rotulo: 'Farinha', icone: Wheat, cor: colors.semantic.violet },
+  { id: 'moinho', rotulo: 'Moinhos', icone: Factory, cor: colors.semantic.cyan },
+  { id: 'margem', rotulo: 'Margem', icone: Scale, cor: colors.gold.light },
+  { id: 'comercial', rotulo: 'Comercial', icone: Store, cor: colors.semantic.info },
 ]
 const categoriaDe = (id: Categoria) => CATEGORIAS.find((c) => c.id === id)!
+
+/**
+ * Impacto formatado com a BASE explícita. Sem o rótulo da base, R$ 5,3M de
+ * desvio trimestral e R$ 372 mil de economia mensal apareceriam na mesma
+ * coluna como se fossem comparáveis.
+ */
+const ROTULO_BASE: Record<NonNullable<Alerta['impactoBase']>, string> = {
+  mes: '/mês',
+  trimestre: '/trimestre',
+  evento: '',
+}
+function impactoFormatado(a: Alerta): { texto: string; positivo: boolean } | null {
+  if (a.impactoRs == null) return null
+  const positivo = a.impactoRs > 0
+  const sinal = positivo ? '+' : '−'
+  return {
+    texto: `${sinal}${formatBRL(Math.abs(a.impactoRs), { compacto: true })}${ROTULO_BASE[a.impactoBase ?? 'evento']}`,
+    positivo,
+  }
+}
 
 const ORDEM_SEV: Record<Severidade, number> = { critico: 0, alto: 1, medio: 2, info: 3 }
 const TONE_SEV: Record<Severidade, Tone> = { critico: 'danger', alto: 'warning', medio: 'info', info: 'neutral' }
@@ -57,6 +91,12 @@ const FICHA_DO_ALERTA: Record<string, { tipo: TipoObjeto; id: string; rotulo: st
   'alerta-estoque-fortaleza': { tipo: 'moinho', id: 'fortaleza', rotulo: 'Ficha do Moinho Fortaleza' },
   'alerta-don-russia': { tipo: 'lote', id: 'alt-russia-suape', rotulo: 'Ficha do lote russo' },
   'alerta-restricao-exportacao': { tipo: 'origem', id: 'russia', rotulo: 'Ficha da origem Rússia' },
+  'alerta-farinha-abaixo-custo': { tipo: 'moinho', id: 'bento-goncalves', rotulo: 'Ficha do Moinho Bento Gonçalves' },
+  'alerta-rendimento-cabedelo': { tipo: 'moinho', id: 'cabedelo', rotulo: 'Ficha do Moinho Cabedelo' },
+  'alerta-capacidade-minima-rolandia': { tipo: 'moinho', id: 'rolandia', rotulo: 'Ficha do Moinho Rolândia' },
+  'alerta-capacidade-ociosa-salvador': { tipo: 'moinho', id: 'salvador', rotulo: 'Ficha do Moinho Salvador' },
+  'alerta-cambio-vira-decisao': { tipo: 'moinho', id: 'rolandia', rotulo: 'Ficha do Moinho Rolândia' },
+  'alerta-farinha-sem-destino': { tipo: 'moinho', id: 'rolandia', rotulo: 'Ficha do Moinho Rolândia' },
 }
 
 const ordenados = [...alertas].sort(
@@ -80,6 +120,9 @@ function detalhesDoAlerta(alerta: Alerta): Array<{ rotulo: string; valor: string
   const estoque = (id: string) => snapshot.compra.estoqueMoinhos.find((e) => e.moinhoId === id)!
   const distr = (id: string) => compraRec.distribuicaoMoinhos.find((d) => d.moinhoId === id)!
   const altRussia = snapshot.tlc.alternativas.find((a) => a.id === 'alt-russia-suape')!
+  /** Atalhos do elo farinha — mesmas funções do motor que as telas chamam. */
+  const ef = (m: MoinhoId, f: FarinhaId) => snapshot.moinhos.eficiencia(m, f)
+  const mbs = (m: MoinhoId) => snapshot.makeBuySell.cenarios.find((c) => c.moinhoId === m)!
 
   switch (alerta.id) {
     case 'alerta-rio-parana':
@@ -148,6 +191,131 @@ function detalhesDoAlerta(alerta: Alerta): Array<{ rotulo: string; valor: string
         { rotulo: 'TLC da alternativa', valor: `${formatBRL(altRussia.tlcRs)}/t (+${formatBRL(altRussia.deltaVsBaselineRs)}/t vs baseline)` },
         { rotulo: 'Exposição da recomendação', valor: 'Nenhuma — compra do dia é Argentina' },
       ]
+
+    // --- Elo farinha → margem ---
+    case 'alerta-farinha-abaixo-custo': {
+      const c = mbs('bento-goncalves')
+      return [
+        { rotulo: 'Custo pleno (P&L)', valor: `${formatBRL(c.custoInternoRsT)}/t` },
+        { rotulo: 'Custo evitável (base da decisão)', valor: `${formatBRL(c.custoEvitavelRsT)}/t` },
+        { rotulo: 'Preço externo comparável', valor: `${formatBRL(c.precoExternoRsT)}/t` },
+        { rotulo: 'Economia ao comprar', valor: `${formatBRL(c.custoEvitavelRsT - c.precoExternoRsT)}/t` },
+        { rotulo: 'Volume da janela', valor: formatTon(c.volumeT) },
+        { rotulo: 'Base de comparação', valor: 'Industrial · granel · posto fábrica' },
+      ]
+    }
+    case 'alerta-venda-supera-interno': {
+      const lista = snapshot.comercial.oportunidades.filter(
+        (o) => o.status === 'recomendada' && o.superaUsoInterno === true,
+      )
+      return [
+        { rotulo: 'Pedidos que superam o uso interno', valor: String(lista.length) },
+        { rotulo: 'Volume somado', valor: formatTon(lista.reduce((s, o) => s + o.volumeT, 0)) },
+        ...lista.map((o) => ({
+          rotulo: snapshot.comercial.clientes.find((c) => c.id === o.clienteId)?.nome ?? o.clienteId,
+          valor: `${formatBRL(o.margemRsT)}/t vs ${formatBRL(o.ganhoUsoInternoRsT ?? 0)}/t interno`,
+        })),
+        { rotulo: 'Ruptura', valor: 'Nenhuma — todos cabem na folga do parque' },
+      ]
+    }
+    case 'alerta-orcamento-trigo':
+      return [
+        { rotulo: 'TLC do dia', valor: `${formatBRL(snapshot.tlc.recomendadoRs)}/t` },
+        { rotulo: 'Orçamento do trimestre', valor: `${formatBRL(ORCAMENTO_TRIGO_RS_T)}/t` },
+        { rotulo: 'Baseline (não agir)', valor: `${formatBRL(snapshot.tlc.baselineRs)}/t` },
+        { rotulo: 'Volume ainda a comprar', valor: formatTon(compraRec.volumeTrimestreToneladas) },
+        {
+          rotulo: 'Desvio no trimestre',
+          valor: formatBRL((snapshot.tlc.recomendadoRs - ORCAMENTO_TRIGO_RS_T) * compraRec.volumeTrimestreToneladas, {
+            compacto: true,
+          }),
+        },
+      ]
+    case 'alerta-rendimento-cabedelo': {
+      const e = ef('cabedelo', 'biscoito')
+      return [
+        { rotulo: 'Rendimento de regime', valor: formatPct(e.rendimentoPct, 1) },
+        { rotulo: 'Queda observada', valor: '0,8 p.p.' },
+        { rotulo: 'Custo por p.p. de rendimento', valor: `${formatBRL(sensibilidadeRendimentoRsT('cabedelo', 'biscoito'))}/t` },
+        { rotulo: 'Produção do mês', valor: formatTon(Math.round((e.capacidadeFarinhaT * e.utilizacaoPct) / 100)) },
+        { rotulo: 'Custo pleno atual', valor: `${formatBRL(e.custoInternoRsT)}/t` },
+      ]
+    }
+    case 'alerta-capacidade-minima-rolandia': {
+      const e = ef('rolandia', 'massa')
+      return [
+        { rotulo: 'Utilização atual', valor: formatPct(e.utilizacaoPct) },
+        { rotulo: 'Capacidade econômica mínima', valor: formatPct(e.utilizacaoMinimaPct ?? 0, 1) },
+        { rotulo: 'Folga', valor: `${(e.folgaPp ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} p.p.` },
+        { rotulo: 'Custo pleno', valor: `${formatBRL(e.custoInternoRsT)}/t` },
+        { rotulo: 'Preço de mercado (Sul)', valor: `${formatBRL(e.precoExternoRsT)}/t` },
+        { rotulo: 'Vantagem atual', valor: `${formatBRL(e.ganhoRsT)}/t — a menor do parque` },
+      ]
+    }
+    case 'alerta-capacidade-ociosa-salvador': {
+      const e = ef('salvador', 'massa')
+      return [
+        { rotulo: 'Capacidade ociosa', valor: formatTon(e.capacidadeOciosaT) },
+        { rotulo: 'Custo marginal', valor: `${formatBRL(e.custoMarginalRsT)}/t` },
+        { rotulo: 'Preço comparável', valor: `${formatBRL(e.precoExternoRsT)}/t` },
+        { rotulo: 'Margem incremental', valor: `${formatBRL(e.margemIncrementalRsT)}/t (líquida do custo de servir)` },
+        { rotulo: 'Utilização atual', valor: formatPct(e.utilizacaoPct) },
+        { rotulo: 'Condição', valor: 'Potencial — depende de contratar cliente' },
+      ]
+    }
+    case 'alerta-ruptura-cerrado': {
+      const o = snapshot.comercial.oportunidades.find((x) => x.guardrail.semaforo === 'ruptura')!
+      return [
+        { rotulo: 'Volume pedido', valor: formatTon(o.volumeT) },
+        { rotulo: 'Cabe na folga', valor: formatTon(o.guardrail.volumeSeguroT) },
+        { rotulo: 'Em ruptura', valor: formatTon(o.guardrail.volumeEmRupturaT) },
+        { rotulo: 'Custo de reposição', valor: `${formatBRL(o.guardrail.custoReposicaoRsT)}/t` },
+        { rotulo: 'Margem aparente', valor: `${formatBRL(o.margemRsT)}/t` },
+        { rotulo: 'Margem com reposição', valor: `${formatBRL(o.guardrail.margemPonderadaRsT)}/t` },
+      ]
+    }
+    case 'alerta-cambio-vira-decisao':
+      return [
+        { rotulo: 'Câmbio hoje', valor: fmtCambio(snapshot.mercado.precos.cambioBrlUsd) },
+        { rotulo: 'Ponto de virada (Rolândia)', valor: 'R$ 5,25' },
+        { rotulo: 'Topo da banda 90d', valor: fmtCambio(cambio.horizontes.d90.bandaMax ?? 5.6) },
+        { rotulo: 'Parcela dolarizada do TLC', valor: 'US$ 274/t' },
+        { rotulo: 'Custo pleno hoje', valor: `${formatBRL(ef('rolandia', 'massa').custoInternoRsT)}/t` },
+        { rotulo: 'Preço de mercado (Sul)', valor: `${formatBRL(ef('rolandia', 'massa').precoExternoRsT)}/t` },
+      ]
+    case 'alerta-lote-incompativel': {
+      const l = snapshot.estoqueTrigo.lotes.find((x) => x.status === 'bloqueado')!
+      return [
+        { rotulo: 'Lote', valor: l.id },
+        { rotulo: 'Quantidade', valor: formatTon(l.quantidadeT) },
+        { rotulo: 'DON medido', valor: `${l.qualidade.don.toLocaleString('pt-BR')} ppb` },
+        { rotulo: 'Política (biscoito)', valor: '≤ 1.000 ppb' },
+        { rotulo: 'Capital parado', valor: formatBRL(l.quantidadeT * snapshot.tlc.recomendadoRs, { compacto: true }) },
+        { rotulo: 'Destino sugerido', valor: 'Ração ou novo laudo' },
+      ]
+    }
+    case 'alerta-farinha-sem-destino': {
+      const p = snapshot.demanda.planoMoinhos.find((x) => x.moinhoId === 'rolandia')!
+      return [
+        { rotulo: 'Capacidade de trigo', valor: formatTon(p.capacidadeTrigoT) },
+        { rotulo: 'Consumo interno', valor: formatTon(p.trigoInternoT) },
+        { rotulo: 'Ocupação', valor: formatPct(p.ocupacaoPct, 1) },
+        { rotulo: 'Farinha sem destino', valor: formatTon(p.farinhaDisponivelT) },
+        { rotulo: 'Armazenagem', valor: `${formatBRL(8)}/t por mês` },
+      ]
+    }
+    case 'alerta-preco-farinha-ne': {
+      const s = snapshot.farinha.mercado.series.find(
+        (x) => x.farinhaId === 'massa' && x.regiao === 'nordeste',
+      )!
+      return [
+        { rotulo: 'Preço comparável hoje', valor: `${formatBRL(s.precoAtualRsT)}/t` },
+        { rotulo: 'Projeção 30 dias', valor: `${formatBRL(s.projecaoD30RsT)}/t` },
+        { rotulo: 'Custo interno (Fortaleza)', valor: `${formatBRL(snapshot.farinha.kpis.custoFarinhaRsT)}/t` },
+        { rotulo: 'Ganho da verticalização', valor: `${formatBRL(snapshot.farinha.kpis.ganhoVerticalizacaoRsT)}/t` },
+        { rotulo: 'Base', valor: 'Industrial · granel · posto fábrica' },
+      ]
+    }
     default:
       return []
   }
@@ -188,6 +356,8 @@ function FiltroChips<T extends string>({
 
 function LinhaAlerta({ alerta, onAbrir }: { alerta: Alerta; onAbrir: () => void }) {
   const cat = categoriaDe(alerta.categoria)
+  const agente = alerta.agenteId ? getAgente(alerta.agenteId) : undefined
+  const impacto = impactoFormatado(alerta)
   return (
     <li className="flex items-center gap-3 rounded-card border border-edge/60 bg-card p-3 transition-colors hover:border-gold/40">
       <button type="button" onClick={onAbrir} className="flex min-w-0 flex-1 items-start gap-3 text-left">
@@ -202,18 +372,29 @@ function LinhaAlerta({ alerta, onAbrir }: { alerta: Alerta; onAbrir: () => void 
           <span className="flex flex-wrap items-center gap-2">
             <Badge kind="status" label={ROTULO_SEV[alerta.severidade]} tone={TONE_SEV[alerta.severidade]} />
             <span className="tnums text-[11px] text-ink-subtle">{formatDataHoraPt(alerta.timestamp)}</span>
+            {agente && <span className="text-[11px] text-ink-faint">· {agente.nome}</span>}
           </span>
           <span className="mt-1 block truncate text-sm font-medium text-ink">{alerta.titulo}</span>
           <span className="mt-0.5 line-clamp-2 block text-xs leading-snug text-ink-subtle">{alerta.descricao}</span>
         </span>
       </button>
-      <Link
-        to={alerta.acaoRota}
-        className="flex shrink-0 items-center gap-1 rounded-full border border-edge px-3 py-1.5 text-[11px] font-semibold text-gold transition-colors hover:border-gold/40"
-      >
-        {alerta.acaoRotulo}
-        <ChevronRight size={12} aria-hidden="true" />
-      </Link>
+      <div className="flex shrink-0 flex-col items-end gap-1.5">
+        {impacto && (
+          <span
+            className={`tnums font-mono text-sm font-semibold ${impacto.positivo ? 'text-positive' : 'text-danger'}`}
+            title={alerta.impactoNota}
+          >
+            {impacto.texto}
+          </span>
+        )}
+        <Link
+          to={alerta.acaoRota}
+          className="flex items-center gap-1 rounded-full border border-edge px-3 py-1.5 text-[11px] font-semibold text-gold transition-colors hover:border-gold/40"
+        >
+          {alerta.acaoRotulo}
+          <ChevronRight size={12} aria-hidden="true" />
+        </Link>
+      </div>
     </li>
   )
 }
@@ -267,8 +448,9 @@ export default function Alerts() {
         subtitle="Gestão por exceção: o que mudou desde ontem e exige uma decisão hoje."
       />
 
-      {/* 1 · Contadores (clicáveis = filtro de severidade) */}
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+      {/* 1 · Contadores (clicáveis = filtro de severidade) + o que está em jogo */}
+      {/* 4 contadores + o card de impacto (col-span-2) = 6 unidades numa linha */}
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-6">
         <button type="button" className="min-w-0 text-left" onClick={limparFiltros} aria-pressed={severidade === 'todas'}>
           <KpiTile label="Total de alertas" value={String(contagem.total)} hint={`${snapshot.contagemAlertas} no sino (críticos + altos)`} />
         </button>
@@ -296,6 +478,21 @@ export default function Alerts() {
         >
           <KpiTile label="Médios" value={String(contagem.medio)} delta={{ label: 'monitorar', direction: 'flat', tone: 'info' }} />
         </button>
+        {/* O número que o CFO lê primeiro: quanto vale agir sobre estes alertas.
+            Só entram os de base MENSAL — misturar com o desvio trimestral de
+            orçamento daria um total que não é nem mês nem trimestre. */}
+        <div className="min-w-0 xl:col-span-2">
+          <KpiTile
+            label="Em jogo neste mês"
+            value={formatBRL(snapshot.impactoAlertasRs, { compacto: true })}
+            delta={{
+              label: `${formatBRL(snapshot.oportunidadeAlertasRs, { compacto: true })} a capturar · ${formatBRL(snapshot.riscoAlertasRs, { compacto: true })} a evitar`,
+              direction: 'flat',
+              tone: 'gold',
+            }}
+            hint="Só alertas de impacto mensal com ação pendente"
+          />
+        </div>
       </div>
 
       {/* 3 · Filtros */}
@@ -414,6 +611,42 @@ export default function Alerts() {
               </div>
               <h3 className="mt-3 font-display text-lg font-semibold leading-snug text-ink">{aberto.titulo}</h3>
               <p className="mt-2 text-sm leading-relaxed text-ink-muted">{aberto.descricao}</p>
+
+              {(() => {
+                const impacto = impactoFormatado(aberto)
+                if (!impacto) return null
+                return (
+                  <div
+                    className={`mt-4 rounded-card border px-3 py-2.5 ${
+                      impacto.positivo ? 'border-positive/30 bg-positive/10' : 'border-danger/30 bg-danger/10'
+                    }`}
+                  >
+                    <p className="eyebrow">{impacto.positivo ? 'Valor a capturar' : 'Perda ou risco'}</p>
+                    <p
+                      className={`tnums mt-1 font-display text-2xl font-semibold ${
+                        impacto.positivo ? 'text-positive' : 'text-danger'
+                      }`}
+                    >
+                      {impacto.texto}
+                    </p>
+                    {aberto.impactoNota && (
+                      <p className="mt-1 text-[11px] leading-snug text-ink-subtle">{aberto.impactoNota}</p>
+                    )}
+                  </div>
+                )
+              })()}
+
+              {(() => {
+                const agente = aberto.agenteId ? getAgente(aberto.agenteId) : undefined
+                if (!agente) return null
+                return (
+                  <div className="mt-4 rounded-card border border-edge/60 bg-navy/40 px-3 py-2.5">
+                    <p className="eyebrow">Quem levantou</p>
+                    <p className="mt-1 text-sm font-semibold text-ink">{agente.nome}</p>
+                    <p className="mt-0.5 text-[11px] leading-snug text-ink-subtle">{agente.pergunta}</p>
+                  </div>
+                )
+              })()}
 
               <p className="mt-5 text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-subtle">
                 Dados relacionados
