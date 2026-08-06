@@ -148,6 +148,9 @@ const variacaoPct = (s: SerieFarinhaMercado) => (s.projecaoD30RsT / s.precoAtual
 /** Ranking regional — calculado uma vez, fora do render. */
 const oportunidades = mf.oportunidadesRegionais()
 
+/** Maior número de degraus entre as escadas — o título não pode mentir a contagem. */
+const maiorEscada = Math.max(...mf.escadas.map((e) => e.degraus.length))
+
 const colunasSeries: DataTableColumn<SerieFarinhaMercado>[] = [
   {
     key: 'spec',
@@ -798,6 +801,115 @@ export default function Forecast() {
             Negativo = o concorrente entrega a mesma spec mais barato que nós. É onde a decisão de comprar farinha em
             vez de moer começa a fazer sentido.
           </p>
+        </Card>
+
+        {/* A escada de canal e embalagem — a regra apples-to-apples visível */}
+        <Card className="lg:col-span-3">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h3 className="font-display text-base font-semibold text-ink">
+                O mesmo produto a {maiorEscada} preços: canal e embalagem
+              </h3>
+              <p className="mt-0.5 text-xs text-ink-subtle">
+                Nenhuma grama do produto muda entre os degraus — só a apresentação, o canal e quem paga o frete
+              </p>
+            </div>
+            <Pill tone="gold">Base de comparação: granel · industrial · posto fábrica</Pill>
+          </div>
+
+          <div className="mt-4 grid gap-3 lg:grid-cols-3">
+            {mf.escadas.map((escada) => {
+              const semBase = escada.base == null
+              return (
+                <div
+                  key={`${escada.farinhaId}-${escada.regiao}`}
+                  className={`rounded-card border px-4 py-3.5 ${
+                    semBase ? 'border-danger/40 bg-danger/5' : 'border-edge/60 bg-navy/30'
+                  }`}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold capitalize text-ink">{specNome(escada.farinhaId)}</p>
+                      <p className="text-[11px] text-ink-subtle">{REGIAO_ROTULO[escada.regiao]}</p>
+                    </div>
+                    <span
+                      className={`shrink-0 font-mono text-xs font-semibold ${
+                        semBase ? 'text-danger' : 'text-gold-light'
+                      }`}
+                    >
+                      +{formatBRL(escada.amplitudeRsT)}/t
+                    </span>
+                  </div>
+
+                  <ul className="mt-3 space-y-2">
+                    {escada.degraus.map((d) => {
+                      const ehBase = escada.base?.id === d.cotacao.id
+                      // A largura mede o DELTA sobre a base, não o preço absoluto:
+                      // barras proporcionais ao preço seriam quase idênticas
+                      // (todas partem de ~R$ 2.300) e esconderiam o que importa.
+                      const largura =
+                        escada.amplitudeRsT > 0 && d.deltaVsBaseRsT != null
+                          ? Math.max(3, Math.round((d.deltaVsBaseRsT / escada.amplitudeRsT) * 100))
+                          : 0
+                      return (
+                        <li key={d.cotacao.id}>
+                          <div className="flex items-baseline justify-between gap-2">
+                            <span className="min-w-0 truncate text-[11px] text-ink-muted">
+                              {APRESENTACAO_ROTULO[d.cotacao.apresentacao]} · {CANAL_ROTULO[d.cotacao.canal]}
+                            </span>
+                            <span
+                              className={`tnums shrink-0 font-mono text-xs font-semibold ${
+                                ehBase ? 'text-gold-light' : 'text-ink'
+                              }`}
+                            >
+                              {formatBRL(d.cotacao.precoRsT)}
+                            </span>
+                          </div>
+                          <div className="mt-1 flex items-center gap-2">
+                            {/* A barra codifica o DELTA sobre a base. A base tem
+                                delta zero, então não ganha barra — desenhá-la
+                                cheia faria o degrau de referência parecer o mais
+                                caro, invertendo a leitura. */}
+                            <div className="h-1 flex-1 overflow-hidden rounded-full bg-edge/40">
+                              {!ehBase && largura > 0 && (
+                                <div className="h-full rounded-full bg-gold/70" style={{ width: `${largura}%` }} />
+                              )}
+                            </div>
+                            <span className="tnums w-16 shrink-0 text-right font-mono text-[10px] text-ink-faint">
+                              {ehBase
+                                ? 'base'
+                                : d.deltaVsBaseRsT == null
+                                  ? 'sem base'
+                                  : `+${formatBRL(d.deltaVsBaseRsT)}`}
+                            </span>
+                          </div>
+                          <p className="mt-0.5 text-[10px] text-ink-faint">
+                            {BASE_ROTULO[d.cotacao.base]} · {d.cotacao.prazoDias} dias
+                          </p>
+                        </li>
+                      )
+                    })}
+                  </ul>
+
+                  <p className="mt-3 border-t border-edge/60 pt-2.5 text-[11px] leading-snug text-ink-subtle">
+                    {semBase ? (
+                      <>
+                        <span className="font-semibold text-danger">Sem base comparável.</span> Nenhum destes degraus
+                        confronta com o custo interno sem ajuste explícito — decidir Make/Buy aqui exigiria construir a
+                        cotação equivalente primeiro.
+                      </>
+                    ) : (
+                      <>
+                        Só o degrau em <span className="font-semibold text-gold-light">destaque</span> confronta com o
+                        custo interno de {rsT(farinha.kpis.custoFarinhaRsT)}. Os demais embutem embalagem, frete ao
+                        cliente e prazo — comparar com eles infla o ganho em até {formatBRL(escada.amplitudeRsT)}/t.
+                      </>
+                    )}
+                  </p>
+                </div>
+              )
+            })}
+          </div>
         </Card>
 
         {/* Cotações NÃO comparáveis — a armadilha, exposta */}

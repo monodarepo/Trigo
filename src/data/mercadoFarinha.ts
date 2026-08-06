@@ -17,6 +17,7 @@ import type {
   ConcorrenteFarinha,
   FarinhaId,
   OportunidadeRegionalFarinha,
+  PrecoFarinhaExterno,
   RegiaoComercial,
   SerieFarinhaMercado,
   TendenciaFarinha,
@@ -313,6 +314,75 @@ export function oportunidadesRegionais(): OportunidadeRegionalFarinha[] {
 
 /** Cotações que NÃO servem para comparar — exibidas com a ressalva obrigatória. */
 export const COTACOES_NAO_COMPARAVEIS = PRECOS_FARINHA_EXTERNOS.filter((p) => !p.comparavel)
+
+/**
+ * A ESCADA de canal e embalagem: o mesmo produto, na mesma região, cotado em
+ * apresentações e canais diferentes.
+ *
+ * É o artefato que prova a regra apples-to-apples de forma visível — a mesma
+ * farinha de massas no Nordeste vai de R$ 2.350/t (granel, industrial, posto
+ * fábrica) a R$ 2.620/t (saco de 25 kg, panificação, posto cliente) sem que
+ * uma grama do produto tenha mudado. Quem compara custo interno com "o preço
+ * da farinha" está escolhendo um degrau desta escada sem perceber.
+ *
+ * `base` é o degrau comparável (o único que confronta com o custo interno);
+ * null quando a spec não tem cotação na base — e aí NENHUM degrau serve para
+ * decidir Make/Buy sem ajuste explícito.
+ */
+export interface DegrauCanalEmbalagem {
+  cotacao: PrecoFarinhaExterno
+  /** Diferença vs o degrau comparável (R$/t). null quando não há base. */
+  deltaVsBaseRsT: number | null
+}
+
+export interface EscadaCanalEmbalagem {
+  farinhaId: FarinhaId
+  regiao: RegiaoComercial
+  base: PrecoFarinhaExterno | null
+  degraus: DegrauCanalEmbalagem[]
+  /** Amplitude entre o degrau mais barato e o mais caro (R$/t). */
+  amplitudeRsT: number
+}
+
+/** Ordem de leitura dos degraus: do mais "cru" ao mais processado/capilar. */
+const ORDEM_APRESENTACAO: Record<string, number> = {
+  granel: 0,
+  'big-bag': 1,
+  'saco-25kg': 2,
+  'saco-1kg': 3,
+}
+
+export function escadasCanalEmbalagem(): EscadaCanalEmbalagem[] {
+  const grupos = new Map<string, PrecoFarinhaExterno[]>()
+  for (const p of PRECOS_FARINHA_EXTERNOS) {
+    const chave = `${p.farinhaId}|${p.regiao}`
+    grupos.set(chave, [...(grupos.get(chave) ?? []), p])
+  }
+
+  return [...grupos.values()]
+    // Uma escada de um degrau só não ensina nada — não é escada.
+    .filter((cotacoes) => cotacoes.length > 1)
+    .map((cotacoes) => {
+      const ordenadas = [...cotacoes].sort(
+        (a, b) =>
+          (ORDEM_APRESENTACAO[a.apresentacao] ?? 9) - (ORDEM_APRESENTACAO[b.apresentacao] ?? 9) ||
+          a.precoRsT - b.precoRsT,
+      )
+      const base = ordenadas.find((p) => p.comparavel) ?? null
+      const precos = ordenadas.map((p) => p.precoRsT)
+      return {
+        farinhaId: ordenadas[0].farinhaId,
+        regiao: ordenadas[0].regiao,
+        base,
+        degraus: ordenadas.map((cotacao) => ({
+          cotacao,
+          deltaVsBaseRsT: base ? cotacao.precoRsT - base.precoRsT : null,
+        })),
+        amplitudeRsT: Math.max(...precos) - Math.min(...precos),
+      }
+    })
+    .sort((a, b) => b.amplitudeRsT - a.amplitudeRsT)
+}
 
 /**
  * A ressalva que impede a leitura errada do quadro regional. A cotação

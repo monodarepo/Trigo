@@ -33,6 +33,7 @@ import {
   NOTA_MARGEM_REFERENCIA,
   SERIES_FARINHA_MERCADO,
   TENDENCIA_FARINHA_CONSOLIDADA,
+  escadasCanalEmbalagem,
   oportunidadesRegionais,
 } from './mercadoFarinha'
 import {
@@ -251,6 +252,8 @@ export const snapshot = {
       oportunidadesRegionais,
       naoComparaveis: COTACOES_NAO_COMPARAVEIS,
       notaMargemReferencia: NOTA_MARGEM_REFERENCIA,
+      /** O mesmo produto por canal e embalagem — a regra apples-to-apples visível. */
+      escadas: escadasCanalEmbalagem(),
     },
     kpis: KPIS_FARINHA,
     capacidadeOciosaTotalT: CAPACIDADE_OCIOSA_TOTAL_T,

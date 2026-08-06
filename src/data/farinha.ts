@@ -137,6 +137,21 @@ export const PRECOS_FARINHA_EXTERNOS: PrecoFarinhaExterno[] = [
     comparavel: true,
   },
   {
+    id: 'ext-massa-ne-ind-bigbag',
+    regiao: 'nordeste',
+    farinhaId: 'massa',
+    canal: 'industrial',
+    apresentacao: 'big-bag',
+    precoRsT: 2445,
+    base: 'posto-fabrica',
+    prazoDias: 21,
+    volumeMinimoT: 500,
+    fonte: 'Cotação de moageiros independentes CE/PE — big-bag de 1 t',
+    comparavel: false,
+    ressalva:
+      'Mesmo canal e mesma base logística do custo interno, mas em big-bag de 1 t: são ~R$ 95/t de embalagem e movimentação que o granel não tem. É o degrau que mostra que apresentação sozinha já move o preço.',
+  },
+  {
     id: 'ext-massa-ne-panif-saco',
     regiao: 'nordeste',
     farinhaId: 'massa',
