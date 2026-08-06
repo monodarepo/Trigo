@@ -17,6 +17,7 @@ import { AnimatedNumber } from '../components/live/AnimatedNumber'
 import { abrirObjeto } from '../components/object/objectBus'
 import { SourceBadge } from '../components/trust/SourceBadge'
 import { useDecisao, type DecisaoDoDia } from '../components/approval/decisionStore'
+import { ROTULO_ACAO, totalEnderecadoRs, useRegistroVro } from '../alerts/registroVro'
 import { colors } from '../theme/tokens'
 import {
   snapshot,
@@ -203,6 +204,104 @@ function aplicarDecisao(r: RecomendacaoVRO, d: DecisaoDoDia): RecomendacaoVRO {
   }
 }
 
+/**
+ * TRILHA DO ALERTA ATÉ O VALOR — o que foi tratado NESTA sessão.
+ *
+ * Fecha o laço que o produto promete: um alerta não termina em "lido", termina
+ * numa decisão com dono, hora e número. Só aparece quando alguém agiu — um
+ * bloco vazio permanente ensinaria a ignorá-lo.
+ *
+ * A separação dos KPIs de cima não é diagramação: aquilo é valor CAPTURADO,
+ * medido e com haircut; isto é valor ENDEREÇADO. Resolver o alerta de R$ 560
+ * mil de demurrage não põe R$ 560 mil no YTD — põe uma decisão na mesa. Somar
+ * os dois é exatamente o erro que a § regra de honestidade do POC descreve.
+ */
+function TrilhaDeAlertas() {
+  const trilha = useRegistroVro()
+  if (trilha.length === 0) return null
+  const total = totalEnderecadoRs(trilha)
+  const resolvidos = trilha.filter((l) => l.acao === 'resolvido').length
+  /**
+   * Cada base tem a sua linha. Um "R$ 0/mês" ao lado de "1 resolvido" seria
+   * falso por omissão: o alerta resolvido valia R$ 560 mil, só que POR EVENTO
+   * — somá-lo ao mensal daria um total que não é nem mês nem evento, e
+   * escondê-lo diria que a decisão não valeu nada.
+   */
+  const bases = [
+    { rs: total.mensalRs, unidade: '/mês' },
+    { rs: total.trimestralRs, unidade: '/trimestre' },
+    { rs: total.porEventoRs, unidade: 'por evento' },
+  ].filter((b) => b.rs > 0)
+
+  return (
+    <Card>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h3 className="font-display text-base font-semibold text-ink">Alertas tratados nesta sessão</h3>
+          <p className="mt-0.5 text-xs text-ink-subtle">
+            Do alerta à decisão: quem pegou, quando e quanto estava em jogo
+          </p>
+        </div>
+        <div className="text-right">
+          <p className="eyebrow">Valor endereçado · {resolvidos} resolvido{resolvidos === 1 ? '' : 's'}</p>
+          {bases.length === 0 ? (
+            <p className="mt-0.5 text-13 text-ink-subtle">nada resolvido ainda</p>
+          ) : (
+            bases.map((b) => (
+              <p key={b.unidade} className="tnums mt-0.5 font-display text-xl font-semibold text-ink">
+                {formatBRL(b.rs, { compacto: true })}
+                <span className="ml-1.5 font-sans text-11 font-medium text-ink-subtle">{b.unidade}</span>
+              </p>
+            ))
+          )}
+        </div>
+      </div>
+
+      <ul className="mt-4 space-y-1.5">
+        {[...trilha].reverse().map((l) => (
+          <li
+            key={l.alertaId}
+            className="flex items-center gap-3 rounded-card border border-edge/60 bg-navy/30 px-3 py-2"
+          >
+            <span className="tnums shrink-0 font-mono text-11 text-ink-faint">{l.horaRotulo}</span>
+            <Badge
+              kind="status"
+              label={ROTULO_ACAO[l.acao]}
+              tone={l.acao === 'resolvido' ? 'positive' : l.acao === 'adiado' ? 'neutral' : 'info'}
+            />
+            <span className="min-w-0 flex-1 truncate text-12 text-ink-muted">{l.titulo}</span>
+            {l.nota && <span className="shrink-0 text-11 text-ink-faint">{l.nota}</span>}
+            {/* Só o RESOLVIDO ganha cor: o número de um alerta reconhecido ou
+                adiado é o que está em jogo, não o que foi endereçado — pintá-lo
+                de verde/vermelho o faria parecer contabilizado no total. */}
+            {l.impactoRs != null && (
+              <span
+                className={`tnums shrink-0 font-mono text-12 font-semibold ${
+                  l.acao !== 'resolvido'
+                    ? 'text-ink-faint'
+                    : l.tipo === 'oportunidade'
+                      ? 'text-positive'
+                      : 'text-danger'
+                }`}
+                title={l.acao === 'resolvido' ? 'Endereçado' : 'Em jogo — ainda não endereçado'}
+              >
+                {l.tipo === 'oportunidade' ? '+' : '−'}
+                {formatBRL(l.impactoRs, { compacto: true })}
+              </span>
+            )}
+          </li>
+        ))}
+      </ul>
+
+      <p className="mt-3 border-t border-edge/60 pt-3 text-[11px] leading-snug text-ink-subtle">
+        Valor <span className="font-semibold text-ink">endereçado</span>, não capturado: decidir sobre o alerta põe o
+        número na mesa, e ele só entra no YTD acima depois de medido — com o mesmo haircut de 15–20% das demais
+        alavancas. Em cinza, o que está em jogo em alertas ainda não resolvidos — não entra em nenhum total.
+      </p>
+    </Card>
+  )
+}
+
 export default function Vro() {
   const decisao = useDecisao()
   const linhas = decisao
@@ -273,6 +372,8 @@ export default function Vro() {
           rowClassName={(r) => (r.status === 'projetado' ? 'bg-gold/5' : '')}
         />
       </div>
+
+      <TrilhaDeAlertas />
 
       <div className="grid items-start gap-4 lg:grid-cols-2">
         <div className="space-y-4">

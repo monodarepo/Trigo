@@ -18,38 +18,17 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { ArrowUpRight, ChevronRight, Inbox, X } from 'lucide-react'
 import { EmptyState } from '../components/ui/EmptyState'
 import { formatBRL } from '../data/format'
-import { DEMO_AGORA } from '../data/appContext'
 import type { Alerta } from '../data/types'
 import { useLive } from '../live/liveStore'
 import { marcarVisto, useListaAlertas } from './alertStore'
 import { fecharCentral, useCentralAberta } from './centralStore'
+import { abrirDetalheAlerta } from './AlertDetail'
 import { ativos, filaExigeDecisao, impactoTotal } from './selectors'
 import { SEVERIDADE_UI, SEVERIDADES } from './severidade'
+import { tempoRelativo } from './tempo'
 
 /** Quanto o realce "novo" fica de pé depois de o painel abrir. */
 const MS_ATE_MARCAR_VISTO = 2600
-
-const MS_POR_MINUTO = 60_000
-
-/**
- * "há Xs" com duas origens de tempo, e isso não é acidente: o alerta semeado
- * mede contra o instante do cenário (terça, 07:00), o alerta que chegou ao
- * vivo mede contra o relógio da sessão. Misturar os dois faria a chegada de 12
- * segundos atrás aparecer como "em 4 min".
- */
-function tempoRelativo(alerta: Alerta, segundosDeSessao: number): string {
-  if (alerta.recebidoEmS != null) {
-    const s = Math.max(0, segundosDeSessao - alerta.recebidoEmS)
-    if (s < 60) return `há ${s}s`
-    return `há ${Math.floor(s / 60)} min`
-  }
-  const minutos = Math.round((Date.parse(DEMO_AGORA) - Date.parse(alerta.timestamp)) / MS_POR_MINUTO)
-  if (minutos < 1) return 'agora'
-  if (minutos < 60) return `há ${minutos} min`
-  const horas = Math.round(minutos / 60)
-  if (horas < 24) return `há ${horas}h`
-  return `há ${Math.round(horas / 24)}d`
-}
 
 /** R$ 1,2M / R$ 180 mil — magnitude legível num item de lista. */
 const impactoCurto = (valor: number) => formatBRL(valor, { compacto: true })
@@ -58,10 +37,12 @@ function ItemAlerta({
   alerta,
   segundos,
   aoAgir,
+  aoAbrirDetalhe,
 }: {
   alerta: Alerta
   segundos: number
   aoAgir: (alerta: Alerta) => void
+  aoAbrirDetalhe: (alerta: Alerta) => void
 }) {
   const ui = SEVERIDADE_UI[alerta.severidade]
   const Icone = ui.icone
@@ -76,29 +57,37 @@ function ItemAlerta({
   const chegouAgora = novo && alerta.recebidoEmS != null
 
   return (
-    <li className={`border-b border-edge/40 last:border-b-0 ${chegouAgora ? ui.fundo : ''}`}>
-      <button
-        type="button"
-        onClick={() => aoAgir(alerta)}
-        className={`flex w-full items-start gap-3 border-l-2 px-4 py-3 text-left transition-colors hover:bg-white/[0.03] ${
-          novo ? ui.fio : 'border-l-transparent'
-        }`}
-      >
+    <li
+      className={`border-b border-edge/40 border-l-2 last:border-b-0 ${chegouAgora ? ui.fundo : ''} ${
+        novo ? ui.fio : 'border-l-transparent'
+      }`}
+    >
+      <div className="flex items-start gap-3 px-4 py-3 transition-colors hover:bg-white/[0.03]">
         <Icone size={15} className={`mt-0.5 shrink-0 ${ui.texto}`} aria-hidden="true" />
-        <span className="min-w-0 flex-1">
-          <span className="flex items-baseline gap-2">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-baseline gap-2">
             <span className={`eyebrow ${ui.texto}`}>{ui.rotulo}</span>
             {chegouAgora && (
               <span className="rounded-full bg-gold/20 px-1.5 py-px text-[10px] font-semibold uppercase tracking-wide text-gold-light">
                 novo
               </span>
             )}
+            {alerta.atribuidoA && <span className="truncate text-11 text-ink-faint">→ {alerta.atribuidoA}</span>}
             <span className="tnums ml-auto shrink-0 font-mono text-11 text-ink-faint">
               {tempoRelativo(alerta, segundos)}
             </span>
-          </span>
-          <span className="mt-1 block text-13 font-medium leading-snug text-ink">{alerta.titulo}</span>
-          <span className="mt-1 flex items-center gap-2">
+          </div>
+          {/* O título abre o DETALHE (tratar sem sair da tela); o CTA executa a
+              ação. Um botão só para as duas coisas faria o rótulo "Ver janela
+              de descarga" entregar um painel de detalhe. */}
+          <button
+            type="button"
+            onClick={() => aoAbrirDetalhe(alerta)}
+            className="mt-1 block w-full text-left text-13 font-medium leading-snug text-ink transition-colors hover:text-gold-light"
+          >
+            {alerta.titulo}
+          </button>
+          <div className="mt-1 flex items-center gap-2">
             {alerta.impactoRs != null && (
               <span
                 className={`tnums font-mono text-12 font-semibold ${
@@ -110,12 +99,16 @@ function ItemAlerta({
                 {impactoCurto(alerta.impactoRs)}
               </span>
             )}
-            <span className="ml-auto flex items-center gap-0.5 text-11 font-semibold text-gold">
+            <button
+              type="button"
+              onClick={() => aoAgir(alerta)}
+              className="ml-auto flex items-center gap-0.5 text-11 font-semibold text-gold transition-colors hover:text-gold-light"
+            >
               {alerta.acaoLabel} <ChevronRight size={11} aria-hidden="true" />
-            </span>
-          </span>
-        </span>
-      </button>
+            </button>
+          </div>
+        </div>
+      </div>
     </li>
   )
 }
@@ -216,6 +209,9 @@ function Painel() {
     [irPara],
   )
 
+  /** O detalhe fecha a Central por dentro (`abrirDetalheAlerta`). */
+  const aoAbrirDetalhe = useCallback((alerta: Alerta) => abrirDetalheAlerta(alerta.id), [])
+
   return (
     <motion.div
       ref={painel}
@@ -306,7 +302,13 @@ function Painel() {
         ) : (
           <ul>
             {fila.map((alerta) => (
-              <ItemAlerta key={alerta.id} alerta={alerta} segundos={segundos} aoAgir={aoAgir} />
+              <ItemAlerta
+                key={alerta.id}
+                alerta={alerta}
+                segundos={segundos}
+                aoAgir={aoAgir}
+                aoAbrirDetalhe={aoAbrirDetalhe}
+              />
             ))}
           </ul>
         )}

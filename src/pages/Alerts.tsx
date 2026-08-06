@@ -14,7 +14,7 @@ import {
 import { SEVERIDADE_UI } from '../alerts/severidade'
 import { CATEGORIAS, categoriaDe, impactoFormatado } from '../alerts/detalhes'
 import { abrirDetalheAlerta } from '../alerts/AlertDetail'
-import { formatBRL, formatDataHoraPt, getAgente, type Alerta } from '../data'
+import { formatBRL, formatDataHoraPt, formatDataPt, getAgente, type Alerta } from '../data'
 
 type Categoria = Alerta['categoria']
 type Severidade = Alerta['severidade']
@@ -76,6 +76,17 @@ function LinhaAlerta({ alerta, onAbrir }: { alerta: Alerta; onAbrir: () => void 
             />
             <span className="tnums text-[11px] text-ink-subtle">{formatDataHoraPt(alerta.timestamp)}</span>
             {agente && <span className="text-[11px] text-ink-faint">· {agente.nome}</span>}
+            {/* Estado do ciclo de vida: quem pegou, até quando esperou. */}
+            {alerta.atribuidoA && <Badge kind="status" label={`→ ${alerta.atribuidoA}`} tone="info" />}
+            {alerta.status === 'adiado' && (
+              <Badge
+                kind="status"
+                label={alerta.adiadoAte ? `Adiado até ${formatDataPt(alerta.adiadoAte)}` : 'Adiado'}
+                tone="neutral"
+              />
+            )}
+            {alerta.status === 'reconhecido' && <Badge kind="status" label="Reconhecido" tone="neutral" />}
+            {alerta.status === 'resolvido' && <Badge kind="status" label="Resolvido" tone="positive" />}
           </span>
           <span className="mt-1 block truncate text-sm font-medium text-ink">{alerta.titulo}</span>
           <span className="mt-0.5 line-clamp-2 block text-xs leading-snug text-ink-subtle">{alerta.descricao}</span>
@@ -106,17 +117,25 @@ export default function Alerts() {
   const [categoria, setCategoria] = useState<'todas' | Categoria>('todas')
   const [severidade, setSeveridade] = useState<'todas' | Severidade>('todas')
   const [grupo, setGrupo] = useState<'todos' | 'decisao' | 'informativo'>('todos')
+  /**
+   * A aba é o mission control: é a ÚNICA superfície onde o resolvido continua
+   * existindo. Sem esta chave, resolver faria o alerta desaparecer do produto
+   * inteiro — e a Central prometeria, no seu estado vazio, um histórico que
+   * não existia em lugar nenhum.
+   */
+  const [mostrarResolvidos, setMostrarResolvidos] = useState(false)
 
   // TUDO vem do store: a tela não guarda lista própria nem recalcula contagem.
   const lista = useListaAlertas()
+  const resolvidos = useMemo(() => lista.filter((a) => a.status === 'resolvido'), [lista])
   const ordenados = useMemo(
     () =>
-      [...ativos(lista)].sort(
+      [...(mostrarResolvidos ? resolvidos : ativos(lista))].sort(
         (a, b) =>
           ORDEM_SEVERIDADE[a.severidade] - ORDEM_SEVERIDADE[b.severidade] ||
           b.timestamp.localeCompare(a.timestamp),
       ),
-    [lista],
+    [lista, resolvidos, mostrarResolvidos],
   )
   const severidades = porSeveridade(lista)
   const impacto = impactoTotal(lista)
@@ -240,6 +259,18 @@ export default function Alerts() {
                 { id: 'informativo' as const, rotulo: 'Informativo' },
               ]}
             />
+            <button
+              type="button"
+              aria-pressed={mostrarResolvidos}
+              onClick={() => setMostrarResolvidos((v) => !v)}
+              className={`rounded-full border px-3 py-1 text-[11px] font-semibold transition-colors ${
+                mostrarResolvidos
+                  ? 'border-positive/50 bg-positive/15 text-positive'
+                  : 'border-edge bg-card-2 text-ink-muted hover:border-gold/40 hover:text-ink'
+              }`}
+            >
+              Resolvidos ({resolvidos.length})
+            </button>
           </div>
         </div>
       </Card>
@@ -247,8 +278,12 @@ export default function Alerts() {
       {/* 2 · Lista priorizada / 5 · vazio */}
       {filtrados.length === 0 ? (
         <EmptyState
-          title="Nenhum alerta com estes filtros"
-          description="Tudo tratado por aqui. Ajuste os filtros ou volte ao conjunto completo do dia."
+          title={mostrarResolvidos ? 'Nenhum alerta resolvido ainda' : 'Nenhum alerta com estes filtros'}
+          description={
+            mostrarResolvidos
+              ? 'Resolva um alerta pelo drawer de detalhe — ele sai das superfícies ativas e passa a ser listado aqui.'
+              : 'Tudo tratado por aqui. Ajuste os filtros ou volte ao conjunto completo do dia.'
+          }
           action={
             <button
               type="button"
