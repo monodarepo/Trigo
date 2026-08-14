@@ -58,25 +58,33 @@ export function LoginScreen() {
             do resto do produto. */}
         <div className="rounded-card-lg border border-edge bg-card p-7 shadow-card sm:p-8">
           {/* Cliente e consultoria lado a lado, separados por um fio: quem é
-              dono do negócio à esquerda, quem constrói à direita. Ambas
-              dimensionadas pela ALTURA (w-auto) para preservar o aspecto. */}
+              dono do negócio à esquerda, quem constrói à direita.
+
+              AS ALTURAS NÃO SÃO IGUAIS DE PROPÓSITO. Igualar a caixa dos dois
+              arquivos deixa o par torto, porque a proporção interna deles é
+              muito diferente: na M. Dias Branco o wordmark ocupa 25,4% da
+              altura (o resto é a espiga, de traço fino), enquanto na Monoda o
+              "MONODA" ocupa 33,8% em caixa alta cheia. Na mesma altura de
+              caixa, a Monoda sai 1,3× maior e bem mais pesada — na tela do
+              próprio cliente.
+
+              48px e 36px igualam o que o olho compara: 12,2px de wordmark nos
+              dois, e larguras de 125px e 120px. Mexer numa altura sem refazer
+              a conta desfaz o par. */}
           <div className="flex flex-wrap items-center gap-3 sm:gap-4">
             <img
               src="/brand/mdias-logo-branco.png"
               alt="M. Dias Branco"
-              className="h-10 w-auto shrink-0 sm:h-11"
+              className="h-11 w-auto shrink-0 sm:h-12"
               width={296}
               height={114}
             />
             {/* Some abaixo de 360px: numa quebra de linha o fio ficaria órfão
                 ao lado de uma marca só, sugerindo uma separação que não há. */}
-            <span className="h-9 w-px shrink-0 bg-edge-strong max-[359px]:hidden" aria-hidden="true" />
+            <span className="h-8 w-px shrink-0 bg-edge-strong max-[359px]:hidden" aria-hidden="true" />
             <img
               src="/brand/monoda-logo-branco.png"
               alt="Monoda Consulting Group"
-              /* Um pouco menor que a marca do cliente: o aspecto é 3,34:1
-                 contra 2,6:1, então na mesma altura a Monoda ficaria mais
-                 larga e pesada que a M. Dias Branco na própria tela dela. */
               className="h-8 w-auto shrink-0 sm:h-9"
               width={494}
               height={148}
