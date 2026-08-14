@@ -57,14 +57,34 @@ export function LoginScreen() {
             eles não teriam direto sobre a base — a mesma escada de superfícies
             do resto do produto. */}
         <div className="rounded-card-lg border border-edge bg-card p-7 shadow-card sm:p-8">
-          {/* Marca — altura fixa e largura automática preservam o aspecto ~2,7:1 */}
-          <img
-            src="/brand/mdias-logo-branco.png"
-            alt="M. Dias Branco"
-            className="h-12 w-auto"
-            width={296}
-            height={114}
-          />
+          {/* Cliente e consultoria lado a lado, separados por um fio: quem é
+              dono do negócio à esquerda, quem constrói à direita. Ambas
+              dimensionadas pela ALTURA (w-auto) para preservar o aspecto. */}
+          <div className="flex flex-wrap items-center gap-3 sm:gap-4">
+            <img
+              src="/brand/mdias-logo-branco.png"
+              alt="M. Dias Branco"
+              className="h-10 w-auto shrink-0 sm:h-11"
+              width={296}
+              height={114}
+            />
+            {/* Some abaixo de 360px: numa quebra de linha o fio ficaria órfão
+                ao lado de uma marca só, sugerindo uma separação que não há. */}
+            <span className="h-9 w-px shrink-0 bg-edge-strong max-[359px]:hidden" aria-hidden="true" />
+            <span className="flex shrink-0 items-center gap-2.5">
+              <img src="/brand/monoda-simbolo.svg" alt="" aria-hidden="true" className="h-8 w-8 sm:h-9 sm:w-9" />
+              {/* O wordmark é texto, não imagem: assim herda as fontes do
+                  produto e continua nítido em qualquer densidade de tela. */}
+              <span className="leading-none">
+                <span className="wordmark-vazado block font-display text-[17px] font-medium tracking-[0.14em] sm:text-[19px]">
+                  MONODA
+                </span>
+                <span className="mt-1 block text-[7px] font-semibold tracking-[0.3em] text-azure sm:text-[7.5px] sm:tracking-[0.34em]">
+                  CONSULTING GROUP
+                </span>
+              </span>
+            </span>
+          </div>
 
           <h1 className="mt-7 font-display text-28 font-semibold leading-tight text-ink">
             Wheat &amp; Flour Value Tower
