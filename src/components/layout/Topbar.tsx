@@ -1,5 +1,5 @@
 import { useLocation } from 'react-router-dom'
-import { ChevronDown, Menu, Monitor, Play, Rows3, Search } from 'lucide-react'
+import { ChevronDown, LogOut, Menu, Monitor, Play, Rows3, Search } from 'lucide-react'
 import { findNavItem } from '../../data/navigation'
 import { APP_CONTEXT } from '../../data/appContext'
 import { MarketPulse } from '../live/MarketPulse'
@@ -7,6 +7,7 @@ import { abrirCommandPalette } from '../command/CommandLayer'
 import { AlertBell } from '../../alerts/AlertBell'
 import { abrirApresentacao } from '../present/presentStore'
 import { alternarDensidade, alternarMural, useDensidade, useMural } from './layoutStore'
+import { sair } from '../../auth/sessao'
 
 interface TopbarProps {
   onOpenMenu: () => void
@@ -121,6 +122,18 @@ export function Topbar({ onOpenMenu }: TopbarProps) {
           >
             {APP_CONTEXT.user.initials}
           </span>
+
+          {/* Sem esta saída, a única forma de voltar ao login seria fechar a
+              aba — e a sessão vive nela. */}
+          <button
+            type="button"
+            onClick={sair}
+            aria-label="Sair da sessão"
+            title="Sair"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-edge bg-card-2 text-ink-subtle transition-colors hover:border-danger/40 hover:text-danger"
+          >
+            <LogOut size={15} aria-hidden="true" />
+          </button>
         </div>
       </div>
       <MarketPulse />

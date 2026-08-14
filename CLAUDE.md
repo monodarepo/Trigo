@@ -137,6 +137,11 @@ Princípio: hierarquia por peso, densidade calibrada, movimento que explica, cor
 - Exceção: navio MV Río Paraná com atraso de +6 dias → risco de demurrage; cobertura do Moinho Natal cai para 19 dias.
 - Alertas: dólar perto do limite; safra argentina revisada p/ baixo; nova janela de hedge; estoque Moinho Fortaleza abaixo da política em 21 dias.
 
+## Porta de entrada (`src/auth/`)
+O protótipo abre numa tela de login com a marca (`LoginScreen.tsx`), e o gate fica **antes do Router** em `App.tsx` — sem sessão não existe rota nenhuma, nem `/exportar` nem deep link; um guarda por rota abriria buraco a cada tela nova. Sessão em `sessionStorage` (sobrevive ao F5 no meio da demo, morre ao fechar a aba); saída pelo ícone na Topbar.
+
+**Isto não é autenticação.** Não há servidor: a verificação roda no navegador de quem entra e é contornável por qualquer pessoa com o DevTools. É uma porta encostada para o mockup não ficar aberto na URL. O que dá para fazer bem está feito — o bundle carrega só o **SHA-256** de `USUÁRIO:senha`, nunca a senha em texto (`printf 'USUARIO:senha' | shasum -a 256`, ou `VITE_ACESSO_HASH` no build para rotacionar sem commit). Quando houver backend, muda só `entrar()`.
+
 ## Arquitetura de informação (rotas)
 Seis seções na sidebar, do sinal à decisão. `(NOVA)` = placeholder a criar nesta etapa; as demais são telas existentes (quando marcadas "rótulo/título", só o texto muda — a tela permanece).
 

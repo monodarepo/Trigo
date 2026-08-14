@@ -3,6 +3,8 @@ import { BrowserRouter, HashRouter, Navigate, Route, Routes } from 'react-router
 import { MotionConfig } from 'framer-motion'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AppShell } from './components/layout/AppShell'
+import { LoginScreen } from './auth/LoginScreen'
+import { useSessao } from './auth/sessao'
 import { ErrorBoundary } from './components/feedback/ErrorBoundary'
 import { TelaComEstado } from './components/feedback/TelaComEstado'
 import {
@@ -80,6 +82,23 @@ const TELAS: Array<{ path: string; titulo: string; Tela: ComponentType; esquelet
 ]
 
 export default function App() {
+  const autenticado = useSessao()
+
+  /**
+   * A porta fica ANTES do Router, e isso é deliberado: sem sessão não existe
+   * rota nenhuma — nem `/exportar`, nem um deep link para `/tlc`. Um guarda
+   * por rota deixaria buracos toda vez que alguém acrescentasse uma tela.
+   */
+  if (!autenticado) {
+    return (
+      <ErrorBoundary rotulo="A tela de acesso">
+        <MotionConfig reducedMotion="user">
+          <LoginScreen />
+        </MotionConfig>
+      </ErrorBoundary>
+    )
+  }
+
   return (
     <ErrorBoundary rotulo="A Torre de Controle">
     <QueryClientProvider client={queryClient}>
