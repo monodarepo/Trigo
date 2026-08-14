@@ -71,19 +71,16 @@ export function LoginScreen() {
             {/* Some abaixo de 360px: numa quebra de linha o fio ficaria órfão
                 ao lado de uma marca só, sugerindo uma separação que não há. */}
             <span className="h-9 w-px shrink-0 bg-edge-strong max-[359px]:hidden" aria-hidden="true" />
-            <span className="flex shrink-0 items-center gap-2.5">
-              <img src="/brand/monoda-simbolo.svg" alt="" aria-hidden="true" className="h-8 w-8 sm:h-9 sm:w-9" />
-              {/* O wordmark é texto, não imagem: assim herda as fontes do
-                  produto e continua nítido em qualquer densidade de tela. */}
-              <span className="leading-none">
-                <span className="wordmark-vazado block font-display text-[17px] font-medium tracking-[0.14em] sm:text-[19px]">
-                  MONODA
-                </span>
-                <span className="mt-1 block text-[7px] font-semibold tracking-[0.3em] text-azure sm:text-[7.5px] sm:tracking-[0.34em]">
-                  CONSULTING GROUP
-                </span>
-              </span>
-            </span>
+            <img
+              src="/brand/monoda-logo-branco.png"
+              alt="Monoda Consulting Group"
+              /* Um pouco menor que a marca do cliente: o aspecto é 3,34:1
+                 contra 2,6:1, então na mesma altura a Monoda ficaria mais
+                 larga e pesada que a M. Dias Branco na própria tela dela. */
+              className="h-8 w-auto shrink-0 sm:h-9"
+              width={494}
+              height={148}
+            />
           </div>
 
           <h1 className="mt-7 font-display text-28 font-semibold leading-tight text-ink">
